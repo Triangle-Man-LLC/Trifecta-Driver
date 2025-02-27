@@ -1,18 +1,29 @@
 
-# Drivers for Trifecta IMU Devices #
+# Linux/Unix/POSIX Driver Setup #
 
-This repository contains driver software for the <b>Intelligent Sensor Fusion</b> IMU and navigation device series from <b>Triangle Man LLC</b> and/or <b>4rge</b>. 
+<b>Linux/POSIX-Compliant Systems</b> are supported through a direct C API. 
 
-### Installation and Usage ###
+### General Usage ###
 
-Currently supported platforms are <b><a href = "/Trifecta-Driver/tree/esp-idf">ESP-IDF (C/C++)</a></b>, <b><a href = "/Trifecta-Driver/tree/linux">Linux (C/C++)</a></b>, <b><a href="/Trifecta-Driver/tree/python">Python</a></b>, and <b><a href="/Trifecta-Micropython/">Micropython</a></b>. (Platforms with in-progress support: <b><a href="/Trifecta-Driver/tree/micropython">STM32 (C/C++)</a></b>.) 
+In general, this entire sub-folder `Trifecta-Linux` should be copied into the `lib` folder of your project. 
 
-Platform-specific installation instructions are located in the README.md of their respective folders. A recommended deployment platform should be at least 32-bit processor with clock speed of 40 MHz and 64 kB of memory.
+Typical folder structure:
+```
+YOUR_PROJECT_NAME/ 
+  ├── lib/ 
+  │ └── Trifecta-Linux/ 
+  └── src/ 
+    └── main.c
+```
+CMake is recommended as a build system. 
 
-### Porting the Drivers to Another Platform ###
+This can also be used as a component in a ROS 1 or ROS 2 project. More on that soon.
 
-The drivers can be ported to platforms by implementing the relevant methods listed in the <a href = "/include/FS_Trifecta_Interfaces.h">Interfaces Definitions</a> file. 
+### Trying the Examples ###
 
-Any method which is not relevant/supported (e.g. wireless networking methods on STM32 which does not have wireless networking support) can be made to return -1 to indicate the lack of support.
+NOTE: To access serial over USB ports, it is necessary to have `dialout` permissions on most Linux distributions.
+If you encounter the `Permission denied` error, use `sudo usermod -a -G dialout $USER` and restart the computer.
 
-The specific implementation of the `FS_Interfaces.h` file should be placed in the `/Trifecta-Driver/<PLATFORM_NAME>/FS_Interfaces.c` file of the project.
+For a sample project, see the following:
+
+<a href = "https://github.com/Triangle-Man-LLC/Trifecta-Sample-Linux">Linux Project Template</a>
