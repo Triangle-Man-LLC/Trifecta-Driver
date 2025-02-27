@@ -1,19 +1,29 @@
-# Drivers for Trifecta IMU Devices #
 
-This repository contains driver software for the <b>Intelligent Sensor Fusion</b> IMU/navigation device series. 
+# Linux/Unix/POSIX Driver Setup #
 
-![CI](https://github.com/Triangle-Man-LLC/Trifecta-Driver/actions/workflows/static_analyzer.yml/badge.svg)
-![CI](https://github.com/Triangle-Man-LLC/Trifecta-Driver/actions/workflows/execute_tests.yml/badge.svg)
+<b>Linux/POSIX-Compliant Systems</b> are supported through a direct C API. 
 
-### Installation and Usage ###
-Currently supported platforms are <b><a href = "https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/esp-idf">ESP-IDF (C/C++)</a></b>, <b><a href = "https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/linux">Linux (C/C++)</a></b>, <b><a href = "https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/windows">Windows (C/C++)</a></b>, <b><a href="https://github.com/Triangle-Man-LLC/Trifecta-Python-Samples/tree/main/Trifecta-Python">Python</a></b>, and <b><a href="https://github.com/Triangle-Man-LLC/Trifecta-Python-Samples/tree/main/Trifecta-MicroPython">Micropython</a></b>. (Platforms with in-progress support: <b><a href="https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/stm32">STM32 (C/C++)</a></b>, <b><a href = "https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/android">Android (NDK)</a></b>.) 
+### General Usage ###
 
-Platform-specific installation instructions are located in the README.md of their respective folders. A recommended deployment platform should be at least 32-bit processor with clock speed of 40 MHz and 64 kB of memory.
+In general, this entire sub-folder `Trifecta-Linux` should be copied into the `lib` folder of your project. 
 
-### Porting the Drivers to Another Platform ###
+Typical folder structure:
+```
+YOUR_PROJECT_NAME/ 
+  ├── lib/ 
+  │ └── Trifecta-Linux/ 
+  └── src/ 
+    └── main.c
+```
+CMake is recommended as a build system. 
 
-The drivers can be ported to platforms by implementing the relevant methods listed in the <a href = "/include/FS_Trifecta_Interfaces.h">Interfaces Definitions</a> file. 
+This can also be used as a component in a ROS 1 or ROS 2 project. More on that soon.
 
-Any method which is not relevant/supported (e.g. wireless networking methods on STM32 which does not have wireless networking support) can be made to return -1 to indicate the lack of support.
+### Trying the Examples ###
 
-The specific implementation of the `FS_Interfaces.h` file should be placed in the `/Trifecta-Driver/<PLATFORM_NAME>/FS_Interfaces.c` file of the project.
+NOTE: To access serial over USB ports, it is necessary to have `dialout` permissions on most Linux distributions.
+If you encounter the `Permission denied` error, use `sudo usermod -a -G dialout $USER` and restart the computer.
+
+For a sample project, see the following:
+
+<a href = "https://github.com/Triangle-Man-LLC/Trifecta-Sample-Linux">Linux Project Template</a>
