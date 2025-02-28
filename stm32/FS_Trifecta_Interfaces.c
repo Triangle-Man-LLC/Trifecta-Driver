@@ -9,11 +9,11 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "FreeRTOS.h" // FreeRTOS headers
-#include "task.h"
-#include "queue.h"
-#include "semphr.h"
-#include "timers.h"
+// #include "FreeRTOS.h" // FreeRTOS headers
+// #include "task.h"
+// #include "queue.h"
+// #include "semphr.h"
+// #include "timers.h"
 #include "cmsis_os.h"
 
 // Include the HAL library header based on the target STM32 series
@@ -107,21 +107,24 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
     // Ensure the flag is set to indicate the thread is running
     *thread_running_flag = true;
 
-    TaskHandle_t task_handle = NULL;
-    BaseType_t result;
+    osThreadAttr_t thread_attr = {
+        .name = "ThreadTask",
+        .priority = (osPriority_t) priority,
+        .stack_size = stack_size
+    };
 
-    // Create the FreeRTOS task
     if (core_affinity < 0)
     {
-        result = xTaskCreate(thread_func, "ThreadTask", stack_size, params, priority, &task_handle);
+        thread_attr.attr_bits = 0;
     }
     else
     {
         fs_log_output("[Trifecta] Warning: STM32 does not support multi-core operation in this manner!\n");
-        result = xTaskCreate(thread_func, "ThreadTask", stack_size, params, priority, &task_handle);
     }
 
-    if (result != pdPASS)
+    osThreadId_t task_handle = osThreadNew(thread_func, params, &thread_attr);
+
+    if (task_handle == NULL)
     {
         fs_log_output("[Trifecta] Error: Task creation failed!\n");
         *thread_running_flag = 0;
@@ -381,8 +384,8 @@ int fs_toggle_logging(bool do_log)
 /// @return The number of ticks the delay lasted
 int fs_delay(int millis)
 {
-    vTaskDelay(pdMS_TO_TICKS(millis));
-    return pdMS_TO_TICKS(millis);
+    osDelay(millis);
+    return osKernelSysTick();
 }
 
 /// @brief Real-time delay
@@ -393,20 +396,19 @@ int fs_delay_for(uint32_t *current_time, int millis)
 {
     if (*current_time == 0)
     {
-        *current_time = xTaskGetTickCount();
+        *current_time = osKernelSysTick();
     }
     uint32_t initial_time = *current_time;
-    vTaskDelayUntil(current_time, pdMS_TO_TICKS(millis));
+    osDelayUntil(current_time, millis);
     uint32_t elapsed_ticks = *current_time - initial_time;
     return (int)elapsed_ticks;
 }
 
 /// @brief Get the current system time
 /// @param current_time Pointer to the current time
-/// @param millis The exact amount of time to delay
 /// @return 0 on success
 int fs_get_current_time(uint32_t *current_time)
 {
-    *current_time = xTaskGetTickCount();
+    *current_time = osKernelSysTick();
     return 0;
 }
