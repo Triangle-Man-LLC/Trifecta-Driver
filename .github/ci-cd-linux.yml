@@ -1,0 +1,87 @@
+name: CI Build and Test (Linux x86/x64 and ARM32/64) - BCH Driver Library
+
+on:
+  push:
+    branches:
+      - linux
+  pull_request:
+    branches:
+      - linux
+
+jobs:
+  bch-linux:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Build project for x86-64
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-x86-64
+          cd $GITHUB_WORKSPACE/build-x86-64
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/toolchain-x86-64.cmake
+          make
+
+      - name: Build project for x86 (32-bit)
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-x86
+          cd $GITHUB_WORKSPACE/build-x86
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/toolchain-x86.cmake
+          make
+
+      - name: Build project for ARM64
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-arm64
+          cd $GITHUB_WORKSPACE/build-arm64
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/BCH-Linux-Driver/toolchain-arm64.cmake
+          make
+
+      - name: Build project for ARM32
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-arm32
+          cd $GITHUB_WORKSPACE/build-arm32
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/toolchain-arm32.cmake
+          make
+
+      - name: Detect Architecture
+        id: arch_check
+        run: echo "ARCH=$(uname -m)" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: |
+          if [ "$ARCH" == "x86_64" ]; then
+            echo "Running tests for x86_64 architecture"
+            cd $GITHUB_WORKSPACE/BCH-Linux-Driver/build-x86-64
+            ctest --verbose
+          elif [ "$ARCH" == "aarch64" ]; then
+            echo "Running tests for ARM64 architecture"
+            cd $GITHUB_WORKSPACE/BCH-Linux-Driver/build-arm64
+            ctest --verbose
+          else
+            echo "Unsupported architecture: $ARCH"
+            exit 1
+          fi
+
+      - name: Merge build folders
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-universal
+          cp -r $GITHUB_WORKSPACE/build-x86-64/. $GITHUB_WORKSPACE/build-universal/
+          cp -r $GITHUB_WORKSPACE/build-arm64/. $GITHUB_WORKSPACE/build-universal/
+          cp -r $GITHUB_WORKSPACE/build-x86/. $GITHUB_WORKSPACE/build-universal/
+          cp -r $GITHUB_WORKSPACE/build-arm32/. $GITHUB_WORKSPACE/build-universal/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Trifecta_Driver_Linux_Universal
+          path: build-universal/**
+
+      - name: Delete build folders after upload
+        run: |
+          rm -rf $GITHUB_WORKSPACE/build-x86-64
+          rm -rf $GITHUB_WORKSPACE/build-arm64
+          rm -rf $GITHUB_WORKSPACE/build-x86
+          rm -rf $GITHUB_WORKSPACE/build-arm32
+          rm -rf $GITHUB_WORKSPACE/build-universal 
