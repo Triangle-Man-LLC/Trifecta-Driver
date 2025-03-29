@@ -1,0 +1,82 @@
+# name: CI Build (ESP-IDF)
+
+# on:
+#   push:
+#     branches: 
+#       - esp-idf
+#   pull_request:
+#     branches:
+#       - esp-idf
+
+# jobs:
+#   build-static-libraries:
+#     name: Build Static Libraries for ESP32 Platforms
+#     runs-on: [self-hosted, ESP-IDF]
+#     steps:
+#       - name: Set up ESP-IDF environment
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y wget git flex bison gperf python3 python3-pip python3-setuptools cmake ninja-build ccache libffi-dev libssl-dev dfu-util
+#           sudo apt-get install -y python3-pip-whl python3-setuptools-whl python3.12-venv       
+#           if [ ! -d "$HOME/esp-idf" ]; then
+#             git clone --branch release/v5.3 --recursive https://github.com/espressif/esp-idf.git $HOME/esp-idf
+#             cd $HOME/esp-idf
+#             ./install.sh
+#           fi
+
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#         with:
+#           submodules: true
+
+#       - name: Build for ESP32
+#         run: |
+#           . $HOME/esp-idf/export.sh
+#           cd $GITHUB_WORKSPACE
+#           idf.py set-target esp32
+#           mkdir -p build_esp32
+#           idf.py build
+#           cp build/libdriver.a build_esp32/libdriver_esp32.a
+
+#       - name: Build for ESP32-S3
+#         run: |
+#           . $HOME/esp-idf/export.sh
+#           cd $GITHUB_WORKSPACE
+#           idf.py set-target esp32s3
+#           mkdir -p build_esp32s3
+#           idf.py build
+#           cp build/libdriver.a build_esp32s3/libdriver_esp32s3.a
+
+#       - name: Build for ESP32-S2
+#         run: |
+#           . $HOME/esp-idf/export.sh
+#           cd $GITHUB_WORKSPACE
+#           idf.py set-target esp32s2
+#           mkdir -p build_esp32s2
+#           idf.py build
+#           cp build/libdriver.a build_esp32s2/libdriver_esp32s2.a
+
+#       - name: Build for ESP32-P4
+#         run: |
+#           . $HOME/esp-idf/export.sh
+#           cd $GITHUB_WORKSPACE
+#           idf.py set-target esp32p4
+#           mkdir -p build_esp32p4
+#           idf.py build
+#           cp build/libdriver.a build_esp32p4/libdriver_esp32p4.a
+
+#       - name: Cleanup build files
+#         run: |
+#           . $HOME/esp-idf/export.sh
+#           cd $GITHUB_WORKSPACE
+#           idf.py clean
+
+#       - name: Upload static libraries
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: ESP32_Driver_Static_Libraries
+#           path: |
+#             build_esp32/libdriver_esp32.a
+#             build_esp32s3/libdriver_esp32s3.a
+#             build_esp32s2/libdriver_esp32s2.a
+#             build_esp32p4/libdriver_esp32p4.a
