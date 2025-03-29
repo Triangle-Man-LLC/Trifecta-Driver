@@ -1,0 +1,11 @@
+version: "1.0.0"
+license: "MIT"
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32p4
+description: ESP-IDF compatible driver for Trifecta IMU devices.
+url: https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/esp-idf
+dependencies: 
+  idf: ">=5.3"
