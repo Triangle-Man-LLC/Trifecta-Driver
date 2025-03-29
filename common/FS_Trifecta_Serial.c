@@ -11,9 +11,6 @@
 
 #include "FS_Trifecta_Serial.h"
 
-
-static fs_driver_config *config = NULL;
-
 /// @brief Updater thread, there is one of these per device connected.
 /// @param params Passes the device handle to the thread.
 /// @return
@@ -30,24 +27,24 @@ static void fs_serial_update_thread(void *params)
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
 
-    int rx_buffer[FS_MAX_DATA_LENGTH] = {0};
-    memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
+    uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
     active_device->status = FS_RUN_STATUS_RUNNING;
 
-    fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us", active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
+    fs_log_output("[Trifecta] Device parameters: Run status: %d, Delay time %d ms, Receive timeout %d us", active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
     size_t last_received_serial = 0;
 
     while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
-        last_received_serial = fs_receive_serial(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
-        if (last_received_serial > 0)
-        {
-            if (fs_device_parse_packet(active_device, &rx_buffer, last_received_serial) < 0)
+        last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
+        while (last_received_serial > 0)
+        {        
+            fs_log_output("[Trifecta] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
+            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, FS_COMMUNICATION_MODE_SERIAL) < 0)
             {
                 fs_log_output("[Trifecta] WARN: Could not parse data! Is there corruption?");
             }
-            last_received_serial = fs_receive_serial(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros); 
+            last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros); 
         }
         fs_delay(delay_time_millis);
     }
@@ -71,7 +68,7 @@ int fs_serial_send_message(fs_device_info *device_handle, char *message, size_t 
 int fs_serial_start(fs_device_info *device_handle)
 {
     // Clear the device name
-    memset(device_handle->device_name, 0, sizeof(device_handle->device_name));
+    memset(&device_handle->device_name, 0, sizeof(device_handle->device_name));
 
     // Initialize the serial driver
     int status = fs_init_serial_driver(device_handle);
@@ -87,7 +84,7 @@ int fs_serial_start(fs_device_info *device_handle)
     const int task_stack_size = device_handle->driver_config.task_stack_size_bytes;
 
     // Start the serial update thread
-    status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, &device_handle->status, &device_handle->update_thread_handle, task_stack_size, task_priority, core_affinity);
+    status = fs_thread_start(fs_serial_update_thread, device_handle, &device_handle->status, &device_handle->update_thread_handle, task_stack_size, task_priority, core_affinity);
     if (status != 0)
     {
         fs_log_output("[Trifecta] Error: Could not start serial thread!");

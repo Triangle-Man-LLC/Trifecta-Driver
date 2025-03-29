@@ -35,7 +35,7 @@ static void fs_network_update_thread(void *params)
 
     while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
-        last_received_tcp = fs_receive_networked_tcp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
+        last_received_tcp = fs_receive_networked_tcp(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         fs_log_output("[Trifecta] TCP:RX %d", last_received_tcp);
         if (last_received_tcp > 0)
         {
@@ -51,7 +51,7 @@ static void fs_network_update_thread(void *params)
         if (last_received_udp > 0)
         {
             // UDP only receive data packets, so handle them here
-            if (fs_device_parse_packet(active_device, rx_buffer, last_received_udp) < 0)
+            if (fs_device_parse_packet(active_device, rx_buffer, last_received_udp, FS_COMMUNICATION_MODE_TCP_UDP) < 0)
             {
                 fs_log_output("[Trifecta] Could not parse data! Is there interference?");
             }

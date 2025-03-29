@@ -125,22 +125,30 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *run_status_flag, void *thread_handle, size_t stack_size, int priority, int core_affinity)
+/// @brief Platform-specific start thread given a function handle.
+/// @param thread_func Pointer to the thread function handle.
+/// @param params Parameters to pass to the thread function.
+/// @param thread_running_flag Pointer to the flag used to indicate thread status.
+/// @param stack_size Size of the stack allocated for the thread.
+/// @param priority Priority level of the thread.
+/// @param core_affinity -1 for indifference, else preferred core number
+/// @return Status of the thread creation (0 for success, -1 for failure).
+int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
-    if (thread_func == NULL || run_status_flag == NULL || thread_handle == NULL)
+    if (thread_func == NULL || thread_running_flag == NULL)
     {
-        fs_log_output("[Trifecta] Error: Invalid thread function, run flag, or thread handle!\n");
+        fs_log_output("[Trifecta] Error: Invalid thread function or running flag!\n");
         return -1;
     }
 
-    else if (run_status_flag != NULL && *run_status_flag == FS_RUN_STATUS_RUNNING)
+    else if(thread_running_flag != NULL && *thread_running_flag != 0)
     {
         fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
-        return 0;
+        return 0; // Thread already running
     }
 
     // Ensure the flag is set to indicate the thread is running
-    *run_status_flag = FS_RUN_STATUS_RUNNING;
+    *thread_running_flag = true;
 
     TaskHandle_t task_handle = NULL;
     BaseType_t result;
@@ -158,7 +166,7 @@ int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *run_
     if (result != pdPASS)
     {
         fs_log_output("[Trifecta] Error: Task creation failed!\n");
-        *run_status_flag = FS_RUN_STATUS_ERROR;
+        *thread_running_flag = 0;
         return -1;
     }
 
@@ -433,7 +441,7 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
 
 /// @brief Receive data over serial communication
 /// @param device_handle Pointer to the device information structure
-/// @param rx_buffer Pointer to the receive data buffer
+/// @param rx_buffer Pointer to the receive data buffer (this buffer is cleared on read)
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
@@ -462,6 +470,8 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
         fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
         return -1;
     }
+    // Clear only the specified buffer size
+    memset(&rx_buffer, 0, length_bytes);
 
     size_t buffer_data_len = 0;
     if (uart_get_buffered_data_len(device_handle->serial_port, (size_t *)&buffer_data_len) != 0)
@@ -472,12 +482,14 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
 
     if (buffer_data_len > length_bytes)
     {
-        fs_log_output("[Trifecta] Error: Data of length %ld would overflow buffer size %ld!", buffer_data_len, length_bytes);
-        uart_flush(device_handle->serial_port);
-        return -1;
+        fs_log_output("[Trifecta] Warning: Data length %ld exceeds buffer size %ld. Truncating data.",
+                      buffer_data_len, length_bytes);
+        buffer_data_len = length_bytes; // Read only up to buffer size
     }
 
     ssize_t rx_len = uart_read_bytes(device_handle->serial_port, rx_buffer, buffer_data_len, timeout_micros / 1000);
+    // ssize_t rx_len = uart_read_bytes(device_handle->serial_port, rx_buffer, FS_MAX_DATA_LENGTH, timeout_micros / 1000);
+
     if (rx_len > 0)
     {
         fs_log_output("[Trifecta] Read data from port %d - length %d!", device_handle->serial_port, rx_len);
