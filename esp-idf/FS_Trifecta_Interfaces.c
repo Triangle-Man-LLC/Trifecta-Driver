@@ -11,7 +11,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/uart.h" 
+#include "driver/uart.h"
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
@@ -125,22 +125,22 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *run_status_flag, void *thread_handle, size_t stack_size, int priority, int core_affinity)
 {
-    if (thread_func == NULL || thread_running_flag == NULL)
+    if (thread_func == NULL || run_status_flag == NULL || thread_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Invalid thread function or running flag!\n");
+        fs_log_output("[Trifecta] Error: Invalid thread function, run flag, or thread handle!\n");
         return -1;
     }
 
-    else if(thread_running_flag != NULL && *thread_running_flag != 0)
+    else if (run_status_flag != NULL && *run_status_flag == FS_RUN_STATUS_RUNNING)
     {
         fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
-        return 0; // Thread already running
+        return 0;
     }
 
     // Ensure the flag is set to indicate the thread is running
-    *thread_running_flag = true;
+    *run_status_flag = FS_RUN_STATUS_RUNNING;
 
     TaskHandle_t task_handle = NULL;
     BaseType_t result;
@@ -158,7 +158,7 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
     if (result != pdPASS)
     {
         fs_log_output("[Trifecta] Error: Task creation failed!\n");
-        *thread_running_flag = 0;
+        *run_status_flag = FS_RUN_STATUS_ERROR;
         return -1;
     }
 
@@ -168,10 +168,15 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
 /// @brief Some platforms (e.g. FreeRTOS) require thread exit to be properly handled.
 /// This function should implement that behavior.
 /// @return Should always return 0...
-int fs_thread_exit()
+int fs_thread_exit(void *thread_handle)
 {
-    vTaskDelete(NULL);
-    return 0;
+    if (thread_handle == NULL)
+    {
+        vTaskDelete(NULL);
+        return 0;
+    }
+    vTaskDelete(*(TaskHandle_t *)thread_handle);
+    return 0; // Success
 }
 
 /// @brief Transmit data over a networked TCP connection
@@ -314,7 +319,7 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
     if (actual_len != length_bytes)
     {
         fs_log_output("[Trifecta] Error: Writing data over serial failed! Expected length: %ld, actual: %ld", length_bytes, actual_len);
-        return -1; 
+        return -1;
     }
 
     fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld - data %s", device_handle->serial_port, actual_len, tx_buffer);

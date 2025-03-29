@@ -11,25 +11,21 @@
 
 #include "FS_Trifecta_Networked.h"
 
-static bool networked_running = false;
-
-static fs_driver_config *config = NULL;
-
-/// @brief Updater thread
-/// @param params
+/// @brief Updater thread, there is one of these per device connected.
+/// @param params Passes the device handle to the thread.
 /// @return
 static void fs_network_update_thread(void *params)
 {
     if (params == NULL)
     {
         fs_log_output("[Trifecta] Error: Network thread params point to an invalid instance of fs_device_info!");
-        fs_thread_exit();
+        fs_thread_exit(NULL);
         return;
     }
 
     fs_device_info *active_device = (fs_device_info *)params;
-    const int delay_time_millis = config->task_wait_ms;
-    const int receive_timeout_micros = config->read_timeout_micros;
+    const int delay_time_millis = active_device->driver_config.task_wait_ms;
+    const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
 
     int rx_buffer[FS_MAX_DATA_LENGTH] = {0};
     memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
@@ -37,7 +33,7 @@ static void fs_network_update_thread(void *params)
     size_t last_received_tcp = 0;
     size_t last_received_udp = 0;
 
-    while (networked_running)
+    while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
         last_received_tcp = fs_receive_networked_tcp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         fs_log_output("[Trifecta] TCP:RX %d", last_received_tcp);
@@ -62,18 +58,9 @@ static void fs_network_update_thread(void *params)
         }
         fs_delay(delay_time_millis);
     }
-    fs_thread_exit();
-    return;
-}
 
-int fs_network_set_driver_config(fs_driver_config *driver_config)
-{
-    if (driver_config == NULL)
-    {
-        return -1;
-    }
-    config = driver_config;
-    return 0;
+    fs_thread_exit(&active_device->update_thread_handle);
+    return;
 }
 
 /// @brief Generic message send over network (TCP).
@@ -115,18 +102,12 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
         return -1;
     }
 
-    if (config == NULL)
-    {
-        fs_log_output("[Trifecta] Error: Did not set driver config!\n");
-        return -1;
-    }
-
     // Define thread parameters
-    const int task_priority = config->background_task_priority;
-    const int core_affinity = config->background_task_core_affinity;
-    const int task_stack_size = config->task_stack_size_bytes;
+    const int task_priority = device_handle->driver_config.background_task_priority;
+    const int core_affinity = device_handle->driver_config.background_task_core_affinity;
+    const int task_stack_size = device_handle->driver_config.task_stack_size_bytes;
 
-    int status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &networked_running, task_stack_size, task_priority, core_affinity);
+    int status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &device_handle->status, &device_handle->update_thread_handle, task_stack_size, task_priority, core_affinity);
 
     if (status != 0)
     {
@@ -201,7 +182,7 @@ int fs_network_read_one_shot(fs_device_info *device_handle)
 int fs_network_exit(fs_device_info *device_handle)
 {
     char send_buf[16] = {0};
-    networked_running = false; // Stop network-related activities
+    device_handle->status = FS_RUN_STATUS_IDLE;
 
     // Prepare the command to stop streaming
     snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 0);
