@@ -1,4 +1,3 @@
-
 # Drivers for Trifecta IMU Devices #
 
 This repository contains driver software for the <b>Intelligent Sensor Fusion</b> IMU/navigation device series. 
