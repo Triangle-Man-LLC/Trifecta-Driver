@@ -27,73 +27,29 @@
 #define FS_TRIFECTA_SERIAL_BAUDRATE 2000000
 #define FS_MAX_DATA_LENGTH 512
 
+#define FS_MAX_NUMBER_DEVICES 16
+
 #define FS_GYRO_SCALER_DPS 500
 #define FS_ACCEL_SCALER_Gs 4
 
 #define DEGREES_TO_RADIANS 0.0174533f
 
+#define FS_MAX_DEVICE_NUMBER 1
+
+#define FS_MAX_CMD_QUEUE_LENGTH 4
+#define FS_MAX_CMD_LENGTH 64
+
+#define FS_MAX_PACKET_QUEUE_LENGTH 4
+#define FS_MAX_PACKET_LENGTH 256
+
+#define FS_SERIAL_PACKET_HEADER ':'
+#define FS_SERIAL_PACKET_FOOTER '!'
+#define FS_SERIAL_COMMAND_TERMINATOR ';'
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-    /// @brief Communication mode between the device and the host (this machine)
-    typedef enum fs_communication_mode
-    {
-        FS_COMMUNICATION_MODE_UNINITIALIZED = -1, // This is used when not initialized
-        FS_COMMUNICATION_MODE_SERIAL = 0,         // Wired serial
-        FS_COMMUNICATION_MODE_TCP_UDP = 1,        // UDP streaming
-        FS_COMMUNICATION_MODE_BLUETOOTH = 2,      // Bluetooth serial streaming
-        FS_COMMUNICATION_MODE_CAN = 3,            // CAN bus
-        FS_COMMUNICATION_MODE_I2C = 4,            // I2C bus
-    } fs_communication_mode;
-
-    typedef struct fs_driver_config
-    {
-        int background_task_priority;      // Priority of the background task for obtaining updates from the device (leave as -1 if no preference)
-        int background_task_core_affinity; // Core to pin the background task to (leave as -1 if no preference)
-        int read_timeout_micros;           // How long to wait (microseconds) to read data
-        int task_wait_ms;                  // How long to wait in between updates of the background task
-        int task_stack_size_bytes;         // How much to allocate to the background task
-    } fs_driver_config;
-
-#define FS_DRIVER_CONFIG_DEFAULT { \
-    6,                             \
-    1,                             \
-    1000,                          \
-    3,                             \
-    16384,                         \
-}
-
-    /// @brief Device information container
-    typedef struct fs_device_info
-    {
-        char device_name[32];                     // Unique identifier for device name
-        int32_t device_id;                        // Unique identifier for the device type
-        fs_communication_mode communication_mode; // Communication mode
-        int32_t ping;                             // Time since last received communication from device
-
-        char ip_addr[39]; // If networking is used, this is the corresponding IP address string
-        int ip_port;      // Always 8888
-        int tcp_sock;     // TCP socket number
-        int udp_sock;     // UDP socket number
-
-        int serial_port;  // If serial communication of some kind is used, this is the corresponding port
-        int32_t baudrate; // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
-    } fs_device_info;
-
-#define FS_DEVICE_INFO_UNINITIALIZED {                                                                           \
-    "",                               /* device_name */                                                          \
-    0,                                /* device_id */                                                            \
-    FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode - assuming you have a default value for this enum */ \
-    9999,                             /* ping */                                                                 \
-    {0},                              /* ip_addr */                                                              \
-    8888,                             /* ip_port */                                                              \
-    -1,                               /* tcp_sock */                                                             \
-    -1,                               /* udp_sock */                                                             \
-    -1,                               /* serial_port */                                                          \
-    0                                 /* baudrate */                                                             \
-}
 
     typedef struct fs_quaternion
     {
@@ -291,6 +247,91 @@ extern "C"
         fs_imu_regular_packet regular;
         fs_imu_composite_packet_2 composite2;
     } __attribute__((packed)) fs_packet_union;
+
+    /// @brief Communication mode between the device and the host (this machine)
+    typedef enum fs_communication_mode
+    {
+        FS_COMMUNICATION_MODE_UNINITIALIZED = -1, // This is used when not initialized
+        FS_COMMUNICATION_MODE_SERIAL = 0,         // Wired serial
+        FS_COMMUNICATION_MODE_TCP_UDP = 1,        // UDP streaming
+        FS_COMMUNICATION_MODE_BLUETOOTH = 2,      // Bluetooth serial streaming
+        FS_COMMUNICATION_MODE_CAN = 3,            // CAN bus
+        FS_COMMUNICATION_MODE_I2C = 4,            // I2C bus
+    } fs_communication_mode;
+
+    typedef enum fs_run_status
+    {
+        FS_RUN_STATUS_ERROR = -1,
+        FS_RUN_STATUS_IDLE = 0,
+        FS_RUN_STATUS_RUNNING = 1,
+    } fs_run_status;
+
+    typedef struct fs_driver_config
+    {
+        int background_task_priority;      // Priority of the background task for obtaining updates from the device (leave as -1 if no preference)
+        int background_task_core_affinity; // Core to pin the background task to (leave as -1 if no preference)
+        int read_timeout_micros;           // How long to wait (microseconds) to read data
+        int task_wait_ms;                  // How long to wait in between updates of the background task
+        int task_stack_size_bytes;         // How much to allocate to the background task
+    } fs_driver_config;
+
+#define FS_DRIVER_CONFIG_DEFAULT { \
+    6,                             \
+    1,                             \
+    1000,                          \
+    3,                             \
+    16384,                         \
+}
+
+    /// @brief Device information container
+    typedef struct fs_device_info
+    {
+        char device_name[32];                     // Unique identifier for device name
+        int32_t device_id;                        // Unique identifier for the device type
+        fs_communication_mode communication_mode; // Communication mode
+        int32_t ping;                             // Time since last received communication from device
+
+        fs_driver_config driver_config; // Device driver configuration (each device has its own thread spawned)
+        fs_run_status status;           // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
+        // void *update_thread_handle;     // Pointer to the run thread of the device
+
+        char ip_addr[39]; // If networking is used, this is the corresponding IP address string
+        int ip_port;      // Always 8888
+        int tcp_sock;     // TCP socket number
+        int udp_sock;     // UDP socket number
+
+        int serial_port;  // If serial communication of some kind is used, this is the corresponding port
+        int32_t baudrate; // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
+
+        fs_packet_union last_received_packet; // The last received packet for this device
+
+        fs_packet_union packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH][FS_MAX_PACKET_LENGTH]; // Packet queue buffer for the device (read-only)
+        size_t packet_buf_queue_size;                                                   // Current number of received packets (read-only)
+
+        char command_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Command buffer for the device (read-only)
+        size_t command_queue_size;                                  // Current number of received commands (read-only)
+
+    } fs_device_info;
+
+#define FS_DEVICE_INFO_UNINITIALIZED {                              \
+    "",                                  /* device_name */          \
+    0,                                   /* device_id */            \
+    FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */   \
+    9999,                                /* ping */                 \
+    FS_DRIVER_CONFIG_DEFAULT,            /* driver_config */        \
+    FS_RUN_STATUS_IDLE,                  /* status */               \
+    {0},                                 /* ip_addr */              \
+    8888,                                /* ip_port */              \
+    -1,                                  /* tcp_sock */             \
+    -1,                                  /* udp_sock */             \
+    -1,                                  /* serial_port */          \
+    0,                                   /* baudrate */             \
+    {0},                                 /* last_received_packet */ \
+    {{0}},                                                          \
+    {0},                                                            \
+    {{0}},                                                          \
+    {0},                                                            \
+}
 
 #ifdef __cplusplus
 }
