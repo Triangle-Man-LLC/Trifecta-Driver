@@ -26,9 +26,13 @@ static void fs_network_update_thread(void *params)
     fs_device_info *active_device = (fs_device_info *)params;
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
+    active_device->status = FS_RUN_STATUS_RUNNING;
 
-    int rx_buffer[FS_MAX_DATA_LENGTH] = {0};
+    uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
     memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
+
+    fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
+                  active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
     size_t last_received_tcp = 0;
     size_t last_received_udp = 0;
@@ -59,7 +63,7 @@ static void fs_network_update_thread(void *params)
         fs_delay(delay_time_millis);
     }
 
-    fs_thread_exit(&active_device->update_thread_handle);
+    fs_thread_exit(NULL);
     return;
 }
 
@@ -107,7 +111,7 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
     const int core_affinity = device_handle->driver_config.background_task_core_affinity;
     const int task_stack_size = device_handle->driver_config.task_stack_size_bytes;
 
-    int status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &device_handle->status, &device_handle->update_thread_handle, task_stack_size, task_priority, core_affinity);
+    int status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &device_handle->status, task_stack_size, task_priority, core_affinity);
 
     if (status != 0)
     {

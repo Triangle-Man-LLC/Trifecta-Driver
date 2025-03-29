@@ -114,6 +114,8 @@ int fs_init_serial_driver(fs_device_info *device_handle)
         fs_log_output("[Trifecta] Serial port number cannot be less than zero!");
         return -1;
     }
+    // On ESP-IDF, this is necessary to prevent bytes from being discarded at high baud rates
+    ESP_ERROR_CHECK(uart_set_rx_full_threshold(device_handle->serial_port, 64));
     return 0;
 }
 
@@ -133,7 +135,7 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -141,14 +143,11 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
         return -1;
     }
 
-    else if(thread_running_flag != NULL && *thread_running_flag != 0)
+    else if(thread_running_flag != NULL && *thread_running_flag == FS_RUN_STATUS_RUNNING)
     {
         fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
         return 0; // Thread already running
     }
-
-    // Ensure the flag is set to indicate the thread is running
-    *thread_running_flag = true;
 
     TaskHandle_t task_handle = NULL;
     BaseType_t result;
@@ -166,9 +165,11 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
     if (result != pdPASS)
     {
         fs_log_output("[Trifecta] Error: Task creation failed!\n");
-        *thread_running_flag = 0;
+        *thread_running_flag = FS_RUN_STATUS_ERROR;
         return -1;
     }
+    // Ensure the flag is set to indicate the thread is running
+    *thread_running_flag = FS_RUN_STATUS_RUNNING;
 
     return 0;
 }
@@ -471,7 +472,7 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
         return -1;
     }
     // Clear only the specified buffer size
-    memset(&rx_buffer, 0, length_bytes);
+    memset(rx_buffer, 0, length_bytes);
 
     size_t buffer_data_len = 0;
     if (uart_get_buffered_data_len(device_handle->serial_port, (size_t *)&buffer_data_len) != 0)
@@ -488,7 +489,6 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
     }
 
     ssize_t rx_len = uart_read_bytes(device_handle->serial_port, rx_buffer, buffer_data_len, timeout_micros / 1000);
-    // ssize_t rx_len = uart_read_bytes(device_handle->serial_port, rx_buffer, FS_MAX_DATA_LENGTH, timeout_micros / 1000);
 
     if (rx_len > 0)
     {

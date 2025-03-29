@@ -45,8 +45,8 @@ extern "C"
     /// @param priority Priority of the thread.
     /// @param core_affinity Core affinity for the thread (-1 for no preference).
     /// @return 0 on success, or a negative error code on failure.
-    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *run_status_flag, void *thread_handle, size_t stack_size, int priority, int core_affinity);
-
+    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity);
+    
     /// @brief Exits the currently running thread.
     /// @param thread_handle Pointer to the thread handle. 
     /// Some platforms (e.g. FreeRTOS) allow forceful deletion of the thread using the handle, 

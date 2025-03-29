@@ -36,10 +36,10 @@
 
 #define FS_MAX_DEVICE_NUMBER 1
 
-#define FS_MAX_CMD_QUEUE_LENGTH 8
+#define FS_MAX_CMD_QUEUE_LENGTH 4
 #define FS_MAX_CMD_LENGTH 64
 
-#define FS_MAX_PACKET_QUEUE_LENGTH 8
+#define FS_MAX_PACKET_QUEUE_LENGTH 4
 #define FS_MAX_PACKET_LENGTH 256
 
 #define FS_SERIAL_PACKET_HEADER ':'
@@ -293,7 +293,7 @@ extern "C"
 
         fs_driver_config driver_config; // Device driver configuration (each device has its own thread spawned)
         fs_run_status status;           // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
-        void *update_thread_handle;     // Pointer to the run thread of the device
+        // void *update_thread_handle;     // Pointer to the run thread of the device
 
         char ip_addr[39]; // If networking is used, this is the corresponding IP address string
         int ip_port;      // Always 8888
@@ -305,33 +305,32 @@ extern "C"
 
         fs_packet_union last_received_packet; // The last received packet for this device
 
-        fs_packet_union packet_buf_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Packet queue buffer for the device (read-only)
-        size_t packet_buf_queue_size;                                                 // Current number of received packets (read-only)
+        fs_packet_union packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH][FS_MAX_PACKET_LENGTH]; // Packet queue buffer for the device (read-only)
+        size_t packet_buf_queue_size;                                                   // Current number of received packets (read-only)
 
         char command_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Command buffer for the device (read-only)
-        int command_queue_size;                                         // Current number of received commands (read-only)
+        size_t command_queue_size;                                  // Current number of received commands (read-only)
 
     } fs_device_info;
 
-#define FS_DEVICE_INFO_UNINITIALIZED {                               \
-    "",                                  /* device_name */           \
-    0,                                   /* device_id */             \
-    FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */    \
-    9999,                                /* ping */                  \
-    FS_DRIVER_CONFIG_DEFAULT,            /* driver_config */         \
-    FS_RUN_STATUS_IDLE,                  /* status */                \
-    NULL,                                /* update_thread_handle */  \
-    {0},                                 /* ip_addr */               \
-    8888,                                /* ip_port */               \
-    -1,                                  /* tcp_sock */              \
-    -1,                                  /* udp_sock */              \
-    -1,                                  /* serial_port */           \
-    0,                                   /* baudrate */              \
-    {0},                                 /* last_received_packet */  \
-    {{0}},                               /* packet_buf_queue */      \
-    0,                                   /* packet_buf_queue_size */ \
-    {{0}},                               /* command_queue */         \
-    0                                    /* command_queue_size */    \
+#define FS_DEVICE_INFO_UNINITIALIZED {                              \
+    "",                                  /* device_name */          \
+    0,                                   /* device_id */            \
+    FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */   \
+    9999,                                /* ping */                 \
+    FS_DRIVER_CONFIG_DEFAULT,            /* driver_config */        \
+    FS_RUN_STATUS_IDLE,                  /* status */               \
+    {0},                                 /* ip_addr */              \
+    8888,                                /* ip_port */              \
+    -1,                                  /* tcp_sock */             \
+    -1,                                  /* udp_sock */             \
+    -1,                                  /* serial_port */          \
+    0,                                   /* baudrate */             \
+    {0},                                 /* last_received_packet */ \
+    {{0}},                                                          \
+    {0},                                                            \
+    {{0}},                                                          \
+    {0},                                                            \
 }
 
 #ifdef __cplusplus

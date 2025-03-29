@@ -28,8 +28,8 @@ static int fs_enqueue_into_command_queue(fs_device_info *device_handle, char *st
         return -1;
     }
     device_handle->command_queue_size++;
-    memset(device_handle->command_queue[device_handle->command_queue_size - 1], 0, FS_MAX_CMD_LENGTH);
-    memcpy(device_handle->command_queue[device_handle->command_queue_size - 1], str, len);
+    memset(&device_handle->command_queue[device_handle->command_queue_size - 1], 0, FS_MAX_CMD_LENGTH);
+    memcpy(&device_handle->command_queue[device_handle->command_queue_size - 1], str, len);
     return 0;
 }
 
@@ -126,7 +126,7 @@ int fs_handle_received_commands(fs_device_info *device_handle, const void *cmd_b
         if (command_length > 0 && command[0] == CMD_IDENTIFY)
         {
             size_t name_length = command_length - 1; // Exclude CMD_IDENTIFY and ';'
-            strncpy(&device_handle->device_name, command + 1, name_length);
+            strncpy(device_handle->device_name, command + 1, name_length);
             device_handle->device_name[name_length] = '\0';
         }
     }
@@ -298,7 +298,7 @@ static int fs_enqueue_into_packet_queue(fs_device_info *device_handle, const fs_
         // return -1;
     }
 
-    device_handle->packet_buf_queue_size++;
+    device_handle->packet_buf_queue_size ++;
     memset(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], 0, sizeof(fs_packet_union));
     memcpy(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], packet, sizeof(fs_packet_union));
     return 0;
@@ -621,7 +621,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
                 fs_log_output("[Trifecta] Scanner state: %d, PCKT (len %d): %s\n", scanner_state, strnlen(segment, endIndex - startIndex - 1), segment);
 
                 // Reset the buffer for the next search
-                memset(last_data_string, 0, index + 1);
+                memset(&last_data_string, 0, index + 1);
 
                 startIndex = index + 1;
                 endIndex = -1;
