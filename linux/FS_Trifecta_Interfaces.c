@@ -157,6 +157,12 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
 static int configure_serial_port(int fd)
 {
     struct termios options;
+    if (fd <= 2)
+    {
+        // File descriptors 0, 1, 2 are typically STDIN, STDOUT, STDERR
+        fs_log_output("[Trifecta] Error: Invalid file descriptor %d!", fd);
+        return -1;
+    }
 
     // Get the current options for the port
     if (tcgetattr(fd, &options) != 0)
@@ -318,7 +324,7 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void (*thread_func)(void *), void *params, bool *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -326,19 +332,37 @@ int fs_thread_start(void (*thread_func)(void *), void *params, bool *thread_runn
         return -1;
     }
 
-    *thread_running_flag = true;
-
     pthread_t thread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    // Set stack size
-    pthread_attr_setstacksize(&attr, stack_size);
+    // Apply system defaults for parameters if their values are < 0
+    if (stack_size <= 0)
+    {
+        stack_size = PTHREAD_STACK_MIN; // Default stack size, platform-defined minimum
+    }
+    if (priority < 0)
+    {
+        priority = sched_get_priority_min(SCHED_OTHER); // Default priority, lowest valid
+    }
+    if (core_affinity < 0)
+    {
+        core_affinity = -1; // Indifferent to core affinity
+    }
 
-    // Set thread priority if needed
+    // Set stack size
+    if (pthread_attr_setstacksize(&attr, stack_size) != 0)
+    {
+        fs_log_output("[Trifecta] Warning: Failed to set stack size!\n");
+    }
+
+    // Set thread priority if supported
     struct sched_param param;
     param.sched_priority = priority;
-    pthread_attr_setschedparam(&attr, &param);
+    if (pthread_attr_setschedparam(&attr, &param) != 0)
+    {
+        fs_log_output("[Trifecta] Warning: Failed to set thread priority!\n");
+    }
 
     // Set CPU core affinity if specified and supported
     if (core_affinity >= 0)
@@ -346,26 +370,36 @@ int fs_thread_start(void (*thread_func)(void *), void *params, bool *thread_runn
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         CPU_SET(core_affinity, &cpuset);
-        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+        int affinity_result = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+        if (affinity_result != 0)
+        {
+            fs_log_output("[Trifecta] Warning: Failed to set thread affinity!\n");
+        }
     }
 
-    int result = pthread_create(&thread, &attr, (void *(*)(void *))thread_func, params);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    // Create the thread
+    *thread_running_flag = FS_RUN_STATUS_RUNNING;
+    int result = pthread_create(&thread, &attr, thread_func, params);
     pthread_attr_destroy(&attr);
 
     if (result != 0)
     {
-        fs_log_output("[Trifecta] Error: Thread creation failed!\n");
-        *thread_running_flag = false;
+        fs_log_output("[Trifecta] Error: Thread creation failed: errno %d!\n", errno);
+        *thread_running_flag = FS_RUN_STATUS_ERROR;
         return -1;
     }
 
+    fs_log_output("[Trifecta] Thread created successfully.\n");
     return 0;
 }
 
 /// @brief Some platforms (e.g. FreeRTOS) require thread exit to be properly handled.
 /// This function should implement that behavior.
+/// @param thread_handle On Linux systems, this has no impact.
 /// @return Should always return 0...
-int fs_thread_exit()
+int fs_thread_exit(void *thread_handle)
 {
     pthread_exit(NULL);
     return 0;
