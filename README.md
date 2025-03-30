@@ -1,19 +1,17 @@
-# ESP-IDF Driver Setup #
+# Drivers for Trifecta IMU Devices #
 
-Espressif ESP32 devices are supported under the <b>ESP-IDF</b> framework. This entire sub-folder `Trifecta-ESP-IDF` should be copied into the `components` folder of your ESP-IDF project. 
+This repository contains driver software for the <b>Intelligent Sensor Fusion</b> IMU/navigation device series. 
 
-Typical folder structure: 
+### Installation and Usage ###
 
-```
-YOUR_PROJECT_NAME/
-  ├── components/
-  │   └── Trifecta-ESP-IDF/
-  └── main/
-      └── main.c
-```
+Currently supported platforms are <b><a href = "/Trifecta-Driver/tree/esp-idf">ESP-IDF (C/C++)</a></b>, <b><a href = "/Trifecta-Driver/tree/linux">Linux (C/C++)</a></b>, <b><a href="/Trifecta-Driver/tree/python">Python</a></b>, and <b><a href="/Trifecta-Micropython/">Micropython</a></b>. (Platforms with in-progress support: <b><a href="/Trifecta-Driver/tree/micropython">STM32 (C/C++)</a></b>.) 
 
-Please see the following for example project:
+Platform-specific installation instructions are located in the README.md of their respective folders. A recommended deployment platform should be at least 32-bit processor with clock speed of 40 MHz and 64 kB of memory.
 
-<a href = "https://github.com/Triangle-Man-LLC/Trifecta-Sample-ESP-IDF">ESP-IDF Project Template</a>
+### Porting the Drivers to Another Platform ###
 
-You are strongly advised to set `CONFIG_FREERTOS_HZ=1000` in `sdkconfig`. This ensures that the RTOS tick frequency is exactly 1 millisecond, which is fast enough to read from the IMU at 200 Hz.
+The drivers can be ported to platforms by implementing the relevant methods listed in the <a href = "/include/FS_Trifecta_Interfaces.h">Interfaces Definitions</a> file. 
+
+Any method which is not relevant/supported (e.g. wireless networking methods on STM32 which does not have wireless networking support) can be made to return -1 to indicate the lack of support.
+
+The specific implementation of the `FS_Interfaces.h` file should be placed in the `/Trifecta-Driver/<PLATFORM_NAME>/FS_Interfaces.c` file of the project.
