@@ -377,7 +377,7 @@ int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thre
         }
     }
 
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHABLE);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     // Create the thread
     *thread_running_flag = FS_RUN_STATUS_RUNNING;
