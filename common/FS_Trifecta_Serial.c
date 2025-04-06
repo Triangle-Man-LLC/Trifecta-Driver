@@ -33,7 +33,7 @@ static void fs_serial_update_thread(void *params)
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
                   active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
-    size_t last_received_serial = 0;
+    ssize_t last_received_serial = 0;
 
     while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
