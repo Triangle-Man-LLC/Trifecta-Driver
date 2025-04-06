@@ -32,7 +32,8 @@ extern "C"
     int fs_network_device_restart(fs_device_info *device_handle);
     int fs_network_set_device_operating_mode(fs_device_info *device_handle, fs_communication_mode mode);
     int fs_network_set_network_params(fs_device_info *device_handle, char *ssid, char *password);
-
+    int fs_network_set_host_udp_port(fs_device_info *device_handle, int udp_port);
+    
 #ifdef __cplusplus
 }
 #endif
