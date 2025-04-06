@@ -11,6 +11,9 @@
 
 #include "FS_Trifecta_Networked.h"
 
+/// @brief This counter increments when more network devices are added, since it is necessary to bind UDP sockets to unique ports
+static int num_network_devices = 0; 
+
 /// @brief Updater thread, there is one of these per device connected.
 /// @param params Passes the device handle to the thread.
 /// @return
@@ -91,12 +94,23 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
 
     // Set target IP address
     strncpy(device_handle->ip_addr, ip_addr, sizeof(device_handle->ip_addr) - 1);
-    device_handle->ip_port = FS_TRIFECTA_PORT;
+    device_handle->ip_port = FS_TRIFECTA_PORT; // TCP port always 8888
 
     // Initialize TCP driver
     if (fs_init_network_tcp_driver(device_handle) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not start TCP server!");
+        device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+        return -1;
+    }
+
+    // Begin UDP after establishing connection
+    // Note that UDP port should be incremented to enable support for multiple devices
+    device_handle->ip_port = FS_TRIFECTA_PORT + num_network_devices; // Starting at 8888, then 8889, etc.
+    num_network_devices ++;
+    if (fs_network_set_host_udp_port(device_handle, device_handle->ip_port) != 0)
+    {
+        fs_log_output("[Trifecta] Error: Could not set UDP host port!");
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         return -1;
     }
@@ -108,7 +122,7 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         return -1;
     }
-
+    
     // Define thread parameters
     const int task_priority = device_handle->driver_config.background_task_priority;
     const int core_affinity = device_handle->driver_config.background_task_core_affinity;
@@ -239,6 +253,23 @@ int fs_network_set_network_params(fs_device_info *device_handle, char *ssid, cha
 {
     char send_buf[128] = {0};
     snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, ssid);
+    size_t send_len = strnlen(send_buf, 16) + 1;
+    const int receive_timeout_micros = 10000;
+    return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
+}
+
+/// @brief 
+/// @param device_handle 
+/// @return 
+int fs_network_set_host_udp_port(fs_device_info *device_handle, int udp_port)
+{
+    char send_buf[128] = {0};
+    if (udp_port < 1024 || udp_port > 65535)
+    {
+        fs_log_output("[Trifecta] %d is an invalid UDP port!", udp_port);
+        return -1;
+    }
+    snprintf(send_buf, 128, ";%c%d;", CMD_SET_LISTENING_PORT, udp_port);
     size_t send_len = strnlen(send_buf, 16) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;

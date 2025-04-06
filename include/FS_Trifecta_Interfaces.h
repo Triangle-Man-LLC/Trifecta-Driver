@@ -85,7 +85,7 @@ extern "C"
     /// @param length_bytes Number of bytes to receive.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes received on success, or a negative error code on failure.
-    ssize_t fs_receive_networked_tcp(const fs_device_info device_list[FS_MAX_NUMBER_DEVICES], fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Receives data via UDP from the specified device.
     /// @param device_list Pointer to the list of connected devices.
@@ -94,7 +94,7 @@ extern "C"
     /// @param length_bytes Number of bytes to receive.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes received on success, or a negative error code on failure.
-    ssize_t fs_receive_networked_udp(const fs_device_info device_list[FS_MAX_NUMBER_DEVICES], fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Receives data via serial communication from the specified device.
     /// @param device_handle Pointer to the device information structure.

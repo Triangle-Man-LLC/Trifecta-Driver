@@ -39,7 +39,7 @@ int fs_init_network_tcp_driver(fs_device_info *device_handle)
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(INADDR_ANY);
+    server_addr.sin_port = htons(device_handle->ip_port);
 
     if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
     {
@@ -99,14 +99,14 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
         return -1;
     }
 
-    // Enable address reuse
-    int optval = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
-    {
-        fs_log_output("[Trifecta] Error: Could not set SO_REUSEADDR on UDP socket! Errno: %d\n", errno);
-        close(sockfd);
-        return -1;
-    }
+    // // Enable address reuse
+    // int optval = 1;
+    // if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
+    // {
+    //     fs_log_output("[Trifecta] Error: Could not set SO_REUSEADDR on UDP socket! Errno: %d\n", errno);
+    //     close(sockfd);
+    //     return -1;
+    // }
 
     // Set SO_NO_CHECK
     int bc = 1;
@@ -452,12 +452,13 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
     timeout.tv_usec = timeout_micros % 1000000;
     if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
-        fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)!");
+        fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)! Errno: %d", errno);
         return -1;
     }
+
     if (bind(device_handle->udp_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port);
+        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d! Errno: %d", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port, errno);
         // close(sockfd);
         return -1;
     }
