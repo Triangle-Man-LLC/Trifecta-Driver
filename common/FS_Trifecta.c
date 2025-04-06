@@ -59,7 +59,8 @@ int fs_initialize_networked(fs_device_info *device_handle, const char *device_ip
 
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_TCP_UDP)
   {
-    fs_log_output("[Trifecta] Info: Initialized network driver for device: %s (Port %s), Baud rate: %d\n", device_handle->device_name, device_handle->serial_port, device_handle->baudrate);
+    fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IP %s:%d\n",
+                  device_handle->tcp_sock, device_handle->udp_sock, device_handle->ip_addr, device_handle->ip_port);
     return 0;
   }
   else
@@ -121,14 +122,14 @@ int fs_start_stream(fs_device_info *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_start_device_stream(device_handle) != 0)
+    if (fs_serial_start_device_stream(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not start device serial stream!");
       return -1;
     }
     break;
   case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_start_device_stream(device_handle) != 0)
+    if (fs_network_start_device_stream(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not start device network stream!");
       return -1;
@@ -181,16 +182,16 @@ int fs_read_one_shot(fs_device_info *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_read_one_shot(device_handle) != 0)
+    if (fs_serial_read_one_shot(device_handle) < 0)
     {
-      fs_log_output("[Trifecta] Error: Could not stop device serial stream!");
+      fs_log_output("[Trifecta] Error: Could not transmit device serial read command!");
       return -1;
     }
     break;
   case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_read_one_shot(device_handle) != 0)
+    if (fs_network_read_one_shot(device_handle) < 0)
     {
-      fs_log_output("[Trifecta] Error: Could not stop device network stream!");
+      fs_log_output("[Trifecta] Error: Could not transmit device network read command!");
       return -1;
     }
     break;

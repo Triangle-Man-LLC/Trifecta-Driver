@@ -30,36 +30,39 @@ static void fs_network_update_thread(void *params)
 
     uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
     memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
+    uint8_t rx_buffer2[FS_MAX_DATA_LENGTH] = {0};
+    memset(rx_buffer2, 0, FS_MAX_DATA_LENGTH);
 
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
                   active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
-    size_t last_received_tcp = 0;
-    size_t last_received_udp = 0;
+    ssize_t last_received_tcp = 0;
+    ssize_t last_received_udp = 0;
 
     while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
-        last_received_tcp = fs_receive_networked_tcp(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
-        fs_log_output("[Trifecta] TCP:RX %d", last_received_tcp);
+        last_received_tcp = fs_receive_networked_tcp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
+        // fs_log_output("[Trifecta] TCP:RX %d", last_received_tcp);
         if (last_received_tcp > 0)
         {
             // TCP only receive command responses, so handle them here
-            if (fs_handle_received_commands(active_device, rx_buffer, last_received_tcp) < 0)
+            if (fs_handle_received_commands(active_device, &rx_buffer, last_received_tcp) < 0)
             {
                 fs_log_output("[Trifecta] Could not parse data! Is there interference?");
             }
         }
         memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
-        last_received_udp = fs_receive_networked_udp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
-        fs_log_output("[Trifecta] UDP:RX %d", last_received_udp);
+        last_received_udp = fs_receive_networked_udp(active_device, &rx_buffer2, FS_MAX_DATA_LENGTH, receive_timeout_micros);
+        // fs_log_output("[Trifecta] UDP:RX %d", last_received_udp);
         if (last_received_udp > 0)
         {
             // UDP only receive data packets, so handle them here
-            if (fs_device_parse_packet(active_device, rx_buffer, last_received_udp, FS_COMMUNICATION_MODE_TCP_UDP) < 0)
+            if (fs_device_parse_packet(active_device, &rx_buffer2, last_received_udp, FS_COMMUNICATION_MODE_TCP_UDP) < 0)
             {
                 fs_log_output("[Trifecta] Could not parse data! Is there interference?");
             }
         }
+        memset(rx_buffer2, 0, FS_MAX_DATA_LENGTH);
         fs_delay(delay_time_millis);
     }
 

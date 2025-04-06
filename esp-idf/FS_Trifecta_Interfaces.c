@@ -83,6 +83,7 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
     {
@@ -91,10 +92,25 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
     }
 
     // Create UDP socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    
     if (sockfd < 0)
     {
         fs_log_output("[Trifecta] Error: Could not create UDP socket!\n");
+        return -1;
+    }
+
+    int bc = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, &bc, sizeof(bc)) < 0)
+    {
+        fs_log_output("[Trifecta] Error: Failed to set sock options: errno %d", errno);
+        closesocket(sockfd);
+        return -1;
+    }
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port);
+        close(sockfd);
         return -1;
     }
 
@@ -382,7 +398,8 @@ ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer,
 
     if (recv_len < 0)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over TCP failed!");
+        // fs_log_output("[Trifecta] Error: Receiving data over TCP failed!");
+        // Usually, timeout condition, so say nothing
     }
 
     return recv_len;
@@ -420,6 +437,12 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
         return -1;
     }
 
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
     // Set the receive timeout
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
@@ -429,12 +452,25 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
         fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)!");
         return -1;
     }
+    if (bind(device_handle->udp_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port);
+        // close(sockfd);
+        return -1;
+    }
 
-    ssize_t recv_len = recv(device_handle->udp_sock, rx_buffer, length_bytes, 0);
+    struct sockaddr_in source_addr;
+    socklen_t addr_len = sizeof(source_addr);
+
+    // ssize_t recv_len = recv(device_handle->udp_sock, rx_buffer, length_bytes, 0);
+    ssize_t recv_len = recvfrom(device_handle->udp_sock, rx_buffer, length_bytes, 0, (struct sockaddr *)&source_addr, &addr_len);
 
     if (recv_len < 0)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over UDP failed!");
+        if(errno != EAGAIN)
+        {
+            fs_log_output("[Trifecta] Error: Receiving data over UDP failed! Errno: %d", errno);
+        }
     }
 
     return recv_len;
