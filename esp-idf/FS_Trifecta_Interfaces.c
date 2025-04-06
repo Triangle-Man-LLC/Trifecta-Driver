@@ -39,7 +39,7 @@ int fs_init_network_tcp_driver(fs_device_info *device_handle)
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_port = htons(INADDR_ANY);
 
     if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
     {
@@ -51,14 +51,14 @@ int fs_init_network_tcp_driver(fs_device_info *device_handle)
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
-        fs_log_output("[Trifecta] Error: Could not create TCP socket!\n");
+        fs_log_output("[Trifecta] Error: Could not create TCP socket! Errno: %d\n", errno);
         return -1;
     }
 
     // Connect to the device
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        fs_log_output("[Trifecta] Error: Could not connect to device!\n");
+        fs_log_output("[Trifecta] Error: Could not connect to device! Errno: %d\n", errno);
         close(sockfd);
         return -1;
     }
@@ -93,20 +93,31 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
 
     // Create UDP socket
     int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    
     if (sockfd < 0)
     {
-        fs_log_output("[Trifecta] Error: Could not create UDP socket!\n");
+        fs_log_output("[Trifecta] Error: Could not create UDP socket! Errno: %d\n", errno);
         return -1;
     }
 
+    // Enable address reuse
+    int optval = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
+    {
+        fs_log_output("[Trifecta] Error: Could not set SO_REUSEADDR on UDP socket! Errno: %d\n", errno);
+        close(sockfd);
+        return -1;
+    }
+
+    // Set SO_NO_CHECK
     int bc = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, &bc, sizeof(bc)) < 0)
     {
         fs_log_output("[Trifecta] Error: Failed to set sock options: errno %d", errno);
-        closesocket(sockfd);
+        close(sockfd);
         return -1;
     }
+
+    // Bind the socket
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port);
@@ -143,14 +154,6 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-/// @brief Platform-specific start thread given a function handle.
-/// @param thread_func Pointer to the thread function handle.
-/// @param params Parameters to pass to the thread function.
-/// @param thread_running_flag Pointer to the flag used to indicate thread status.
-/// @param stack_size Size of the stack allocated for the thread.
-/// @param priority Priority level of the thread.
-/// @param core_affinity -1 for indifference, else preferred core number
-/// @return Status of the thread creation (0 for success, -1 for failure).
 int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
@@ -159,7 +162,7 @@ int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thre
         return -1;
     }
 
-    else if(thread_running_flag != NULL && *thread_running_flag == FS_RUN_STATUS_RUNNING)
+    else if (thread_running_flag != NULL && *thread_running_flag == FS_RUN_STATUS_RUNNING)
     {
         fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
         return 0; // Thread already running
@@ -467,7 +470,7 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
 
     if (recv_len < 0)
     {
-        if(errno != EAGAIN)
+        if (errno != EAGAIN)
         {
             fs_log_output("[Trifecta] Error: Receiving data over UDP failed! Errno: %d", errno);
         }

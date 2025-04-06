@@ -96,7 +96,7 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
     // Initialize TCP driver
     if (fs_init_network_tcp_driver(device_handle) != 0)
     {
-        fs_log_output("[Trifecta] Error: Could not start TCP server!\n");
+        fs_log_output("[Trifecta] Error: Could not start TCP server!");
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         return -1;
     }
@@ -104,7 +104,7 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
     // Initialize UDP driver
     if (fs_init_network_udp_driver(device_handle) != 0)
     {
-        fs_log_output("[Trifecta] Error: Could not start UDP server!\n");
+        fs_log_output("[Trifecta] Error: Could not start UDP server!");
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         return -1;
     }
