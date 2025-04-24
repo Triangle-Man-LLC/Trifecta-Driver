@@ -336,14 +336,14 @@ int fs_set_ahrs_heading(fs_device_info *device_handle, float heading_deg)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_send_message(device_handle, &command, strnlen(command, sizeof(command))) != 0)
+    if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set device AHRS heading!");
       return -1;
     }
     break;
   case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_send_message(device_handle, &command, strnlen(command, sizeof(command))) != 0)
+    if (fs_network_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set device AHRS heading!");
       return -1;
@@ -364,14 +364,14 @@ int fs_set_ins_position(fs_device_info *device_handle, fs_vector3 *position)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_send_message(device_handle, &command, strnlen(command, sizeof(command))) != 0)
+    if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set INS position!");
       return -1;
     }
     break;
   case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_send_message(device_handle, &command, strnlen(command, sizeof(command))) != 0)
+    if (fs_network_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set INS position!");
       return -1;
