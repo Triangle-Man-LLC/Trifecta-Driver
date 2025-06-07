@@ -94,26 +94,26 @@ extern "C"
         uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
         uint32_t time; // Current time (in RTOS ticks)
 
-        int32_t ax0; // Unprocessed accelerometer value x
-        int32_t ay0; // Unprocessed accelerometer value y
-        int32_t az0; // Unprocessed accelerometer value z
-        int32_t gx0; // Unprocessed gyroscope value x
-        int32_t gy0; // Unprocessed gyroscope value y
-        int32_t gz0; // Unprocessed gyroscope value z
+        float ax0; // Unprocessed accelerometer value x
+        float ay0; // Unprocessed accelerometer value y
+        float az0; // Unprocessed accelerometer value z
+        float gx0; // Unprocessed gyroscope value x
+        float gy0; // Unprocessed gyroscope value y
+        float gz0; // Unprocessed gyroscope value z
 
-        int32_t ax1; // Unprocessed accelerometer value x
-        int32_t ay1; // Unprocessed accelerometer value y
-        int32_t az1; // Unprocessed accelerometer value z
-        int32_t gx1; // Unprocessed gyroscope value x
-        int32_t gy1; // Unprocessed gyroscope value y
-        int32_t gz1; // Unprocessed gyroscope value z
+        float ax1; // Unprocessed accelerometer value x
+        float ay1; // Unprocessed accelerometer value y
+        float az1; // Unprocessed accelerometer value z
+        float gx1; // Unprocessed gyroscope value x
+        float gy1; // Unprocessed gyroscope value y
+        float gz1; // Unprocessed gyroscope value z
 
-        int32_t ax2; // Unprocessed accelerometer value x
-        int32_t ay2; // Unprocessed accelerometer value y
-        int32_t az2; // Unprocessed accelerometer value z
-        int32_t gx2; // Unprocessed gyroscope value x
-        int32_t gy2; // Unprocessed gyroscope value y
-        int32_t gz2; // Unprocessed gyroscope value z
+        float ax2; // Unprocessed accelerometer value x
+        float ay2; // Unprocessed accelerometer value y
+        float az2; // Unprocessed accelerometer value z
+        float gx2; // Unprocessed gyroscope value x
+        float gy2; // Unprocessed gyroscope value y
+        float gz2; // Unprocessed gyroscope value z
 
         float q0; // Quaternion for orientation of device
         float q1;
@@ -187,26 +187,26 @@ extern "C"
         uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
         uint32_t time; // Current time (in RTOS ticks)
 
-        int32_t ax0; // Unprocessed accelerometer value x
-        int32_t ay0; // Unprocessed accelerometer value y
-        int32_t az0; // Unprocessed accelerometer value z
-        int32_t gx0; // Unprocessed gyroscope value x
-        int32_t gy0; // Unprocessed gyroscope value y
-        int32_t gz0; // Unprocessed gyroscope value z
+        float ax0; // Unprocessed accelerometer value x
+        float ay0; // Unprocessed accelerometer value y
+        float az0; // Unprocessed accelerometer value z
+        float gx0; // Unprocessed gyroscope value x
+        float gy0; // Unprocessed gyroscope value y
+        float gz0; // Unprocessed gyroscope value z
 
-        int32_t ax1; // Unprocessed accelerometer value x
-        int32_t ay1; // Unprocessed accelerometer value y
-        int32_t az1; // Unprocessed accelerometer value z
-        int32_t gx1; // Unprocessed gyroscope value x
-        int32_t gy1; // Unprocessed gyroscope value y
-        int32_t gz1; // Unprocessed gyroscope value z
+        float ax1; // Unprocessed accelerometer value x
+        float ay1; // Unprocessed accelerometer value y
+        float az1; // Unprocessed accelerometer value z
+        float gx1; // Unprocessed gyroscope value x
+        float gy1; // Unprocessed gyroscope value y
+        float gz1; // Unprocessed gyroscope value z
 
-        int32_t ax2; // Unprocessed accelerometer value x
-        int32_t ay2; // Unprocessed accelerometer value y
-        int32_t az2; // Unprocessed accelerometer value z
-        int32_t gx2; // Unprocessed gyroscope value x
-        int32_t gy2; // Unprocessed gyroscope value y
-        int32_t gz2; // Unprocessed gyroscope value z
+        float ax2; // Unprocessed accelerometer value x
+        float ay2; // Unprocessed accelerometer value y
+        float az2; // Unprocessed accelerometer value z
+        float gx2; // Unprocessed gyroscope value x
+        float gy2; // Unprocessed gyroscope value y
+        float gz2; // Unprocessed gyroscope value z
 
         float q0; // Quaternion for orientation of device
         float q1;
