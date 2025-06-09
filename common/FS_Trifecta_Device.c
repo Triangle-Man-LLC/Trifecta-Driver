@@ -298,7 +298,7 @@ static int fs_enqueue_into_packet_queue(fs_device_info *device_handle, const fs_
         // return -1;
     }
 
-    device_handle->packet_buf_queue_size ++;
+    device_handle->packet_buf_queue_size++;
     memset(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], 0, sizeof(fs_packet_union));
     memcpy(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], packet, sizeof(fs_packet_union));
     return 0;
@@ -373,144 +373,6 @@ static int base64_to_packet(fs_device_info *device_handle, char *segment, size_t
     return 0;
 }
 
-/// @brief Treat all packets in the buffer as a series of CSV lines
-/// @param rx_buf Buffer containing the received data
-/// @param rx_len Length of the received data
-/// @return Status code
-// static int fs_device_process_packets_serial(fs_device_info *device_handle, const void *rx_buf, size_t rx_len)
-// {
-//     enum
-//     {
-//         SEARCHING_COMMAND_OR_PACKET_START = 0,
-//         SEARCHING_PACKET_TERMINATOR = 1,
-//         SEARCHING_COMMAND_TERMINATOR = 2,
-//     } scanner_state = SEARCHING_COMMAND_OR_PACKET_START;
-
-//     static char last_data_string[FS_MAX_DATA_LENGTH] = {0};
-//     static size_t last_data_length = 0;
-
-//     // Append new data to the static buffer
-//     size_t available_space = FS_MAX_DATA_LENGTH - last_data_length;
-//     if (rx_len > available_space)
-//     {
-//         // Handle overflow: truncate or discard new data
-//         fs_log_output("[Trifecta] Buffer overflow! Discarding data.");
-//         last_data_length = 0; // Optionally reset buffer on overflow
-//         return -1;
-//     }
-//     memcpy(last_data_string + last_data_length, rx_buf, rx_len);
-//     last_data_length += rx_len;
-
-//     fs_log_output("Processing buffer (len %zu): %.*s", last_data_length, (int)last_data_length, last_data_string);
-
-//     int startIndex = -1;
-//     int endIndex = -1;
-
-//     for (int index = 0; index < last_data_length; index++)
-//     {
-//         switch (scanner_state)
-//         {
-//         case SEARCHING_COMMAND_OR_PACKET_START:
-//             if (last_data_string[index] == FS_SERIAL_PACKET_HEADER)
-//             {
-//                 startIndex = index;
-//                 scanner_state = SEARCHING_PACKET_TERMINATOR;
-//             }
-//             else
-//             {
-//                 startIndex = index;
-//                 scanner_state = SEARCHING_COMMAND_TERMINATOR;
-//             }
-//             break;
-
-//         case SEARCHING_PACKET_TERMINATOR:
-//             if (last_data_string[index] == FS_SERIAL_PACKET_FOOTER)
-//             {
-//                 endIndex = index;
-//                 scanner_state = SEARCHING_COMMAND_OR_PACKET_START;
-
-//                 // Process packet from startIndex+1 to endIndex-1
-//                 size_t packet_len = endIndex - startIndex - 1;
-//                 if (packet_len > 0)
-//                 {
-//                     char segment[FS_MAX_PACKET_LENGTH];
-//                     memcpy(segment, last_data_string + startIndex + 1, packet_len);
-//                     segment[packet_len] = '\0'; // Ensure null-terminated if needed
-//                     if (base64_to_packet(segment, packet_len) != 0)
-//                     {
-//                         fs_log_output("[Trifecta] Packet processing failed");
-//                     }
-//                 }
-
-//                 // Shift remaining data and adjust buffer
-//                 size_t shift_start = endIndex + 1;
-//                 size_t remaining = last_data_length - shift_start;
-//                 memmove(last_data_string, last_data_string + shift_start, remaining);
-//                 last_data_length = remaining;
-//                 index = -1; // Reset index to reprocess from start
-//             }
-//             else if (index == last_data_length - 1)
-//             {
-//                 // Retain partial packet
-//                 size_t partial_len = last_data_length - startIndex;
-//                 memmove(last_data_string, last_data_string + startIndex, partial_len);
-//                 last_data_length = partial_len;
-//                 index = -1;
-//             }
-//             break;
-
-//         case SEARCHING_COMMAND_TERMINATOR:
-//             if (last_data_string[index] == FS_SERIAL_COMMAND_TERMINATOR)
-//             {
-//                 endIndex = index;
-//                 scanner_state = SEARCHING_COMMAND_OR_PACKET_START;
-
-//                 // Process command from startIndex to endIndex-1
-//                 size_t cmd_len = endIndex - startIndex;
-//                 if (cmd_len > FS_MAX_CMD_LENGTH)
-//                 {
-//                     fs_log_output("[Trifecta] Command too long");
-//                 }
-//                 else
-//                 {
-//                     char cmd[FS_MAX_CMD_LENGTH + 1];
-//                     memcpy(cmd, last_data_string + startIndex, cmd_len);
-//                     cmd[cmd_len] = '\0';
-//                     if(fs_handle_received_commands(device_handle, cmd, cmd_len) < 0)
-//                     {
-//                         fs_log_output("[Trifecta] Failed to parse command: %s", cmd);
-//                     }
-//                     fs_log_output("[Trifecta] Parsed command segment: %s", cmd);
-//                 }
-
-//                 // Shift remaining data
-//                 size_t shift_start = endIndex + 1;
-//                 size_t remaining = last_data_length - shift_start;
-//                 memmove(last_data_string, last_data_string + shift_start, remaining);
-//                 last_data_length = remaining;
-//                 index = -1; // Reset index
-//             }
-//             else if (index == last_data_length - 1)
-//             {
-//                 // Retain partial command
-//                 size_t partial_len = last_data_length - startIndex;
-//                 memmove(last_data_string, last_data_string + startIndex, partial_len);
-//                 last_data_length = partial_len;
-//                 index = -1;
-//             }
-//             break;
-//         }
-//     }
-
-//     // Null-terminate the static buffer for safety (optional)
-//     if (last_data_length < FS_MAX_DATA_LENGTH)
-//     {
-//         last_data_string[last_data_length] = '\0';
-//     }
-
-//     fs_log_output("Remaining data (len %zu): %.*s", last_data_length, (int)last_data_length, last_data_string);
-//     return 0;
-// }
 static int fs_device_process_packets_serial(fs_device_info *device_handle, const void *rx_buf, size_t rx_len)
 {
     enum
@@ -861,9 +723,18 @@ int fs_get_acceleration(fs_device_info *device_handle, fs_vector3 *acceleration_
         return -1;
     }
 
-    acceleration_buffer->x = device_handle->last_received_packet.composite.ax;
-    acceleration_buffer->y = device_handle->last_received_packet.composite.ay;
-    acceleration_buffer->z = device_handle->last_received_packet.composite.az;
+    acceleration_buffer->x = device_handle->last_received_packet.composite.ax0 + device_handle->last_received_packet.composite.ax1 + device_handle->last_received_packet.composite.ax2;
+    acceleration_buffer->y = device_handle->last_received_packet.composite.ay0 + device_handle->last_received_packet.composite.ay1 + device_handle->last_received_packet.composite.ay2;
+    acceleration_buffer->z = device_handle->last_received_packet.composite.az0 + device_handle->last_received_packet.composite.az1 + device_handle->last_received_packet.composite.az2;
+
+    acceleration_buffer->x /= (3.0f * (float)INT16_MAX);
+    acceleration_buffer->y /= (3.0f * (float)INT16_MAX);
+    acceleration_buffer->z /= (3.0f * (float)INT16_MAX);
+
+    acceleration_buffer->x *= (float)FS_ACCEL_SCALER_Gs;
+    acceleration_buffer->y *= (float)FS_ACCEL_SCALER_Gs;
+    acceleration_buffer->z *= (float)FS_ACCEL_SCALER_Gs;
+
     return 0;
 }
 
@@ -884,13 +755,13 @@ int fs_get_angular_velocity(fs_device_info *device_handle, fs_vector3 *angular_v
         angular_velocity_buffer->y = device_handle->last_received_packet.composite.gy0 + device_handle->last_received_packet.composite.gy1 + device_handle->last_received_packet.composite.gy2;
         angular_velocity_buffer->z = device_handle->last_received_packet.composite.gz0 + device_handle->last_received_packet.composite.gz1 + device_handle->last_received_packet.composite.gz2;
 
-        angular_velocity_buffer->x /= (3 * INT16_MAX);
-        angular_velocity_buffer->y /= (3 * INT16_MAX);
-        angular_velocity_buffer->z /= (3 * INT16_MAX);
+        angular_velocity_buffer->x /= (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->y /= (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->z /= (3.0f * (float)INT16_MAX);
 
-        angular_velocity_buffer->x *= FS_GYRO_SCALER_DPS;
-        angular_velocity_buffer->y *= FS_GYRO_SCALER_DPS;
-        angular_velocity_buffer->z *= FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->x *= (float)FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->y *= (float)FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->z *= (float)FS_GYRO_SCALER_DPS;
         return 0;
     }
     return -1;
