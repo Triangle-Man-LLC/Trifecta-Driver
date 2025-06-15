@@ -382,7 +382,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
         SEARCHING_COMMAND_TERMINATOR = 2,
     } scanner_state = SEARCHING_COMMAND_OR_PACKET_START;
 
-    char *dataString = (char *)rx_buf;
+    const char *dataString = (char *)rx_buf;
 
     static char last_data_string[FS_MAX_DATA_LENGTH] = {0};
     static int last_data_string_index = 0;
@@ -544,9 +544,10 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
                 scanner_state = SEARCHING_PACKET_TERMINATOR;
                 if (index == dataStringLen - 1)
                 {
-                    // Reset the buffer for the next search
-                    memmove(last_data_string, last_data_string + endIndex + 1, dataStringLen - endIndex - 1);
-                    last_data_string[dataStringLen - endIndex] = 0;
+                    // No terminator found; discard up to this header and retry next time
+                    memmove(last_data_string, last_data_string + startIndex, dataStringLen - startIndex);
+                    dataStringLen -= startIndex;
+                    last_data_string[dataStringLen] = '\0';
                 }
             }
             else if (index == dataStringLen - 1 && (last_data_string[index] != FS_SERIAL_COMMAND_TERMINATOR))
@@ -574,7 +575,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
 /// @param rx_len The length to read
 /// @param source FS_COMMUNICATION_MODE_SERIAL, FS_COMMUNICATION_MODE_TCP_UDP, etc. are handled differently
 /// @return
-int fs_device_parse_packet(fs_device_info *device_handle, const void *rx_buf, size_t rx_len, fs_communication_mode source)
+int fs_device_parse_packet(fs_device_info *device_handle, const void *rx_buf, ssize_t rx_len, fs_communication_mode source)
 {
     if (rx_len <= 0)
     {
