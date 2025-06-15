@@ -2,6 +2,8 @@
 
 This repository contains driver software for the <b>Intelligent Sensor Fusion</b> IMU/navigation device series. 
 
+![CI](https://github.com/Triangle-Man-LLC/Trifecta-Driver/actions/workflows/static_analyzer.yml/badge.svg)
+
 ### Installation and Usage ###
 
 Currently supported platforms are <b><a href = "/Trifecta-Driver/tree/esp-idf">ESP-IDF (C/C++)</a></b>, <b><a href = "/Trifecta-Driver/tree/linux">Linux (C/C++)</a></b>, <b><a href="/Trifecta-Driver/tree/python">Python</a></b>, and <b><a href="/Trifecta-Micropython/">Micropython</a></b>. (Platforms with in-progress support: <b><a href="/Trifecta-Driver/tree/micropython">STM32 (C/C++)</a></b>.) 

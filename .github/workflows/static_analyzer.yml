@@ -1,0 +1,32 @@
+name: Static Analyzer Check (Trifecta Driver)
+
+on:
+  push:
+  pull_request:
+      
+jobs:
+  trifecta-driver-cppcheck:
+    runs-on: [self-hosted, ESP-IDF]
+    steps:
+      - name: Install Cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt install -y cppcheck
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Run Cppcheck static analyzer
+        run: |
+          cd $GITHUB_WORKSPACE
+          cppcheck --enable=warning,style,performance,portability --error-exitcode=1 --suppress=missingIncludeSystem --suppress=variableScope --suppress=unknownMacro --suppress=unreadVariable --suppress=constParameterPointer --suppress=constVariable --suppress=cstyleCast --suppress=invalidPrintfArgType_uint --suppress=knownConditionTrueFalse --suppress=invalidPrintfArgType_sint --template=gcc .
+
+      - name: Mark build status
+        if: ${{ success() }}
+        run: echo "Build succeeded."
+
+      - name: Mark build status
+        if: ${{ failure() }}
+        run: echo "Build failed."
