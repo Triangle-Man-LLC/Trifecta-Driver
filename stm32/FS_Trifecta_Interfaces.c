@@ -43,7 +43,15 @@
 #error "Unsupported STM32 series"
 #endif
 
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Interfaces.h"
+
+#define ssize_t ptrdiff_t
+inline size_t strnlen(const char *s, size_t maxlen)
+{
+    const char *end = (const char *)memchr(s, '\0', maxlen);
+    return end ? (size_t)(end - s) : maxlen;
+}
 
 // Platform-specific: Functions for initializing communication drivers on target platform
 
@@ -52,7 +60,7 @@ int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
 /// @brief Start the network TCP driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 on success, -1 on failure
-int fs_init_network_tcp_driver(fs_device_info *device_handle)
+int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -61,7 +69,7 @@ int fs_init_network_tcp_driver(fs_device_info *device_handle)
 /// @brief Start the network UDP driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 on success, -1 on failure
-int fs_init_network_udp_driver(fs_device_info *device_handle)
+int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -70,7 +78,7 @@ int fs_init_network_udp_driver(fs_device_info *device_handle)
 /// @brief Start the network serial driver.
 /// @param device_handle
 /// @return
-int fs_init_serial_driver(fs_device_info *device_handle)
+int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     // On FreeRTOS/microcontroller systems, the serial port is usually a fixed number, so port scanning will not be done
     // Only check to ensure that the serial port was previously set up
@@ -98,7 +106,7 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
         return -1;
     }
 
-    else if(thread_running_flag != NULL && *thread_running_flag != 0)
+    else if (thread_running_flag != NULL && *thread_running_flag != 0)
     {
         fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
         return 0; // Thread already running
@@ -109,9 +117,8 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
 
     osThreadAttr_t thread_attr = {
         .name = "ThreadTask",
-        .priority = (osPriority_t) priority,
-        .stack_size = stack_size
-    };
+        .priority = (osPriority_t)priority,
+        .stack_size = stack_size};
 
     if (core_affinity < 0)
     {
@@ -149,7 +156,7 @@ int fs_thread_exit()
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_networked_tcp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -161,7 +168,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info *device_handle, void *tx_buffer
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_networked_udp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -173,7 +180,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info *device_handle, void *tx_buffer
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -181,7 +188,10 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
@@ -199,10 +209,8 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
         return -1;
     }
 
-    // Assuming 'device_handle->serial_port' holds the UART handle (e.g., &huart1 for UART1)
+    // TODO: Add support for USB-CDC/SPI/I2C
     UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->serial_port;
-
-    // Transmit data over UART
     HAL_StatusTypeDef status = HAL_UART_Transmit(huart, (uint8_t *)tx_buffer, length_bytes, timeout_micros / 1000);
 
     if (status != HAL_OK)
@@ -222,7 +230,7 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -234,7 +242,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer,
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     fs_log_output("[Trifecta] Error: STM32 does not support Wifi!\n");
     return -1;
@@ -246,7 +254,7 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -254,12 +262,14 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C ||
+        device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
-
     if (device_handle->serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
@@ -294,7 +304,7 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
 /// @brief Shutdown the network TCP driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_network_tcp_driver(fs_device_info *device_handle)
+int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
     device_handle->tcp_sock = -1;
     return 0;
@@ -303,7 +313,7 @@ int fs_shutdown_network_tcp_driver(fs_device_info *device_handle)
 /// @brief Shutdown the network UDP driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_network_udp_driver(fs_device_info *device_handle)
+int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
     device_handle->udp_sock = -1;
     return 0;
@@ -312,7 +322,7 @@ int fs_shutdown_network_udp_driver(fs_device_info *device_handle)
 /// @brief Shutdown the serial driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_serial_driver(fs_device_info *device_handle)
+int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL)
     {
