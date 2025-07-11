@@ -139,7 +139,8 @@ extern "C"
         int8_t label_1; // Reserved for future use
         int8_t label_2; // Reserved for future use
 
-        int32_t c; // Reserved for future use
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c; // Reserved for future use
         int32_t d; // Reserved for future use
     } __attribute__((packed)) fs_imu_composite_packet;
 
@@ -177,7 +178,8 @@ extern "C"
         int8_t label_1; // Reserved for future use
         int8_t label_2; // Reserved for future use
 
-        int32_t c; // Reserved for future use
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c; // Reserved for future use
         int32_t d; // Reserved for future use
     } __attribute__((packed)) fs_imu_regular_packet;
 
@@ -236,7 +238,8 @@ extern "C"
         int8_t label_1; // Reserved for future use
         int8_t label_2; // Reserved for future use
 
-        int32_t c; // Reserved for future use
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c; // Reserved for future use
         int32_t d; // Reserved for future use
     } __attribute__((packed)) fs_imu_composite_packet_2;
 
