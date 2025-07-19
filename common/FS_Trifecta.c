@@ -92,7 +92,7 @@ int fs_initialize_serial(fs_device_info *device_handle, int fd)
     }
   }
 
-  device_handle->communication_mode = FS_COMMUNICATION_MODE_SERIAL;
+  device_handle->communication_mode = FS_COMMUNICATION_MODE_UART;
   device_handle->serial_port = fd;
 
   if (fs_serial_start(device_handle) != 0)
@@ -102,7 +102,7 @@ int fs_initialize_serial(fs_device_info *device_handle, int fd)
     return -1;
   }
 
-  if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SERIAL)
+  if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
   {
     device_handle->baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
     fs_log_output("[Trifecta] Info: Initialized serial driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
@@ -121,7 +121,7 @@ int fs_start_stream(fs_device_info *device_handle)
 {
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_start_device_stream(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not start device serial stream!");
@@ -149,7 +149,7 @@ int fs_stop_stream(fs_device_info *device_handle)
 {
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_stop_device_stream(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not stop device serial stream!");
@@ -181,7 +181,7 @@ int fs_read_one_shot(fs_device_info *device_handle)
 {
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_read_one_shot(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not transmit device serial read command!");
@@ -209,7 +209,7 @@ int fs_reboot_device(fs_device_info *device_handle)
 {
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_device_restart(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not restart device!");
@@ -225,65 +225,6 @@ int fs_reboot_device(fs_device_info *device_handle)
     break;
   default:
     fs_log_output("[Trifecta] Error: Failed to restart device, driver was not operating!");
-    return -1;
-    break;
-  }
-  return 0;
-}
-
-/// @brief Change the device communication mode. (Doesn't appear to be implemented for now.)
-/// @param mode
-/// @return
-int fs_set_communication_mode(fs_device_info *device_handle, fs_communication_mode mode)
-{
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_device_restart(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not restart device!");
-      return -1;
-    }
-    break;
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_device_restart(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not restart device!");
-      return -1;
-    }
-    break;
-  default:
-    fs_log_output("[Trifecta] Error: Failed to restart device, driver was not operating!");
-    return -1;
-    break;
-  }
-  return 0;
-}
-
-/// @brief
-/// @param ssid
-/// @param password
-/// @return
-int fs_set_wifi_params(fs_device_info *device_handle, char *ssid, char *password)
-{
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_SERIAL:
-    if (fs_serial_set_network_params(device_handle, ssid, password) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set device wifi configuration!");
-      return -1;
-    }
-    break;
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_set_network_params(device_handle, ssid, password) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set device wifi configuration!");
-      return -1;
-    }
-    break;
-  default:
-    fs_log_output("[Trifecta] Error: Failed to set device wifi configuration, driver was not operating!");
     return -1;
     break;
   }
@@ -302,7 +243,7 @@ int fs_closedown(fs_device_info *device_handle)
 {
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_exit(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Warning: Closedown of serial driver was abnormal.");
@@ -335,7 +276,7 @@ int fs_set_ahrs_heading(fs_device_info *device_handle, float heading_deg)
   snprintf(command, sizeof(command), "%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set device AHRS heading!");
@@ -363,7 +304,7 @@ int fs_set_ins_position(fs_device_info *device_handle, fs_vector3 *position)
   snprintf(command, sizeof(command), "%c0;", CMD_REZERO_INS);
   switch (device_handle->communication_mode)
   {
-  case FS_COMMUNICATION_MODE_SERIAL:
+  case FS_COMMUNICATION_MODE_UART:
     if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not set INS position!");

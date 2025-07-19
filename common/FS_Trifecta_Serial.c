@@ -41,7 +41,7 @@ static void fs_serial_update_thread(void *params)
         while (last_received_serial > 0)
         {
             fs_log_output("[Trifecta] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
-            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, FS_COMMUNICATION_MODE_SERIAL) < 0)
+            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, FS_COMMUNICATION_MODE_UART) < 0)
             {
                 fs_log_output("[Trifecta] WARN: Could not parse data! Is there corruption?");
             }

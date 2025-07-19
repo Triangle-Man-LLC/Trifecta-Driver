@@ -61,9 +61,6 @@ extern "C"
     /// @return 0 on success.
     int fs_reboot_device(fs_device_info *device_handle);
 
-    // int fs_set_communication_mode(fs_device_info *device_handle, fs_communication_mode mode);
-    // int fs_set_wifi_params(fs_device_info *device_handle, char *ssid, char *password);
-
     /// @brief Toggle logging (logging is disabled by default because it is a severe latency penalty).
     /// You should never enable it unless debugging some issue.
     /// @param do_enable TRUE to turn logging on.

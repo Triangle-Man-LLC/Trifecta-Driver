@@ -255,11 +255,15 @@ extern "C"
     typedef enum fs_communication_mode
     {
         FS_COMMUNICATION_MODE_UNINITIALIZED = -1, // This is used when not initialized
-        FS_COMMUNICATION_MODE_SERIAL = 0,         // Wired serial
-        FS_COMMUNICATION_MODE_TCP_UDP = 1,        // UDP streaming
-        FS_COMMUNICATION_MODE_BLUETOOTH = 2,      // Bluetooth serial streaming
-        FS_COMMUNICATION_MODE_CAN = 3,            // CAN bus
-        FS_COMMUNICATION_MODE_I2C = 4,            // I2C bus
+        FS_COMMUNICATION_MODE_USB_CDC = 0,    // USB-CDC always on
+        FS_COMMUNICATION_MODE_UART = 1,       // UART
+        FS_COMMUNICATION_MODE_TCP_UDP = 2,    // UDP streaming (Station mode)
+        FS_COMMUNICATION_MODE_TCP_UDP_AP = 4, // UDP streaming (Access point mode)
+        FS_COMMUNICATION_MODE_CAN = 8,        // CAN bus - 
+        FS_COMMUNICATION_MODE_I2C = 16,       // I2C bus - 
+        FS_COMMUNICATION_MODE_ESPN = 32,      // ESP-NOW (2.4 GHz for ESP32 only) - 
+        FS_COMMUNICATION_MODE_SPI = 64,       // SPI - 
+        FS_COMMUNICATION_MODE_BLE = 128,      // Bluetooth Low Energy - 
     } fs_communication_mode;
 
     typedef enum fs_run_status

@@ -225,8 +225,8 @@ static int fs_base64_decode(const char *input, void *output_buffer, size_t buffe
         if (sextet_a == -1 || sextet_b == -1 || sextet_c == -1 || sextet_d == -1)
         {
             // Invalid Base64 character detected
-            fprintf(stderr, "Invalid Base64 character detected at index %u: 0x%X\n", i, input[i - 1]);
-            fprintf(stderr, "String in question (len %d): %s\n", input_length, input);
+            // fprintf(stderr, "Invalid Base64 character detected at index %u: 0x%X\n", i, input[i - 1]);
+            // fprintf(stderr, "String in question (len %d): %s\n", input_length, input);
             // if(input[i-1] == 0x0)
             // {
             //     continue; // Ignore the space which appears for some reason...
