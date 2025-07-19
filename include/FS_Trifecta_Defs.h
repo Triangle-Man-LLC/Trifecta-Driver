@@ -88,7 +88,7 @@ extern "C"
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type;
 
-    /// @brief This data format used for TCP/UDP sending, it has all the data but will saturate serial transmitters
+    /// @brief
     typedef struct fs_imu_composite_packet
     {
         uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
@@ -128,15 +128,15 @@ extern "C"
         float vy;
         float vz;
 
-        float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point
-        float ry;
+        float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point (not very useful)
+        float ry; // In mode 3 (GNSS), this is instead a fixed-point of GNSS coordinates 
         float rz;
 
         int16_t grav_x; // Gravity vector component x (local frame - for reference only, not used in calculations)
         int16_t grav_y; // Gravity vector component y (local frame - for reference only, not used in calculations)
         int16_t grav_z; // Gravity vector component z (local frame - for reference only, not used in calculations)
 
-        int8_t label_1; // Reserved for future use
+        int8_t device_in_motion; // 1 if stationary, 2 if in motion
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
@@ -144,7 +144,7 @@ extern "C"
         int32_t d; // Reserved for future use
     } __attribute__((packed)) fs_imu_composite_packet;
 
-    /// @brief This data format used for TCP/UDP sending, it has all the data but will saturate serial transmitters
+    /// @brief
     typedef struct fs_imu_regular_packet
     {
         uint8_t type;  // Packet type (see typedef packet_type_t)
@@ -175,7 +175,7 @@ extern "C"
         int16_t grav_y; // Gravity vector component y (local frame)
         int16_t grav_z; // Gravity vector component z (local frame)
 
-        int8_t label_1; // Reserved for future use
+        int8_t device_in_motion; // 1 if stationary, 2 if in motion
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
@@ -183,7 +183,7 @@ extern "C"
         int32_t d; // Reserved for future use
     } __attribute__((packed)) fs_imu_regular_packet;
 
-    /// @brief This data format used for TCP/UDP sending, it has all the data but will saturate serial transmitters
+    /// @brief
     typedef struct fs_imu_composite_packet_2
     {
         uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
@@ -235,7 +235,7 @@ extern "C"
         int16_t grav_y; // Gravity vector component y (local frame - for reference only, not used in calculations)
         int16_t grav_z; // Gravity vector component z (local frame - for reference only, not used in calculations)
 
-        int8_t label_1; // Reserved for future use
+        int8_t device_in_motion; // 1 if stationary, 2 if in motion
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]

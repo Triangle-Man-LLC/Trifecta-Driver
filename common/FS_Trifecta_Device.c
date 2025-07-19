@@ -781,6 +781,16 @@ int fs_get_velocity(fs_device_info *device_handle, fs_vector3 *velocity_buffer)
     return 0;
 }
 
+int fs_get_movement_state(fs_device_info *device_handle, fs_run_status *device_state_buffer)
+{
+    if (device_state_buffer == NULL)
+    {
+        return -1;
+    }
+    *device_state_buffer = (device_handle->last_received_packet.composite.device_in_motion == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+    return 0;
+}
+
 int fs_get_position(fs_device_info *device_handle, fs_vector3 *position_buffer)
 {
     if (position_buffer == NULL)

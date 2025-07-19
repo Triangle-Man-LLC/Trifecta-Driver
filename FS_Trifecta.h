@@ -113,6 +113,13 @@ extern "C"
     /// @return 0 on success.
     int fs_get_velocity(fs_device_info *device_handle, fs_vector3 *velocity_buffer);
 
+    /// @brief Retrieve the latest measured device movement state.
+    /// @param device_handle Pointer to the device handle.
+    /// @param device_state_buffer Pointer to the buffer for storing the state. 
+    /// FS_RUN_STATUS_RUNNING when moving, FS_RUN_STATUS_IDLE when stationary.
+    /// @return 0 on success.
+    int fs_get_movement_state(fs_device_info *device_handle, fs_run_status *device_state_buffer);
+
     /// @brief Retrieve the latest device position.
     /// Note that for non-GNSS stabilized systems, there is very little meaning to this value.
     /// @param device_handle Pointer to the device handle.
