@@ -47,7 +47,7 @@ int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
 /// @brief Start the network TCP driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 on success, -1 on failure
-int fs_init_network_tcp_driver(fs_device_info *device_handle)
+int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
     {
@@ -90,7 +90,7 @@ int fs_init_network_tcp_driver(fs_device_info *device_handle)
 /// @brief Start the network UDP driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 on success, -1 on failure
-int fs_init_network_udp_driver(fs_device_info *device_handle)
+int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
     {
@@ -208,7 +208,7 @@ static int configure_serial_port(int fd)
 /// @brief Start the network serial driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 if successful, -1 if failed
-int fs_init_serial_driver(fs_device_info *device_handle)
+int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL)
     {
@@ -324,7 +324,7 @@ int fs_init_serial_driver(fs_device_info *device_handle)
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -411,7 +411,7 @@ int fs_thread_exit(void *thread_handle)
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_networked_tcp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -463,7 +463,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info *device_handle, void *tx_buffer
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_networked_udp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -515,7 +515,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info *device_handle, void *tx_buffer
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -523,7 +523,8 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART 
+        && device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
@@ -580,7 +581,7 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -632,7 +633,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer,
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -684,7 +685,7 @@ ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer,
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -692,7 +693,8 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART 
+        && device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
@@ -765,7 +767,7 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
 /// @brief Shutdown the network TCP driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_network_tcp_driver(fs_device_info *device_handle)
+int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->tcp_sock < 0)
     {
@@ -786,7 +788,7 @@ int fs_shutdown_network_tcp_driver(fs_device_info *device_handle)
 /// @brief Shutdown the network UDP driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_network_udp_driver(fs_device_info *device_handle)
+int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->udp_sock < 0)
     {
@@ -807,7 +809,7 @@ int fs_shutdown_network_udp_driver(fs_device_info *device_handle)
 /// @brief Shutdown the serial driver.
 /// @param device_handle Pointer to the device information structure.
 /// @return 0 if successful, -1 if failed.
-int fs_shutdown_serial_driver(fs_device_info *device_handle)
+int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->serial_port < 0)
     {
