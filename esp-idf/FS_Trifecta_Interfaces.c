@@ -325,7 +325,8 @@ ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART 
+        &&device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
@@ -494,7 +495,8 @@ ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_SERIAL)
+    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART 
+        &&device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
