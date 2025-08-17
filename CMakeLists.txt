@@ -15,6 +15,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 add_library(DriverTrifectaLinux
     common/FS_Trifecta.c
     common/FS_Trifecta_Device.c
+    common/FS_Trifecta_Device_Utils.c
     common/FS_Trifecta_Serial.c
     common/FS_Trifecta_Networked.c
     linux/FS_Trifecta_Interfaces.c
