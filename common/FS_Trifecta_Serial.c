@@ -34,7 +34,6 @@ static void fs_serial_update_thread(void *params)
                   active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_serial = 0;
-
     while (active_device->status == FS_RUN_STATUS_RUNNING)
     {
         last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);

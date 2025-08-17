@@ -88,7 +88,43 @@ extern "C"
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type;
 
-    /// @brief
+    /// @brief Command definitions
+    typedef enum
+    {
+        CMD_RESTART = 'R',         // Restart the device "R0;"
+        CMD_CLEAR_CONFIG = 'C',    // Clear all saved settings "C0;"
+        CMD_SET_SSID = 'S',        // Set SSID for WiFi connection (UART only) "S<STA_SSID>;"
+        CMD_SET_PASSWORD = 'P',    // Set password for WiFi connection (UART only) "P<STA_PASSWORD>;"
+        CMD_SET_SSID_AP = 'q',     // Set SSID for access point WiFi connection (UART only) "q<AP_SSID>;"
+        CMD_SET_PASSWORD_AP = 'w', // Set password for access point WiFi connection (UART only) "w<AP_PASSWORD>"
+        CMD_SET_FILT_BETA = 'B',   // Set the beta of the orientation filter ? Unused?
+        CMD_SET_DEV_NAME = 'N',    // Set device name "N<DEVICE_NAME>;"
+        CMD_SETUP_FINISH = 'F',    // Exit setup and begin telemetry mode "F0;"
+
+        CMD_IDENTIFY = 'I',                      // Request identification (device name) "I0;"
+        CMD_IDENTIFY_PARAM_DEV_SN = 'p',         // Respond with device serial number (will be set by eFuse on production model) "p0;"
+        CMD_IDENTIFY_PARAM_DEVMODEL = 'm',       // Respond with device model name "m0;"
+        CMD_IDENTIFY_PARAM_DEVFWVERSION = 'f',   // Respond with device firmware version "f0;"
+        CMD_IDENTIFY_PARAM_DEVDESC = 'd',        // Respond with device description "d0;"
+        CMD_IDENTIFY_PARAM_ACCELRANGE = 'a',     // Respond with max acceleration range "a0;"
+        CMD_IDENTIFY_PARAM_GYRORANGE = 'g',      // Respond with max gyro range "g0;"
+        CMD_IDENTIFY_PARAM_REFRESHRATE = 'r',    // Respond with refresh rate (typically 200 Hz) "r0;"
+        CMD_IDENTIFY_PARAM_UART_BAUD_RATE = 'b', // Respond with UART baud rate "b0;"
+        CMD_IDENTIFY_PARAM_SSID = 's',           // Respond with current SSID (STA) for WiFi connection "s0;"
+        CMD_IDENTIFY_PARAM_SSID_AP = '1',        // Respond with current SSID (AP) for WiFi connection "l0;"
+        CMD_IDENTIFY_PARAM_TRANSMIT = 't',       // Respond with transmit mode (serial/UDP/etc.) "t-1;" to query, "t<COMMUNICATION_MODE_1 | 2 | ... |>;" to set
+
+        CMD_REZERO_IMUS = 'Z',            // Re-calibrate the IMUs (should only do on a flat plane and stationary) "Z<NUM_CALIBRATION_POINTS>;"
+        CMD_TOGGLE_REZERO_AT_START = 'K', // Toggle re-zeroing IMU at device reboot - this rezero affects accelerometers "K<1 == DO NOT ELSE 0>;"
+
+        CMD_REZERO_INS = '0',  // Reset INS position to zero "00;"
+        CMD_SET_YAW_DEG = 'y', // Set yaw angle to the given argument (degrees) "y<DEG>;"
+
+        CMD_STREAM = 'A',             // Start or stop streaming data "A<0 == STOP, 1 == STREAM, 2 == ONE SHOT READ>;"
+        CMD_SET_LISTENING_PORT = 'l', // Set the target port for UDP listener on host device (default: 8888) "l<PORT 1024-65535>;"
+    } fs_command_t;
+
+    /// @brief This data format used for TCP/UDP sending, it has all the data but will saturate serial transmitters
     typedef struct fs_imu_composite_packet
     {
         uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
@@ -140,8 +176,8 @@ extern "C"
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c; // Reserved for future use
-        int32_t d; // Reserved for future use
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } __attribute__((packed)) fs_imu_composite_packet;
 
     /// @brief
@@ -179,8 +215,8 @@ extern "C"
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c; // Reserved for future use
-        int32_t d; // Reserved for future use
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } __attribute__((packed)) fs_imu_regular_packet;
 
     /// @brief
@@ -239,8 +275,8 @@ extern "C"
         int8_t label_2; // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c; // Reserved for future use
-        int32_t d; // Reserved for future use
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } __attribute__((packed)) fs_imu_composite_packet_2;
 
     /// @brief Union allowing common storage of all packet types
@@ -300,7 +336,6 @@ extern "C"
 
         fs_driver_config driver_config; // Device driver configuration (each device has its own thread spawned)
         fs_run_status status;           // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
-        // void *update_thread_handle;     // Pointer to the run thread of the device
 
         char ip_addr[39]; // If networking is used, this is the corresponding IP address string
         int ip_port;      // Always 8888
@@ -313,31 +348,31 @@ extern "C"
         fs_packet_union last_received_packet; // The last received packet for this device
 
         fs_packet_union packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH]; // Packet queue buffer for the device (read-only)
-        size_t packet_buf_queue_size;                                                       // Current number of received packets (read-only)
+        size_t packet_buf_queue_size;                                 // Current number of received packets (read-only)
 
         char command_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Command buffer for the device (read-only)
         size_t command_queue_size;                                      // Current number of received commands (read-only)
 
     } fs_device_info;
 
-#define FS_DEVICE_INFO_UNINITIALIZED {                              \
-    "",                                  /* device_name */          \
-    0,                                   /* device_id */            \
-    FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */   \
-    9999,                                /* ping */                 \
-    FS_DRIVER_CONFIG_DEFAULT,            /* driver_config */        \
-    FS_RUN_STATUS_IDLE,                  /* status */               \
-    {0},                                 /* ip_addr */              \
-    8888,                                /* ip_port */              \
-    -1,                                  /* tcp_sock */             \
-    -1,                                  /* udp_sock */             \
-    -1,                                  /* serial_port */          \
-    0,                                   /* baudrate */             \
-    {0},                                 /* last_received_packet */ \
-    {{0}},                                                          \
-    0,                                                              \
-    {{0}},                                                          \
-    0,                                                              \
+#define FS_DEVICE_INFO_UNINITIALIZED {                                                    \
+    .device_name = {0},                                         /* device_name */          \
+    .device_id = 0,                                             /* device_id */            \
+    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */   \
+    .ping = 9999,                                               /* ping */                 \
+    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                  /* driver_config */        \
+    .status = FS_RUN_STATUS_IDLE,                               /* status */               \
+    .ip_addr = {0},                                             /* ip_addr */              \
+    .ip_port = 8888,                                            /* ip_port */              \
+    .tcp_sock = -1,                                             /* tcp_sock */             \
+    .udp_sock = -1,                                             /* udp_sock */             \
+    .serial_port = -1,                                          /* serial_port */          \
+    .baudrate = 0,                                              /* baudrate */             \
+    .last_received_packet = {{0}},                              /* last_received_packet */ \
+    .packet_buf_queue = {{{0}}},                                /* packet_buf_queue */     \
+    .packet_buf_queue_size = 0,                                 /* packet_buf_queue_size */\
+    .command_queue = {{{{0}}}},                                 /* command_queue */        \
+    .command_queue_size = 0                                     /* command_queue_size */   \
 }
 
 #ifdef __cplusplus
