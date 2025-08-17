@@ -165,7 +165,7 @@ extern "C"
         float vz;
 
         float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point (not very useful)
-        float ry; // In mode 3 (GNSS), this is instead a fixed-point of GNSS coordinates 
+        float ry; // In mode 3 (GNSS), this is instead a fixed-point of GNSS coordinates
         float rz;
 
         int16_t grav_x; // Gravity vector component x (local frame - for reference only, not used in calculations)
@@ -173,7 +173,7 @@ extern "C"
         int16_t grav_z; // Gravity vector component z (local frame - for reference only, not used in calculations)
 
         int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2; // Reserved for future use
+        int8_t label_2;          // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
@@ -212,7 +212,7 @@ extern "C"
         int16_t grav_z; // Gravity vector component z (local frame)
 
         int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2; // Reserved for future use
+        int8_t label_2;          // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
@@ -272,7 +272,7 @@ extern "C"
         int16_t grav_z; // Gravity vector component z (local frame - for reference only, not used in calculations)
 
         int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2; // Reserved for future use
+        int8_t label_2;          // Reserved for future use
 
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
@@ -291,15 +291,15 @@ extern "C"
     typedef enum fs_communication_mode
     {
         FS_COMMUNICATION_MODE_UNINITIALIZED = -1, // This is used when not initialized
-        FS_COMMUNICATION_MODE_USB_CDC = 0,    // USB-CDC always on
-        FS_COMMUNICATION_MODE_UART = 1,       // UART
-        FS_COMMUNICATION_MODE_TCP_UDP = 2,    // UDP streaming (Station mode)
-        FS_COMMUNICATION_MODE_TCP_UDP_AP = 4, // UDP streaming (Access point mode)
-        FS_COMMUNICATION_MODE_CAN = 8,        // CAN bus - 
-        FS_COMMUNICATION_MODE_I2C = 16,       // I2C bus - 
-        FS_COMMUNICATION_MODE_ESPN = 32,      // ESP-NOW (2.4 GHz for ESP32 only) - 
-        FS_COMMUNICATION_MODE_SPI = 64,       // SPI - 
-        FS_COMMUNICATION_MODE_BLE = 128,      // Bluetooth Low Energy - 
+        FS_COMMUNICATION_MODE_USB_CDC = 0,        // USB-CDC always on
+        FS_COMMUNICATION_MODE_UART = 1,           // UART
+        FS_COMMUNICATION_MODE_TCP_UDP = 2,        // UDP streaming (Station mode)
+        FS_COMMUNICATION_MODE_TCP_UDP_AP = 4,     // UDP streaming (Access point mode)
+        FS_COMMUNICATION_MODE_CAN = 8,            // CAN bus -
+        FS_COMMUNICATION_MODE_I2C = 16,           // I2C bus -
+        FS_COMMUNICATION_MODE_ESPN = 32,          // ESP-NOW (2.4 GHz for ESP32 only) -
+        FS_COMMUNICATION_MODE_SPI = 64,           // SPI -
+        FS_COMMUNICATION_MODE_BLE = 128,          // Bluetooth Low Energy -
     } fs_communication_mode;
 
     typedef enum fs_run_status
@@ -323,7 +323,7 @@ extern "C"
     1,                             \
     1000,                          \
     3,                             \
-    16384,                         \
+    4096,                          \
 }
 
     /// @brief Device information container
@@ -355,24 +355,24 @@ extern "C"
 
     } fs_device_info;
 
-#define FS_DEVICE_INFO_UNINITIALIZED {                                                    \
-    .device_name = {0},                                         /* device_name */          \
-    .device_id = 0,                                             /* device_id */            \
-    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */   \
-    .ping = 9999,                                               /* ping */                 \
-    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                  /* driver_config */        \
-    .status = FS_RUN_STATUS_IDLE,                               /* status */               \
-    .ip_addr = {0},                                             /* ip_addr */              \
-    .ip_port = 8888,                                            /* ip_port */              \
-    .tcp_sock = -1,                                             /* tcp_sock */             \
-    .udp_sock = -1,                                             /* udp_sock */             \
-    .serial_port = -1,                                          /* serial_port */          \
-    .baudrate = 0,                                              /* baudrate */             \
-    .last_received_packet = {{0}},                              /* last_received_packet */ \
-    .packet_buf_queue = {{{0}}},                                /* packet_buf_queue */     \
-    .packet_buf_queue_size = 0,                                 /* packet_buf_queue_size */\
-    .command_queue = {{{{0}}}},                                 /* command_queue */        \
-    .command_queue_size = 0                                     /* command_queue_size */   \
+#define FS_DEVICE_INFO_UNINITIALIZED {                                                     \
+    .device_name = {0},                                        /* device_name */           \
+    .device_id = 0,                                            /* device_id */             \
+    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */    \
+    .ping = 9999,                                              /* ping */                  \
+    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                 /* driver_config */         \
+    .status = FS_RUN_STATUS_IDLE,                              /* status */                \
+    .ip_addr = {0},                                            /* ip_addr */               \
+    .ip_port = 8888,                                           /* ip_port */               \
+    .tcp_sock = -1,                                            /* tcp_sock */              \
+    .udp_sock = -1,                                            /* udp_sock */              \
+    .serial_port = -1,                                         /* serial_port */           \
+    .baudrate = 0,                                             /* baudrate */              \
+    .last_received_packet = {{0}},                             /* last_received_packet */  \
+    .packet_buf_queue = {{{0}}},                               /* packet_buf_queue */      \
+    .packet_buf_queue_size = 0,                                /* packet_buf_queue_size */ \
+    .command_queue = {{{{0}}}},                                /* command_queue */         \
+    .command_queue_size = 0                                    /* command_queue_size */    \
 }
 
 #ifdef __cplusplus
