@@ -24,17 +24,17 @@ extern "C"
     /// @brief Initializes a TCP network driver for the given device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_init_network_tcp_driver(fs_device_info *device_handle);
+    int fs_init_network_tcp_driver(fs_device_info_t *device_handle);
 
     /// @brief Initializes a UDP network driver for the given device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_init_network_udp_driver(fs_device_info *device_handle);
+    int fs_init_network_udp_driver(fs_device_info_t *device_handle);
 
     /// @brief Initializes a serial communication driver for the given device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_init_serial_driver(fs_device_info *device_handle);
+    int fs_init_serial_driver(fs_device_info_t *device_handle);
 
     /// @brief Starts a new thread for executing a specific function.
     /// @param thread_func Pointer to the thread's main function.
@@ -45,7 +45,7 @@ extern "C"
     /// @param priority Priority of the thread.
     /// @param core_affinity Core affinity for the thread (-1 for no preference).
     /// @return 0 on success, or a negative error code on failure.
-    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status *thread_running_flag, size_t stack_size, int priority, int core_affinity);
+    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity);
     
     /// @brief Exits the currently running thread.
     /// @param thread_handle Pointer to the thread handle. 
@@ -60,7 +60,7 @@ extern "C"
     /// @param length_bytes Number of bytes to transmit.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes sent on success, or a negative error code on failure.
-    ssize_t fs_transmit_networked_tcp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Sends data via UDP to the specified device.
     /// @param device_handle Pointer to the device information structure.
@@ -68,7 +68,7 @@ extern "C"
     /// @param length_bytes Number of bytes to transmit.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes sent on success, or a negative error code on failure.
-    ssize_t fs_transmit_networked_udp(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Sends data via serial communication to the specified device.
     /// @param device_handle Pointer to the device information structure.
@@ -76,7 +76,7 @@ extern "C"
     /// @param length_bytes Number of bytes to transmit.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes sent on success, or a negative error code on failure.
-    ssize_t fs_transmit_serial(fs_device_info *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Receives data via TCP from the specified device.
     /// @param device_list Pointer to the list of connected devices.
@@ -85,7 +85,7 @@ extern "C"
     /// @param length_bytes Number of bytes to receive.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes received on success, or a negative error code on failure.
-    ssize_t fs_receive_networked_tcp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Receives data via UDP from the specified device.
     /// @param device_list Pointer to the list of connected devices.
@@ -94,7 +94,7 @@ extern "C"
     /// @param length_bytes Number of bytes to receive.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes received on success, or a negative error code on failure.
-    ssize_t fs_receive_networked_udp(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Receives data via serial communication from the specified device.
     /// @param device_handle Pointer to the device information structure.
@@ -102,22 +102,22 @@ extern "C"
     /// @param length_bytes Number of bytes to receive.
     /// @param timeout_micros Timeout for the operation in microseconds.
     /// @return Number of bytes received on success, or a negative error code on failure.
-    ssize_t fs_receive_serial(fs_device_info *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
+    ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros);
 
     /// @brief Shuts down the TCP network driver for the specified device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_shutdown_network_tcp_driver(fs_device_info *device_handle);
+    int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle);
 
     /// @brief Shuts down the UDP network driver for the specified device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_shutdown_network_udp_driver(fs_device_info *device_handle);
+    int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle);
 
     /// @brief Shuts down the serial communication driver for the specified device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_shutdown_serial_driver(fs_device_info *device_handle);
+    int fs_shutdown_serial_driver(fs_device_info_t *device_handle);
 
     /// @brief Logs a formatted message to the output stream.
     /// @param format Format string for the log message.

@@ -18,12 +18,12 @@ static void fs_serial_update_thread(void *params)
 {
     if (params == NULL)
     {
-        fs_log_output("[Trifecta] Error: Serial thread params point to an invalid instance of fs_device_info!");
+        fs_log_output("[Trifecta] Error: Serial thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
         return;
     }
 
-    fs_device_info *active_device = (fs_device_info *)params;
+    fs_device_info_t *active_device = (fs_device_info_t *)params;
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
     active_device->status = FS_RUN_STATUS_RUNNING;
@@ -56,7 +56,7 @@ static void fs_serial_update_thread(void *params)
 /// @brief Generic message send over serial.
 /// @param device_handle Pointer to the device information structure.
 /// @return Status code indicating success or failure.
-int fs_serial_send_message(fs_device_info *device_handle, char *message, size_t len)
+int fs_serial_send_message(fs_device_info_t *device_handle, char *message, size_t len)
 {
     const int receive_timeout_micros = 1000;
     return (fs_transmit_serial(device_handle, message, len, receive_timeout_micros) > 0) ? 0 : -1;
@@ -65,7 +65,7 @@ int fs_serial_send_message(fs_device_info *device_handle, char *message, size_t 
 /// @brief Starts the serial communication with the device.
 /// @param device_handle Pointer to the device information structure.
 /// @return Status code indicating success or failure.
-int fs_serial_start(fs_device_info *device_handle)
+int fs_serial_start(fs_device_info_t *device_handle)
 {
     // Clear the device name
     memset(&device_handle->device_name, 0, sizeof(device_handle->device_name));
@@ -144,7 +144,7 @@ int fs_serial_start(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_start_device_stream(fs_device_info *device_handle)
+int fs_serial_start_device_stream(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 1);
@@ -156,7 +156,7 @@ int fs_serial_start_device_stream(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_stop_device_stream(fs_device_info *device_handle)
+int fs_serial_stop_device_stream(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 0);
@@ -168,7 +168,7 @@ int fs_serial_stop_device_stream(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_read_one_shot(fs_device_info *device_handle)
+int fs_serial_read_one_shot(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 2);
@@ -180,7 +180,7 @@ int fs_serial_read_one_shot(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_exit(fs_device_info *device_handle)
+int fs_serial_exit(fs_device_info_t *device_handle)
 {
     device_handle->status = FS_RUN_STATUS_IDLE;
 
@@ -197,7 +197,7 @@ int fs_serial_exit(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_device_restart(fs_device_info *device_handle)
+int fs_serial_device_restart(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_RESTART, 0);
@@ -209,7 +209,7 @@ int fs_serial_device_restart(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_set_device_operating_mode(fs_device_info *device_handle, fs_communication_mode mode)
+int fs_serial_set_device_operating_mode(fs_device_info_t *device_handle, fs_communication_mode_t mode)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, mode);
@@ -223,10 +223,10 @@ int fs_serial_set_device_operating_mode(fs_device_info *device_handle, fs_commun
 /// @param ssid Null-terminated string with SSID
 /// @param password Null-terminated string with password
 /// @return
-int fs_serial_set_network_params(fs_device_info *device_handle, char *ssid, char *password)
+int fs_serial_set_network_params(fs_device_info_t *device_handle, char *ssid, char *password)
 {
     char send_buf[128] = {0};
-    snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, ssid);
+    snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, password);
     size_t send_len = strnlen(send_buf, 16) + 1;
     const int receive_timeout_micros = 1000;
     return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;

@@ -62,7 +62,7 @@ static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 /// @param str Command string
 /// @param len Command length
 /// @return 0 if successful
-int fs_enqueue_into_command_queue(fs_device_info *device_handle, char *str, size_t len)
+int fs_enqueue_into_command_queue(fs_device_info_t *device_handle, char *str, size_t len)
 {
     if (device_handle->command_queue_size >= FS_MAX_CMD_QUEUE_LENGTH)
     {
@@ -79,7 +79,7 @@ int fs_enqueue_into_command_queue(fs_device_info *device_handle, char *str, size
 /// @param cmd_buf The buffer containing all commands
 /// @param buf_len The length of the received buffer
 /// @returns Error code (if any)
-int fs_segment_commands(fs_device_info *device_handle, const void *cmd_buf, size_t buf_len)
+int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, size_t buf_len)
 {
     char input_line[FS_MAX_DATA_LENGTH];
     unsigned int input_pos = 0;
@@ -275,19 +275,19 @@ int obtain_packet_length(int packet_type)
     case C_PACKET_TYPE_AHRS:
     case C_PACKET_TYPE_INS:
     case C_PACKET_TYPE_GNSS:
-        packet_length = sizeof(fs_imu_composite_packet);
+        packet_length = sizeof(fs_imu_composite_packet_t);
         break;
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
     case S_PACKET_TYPE_INS:
     case S_PACKET_TYPE_GNSS:
-        packet_length = sizeof(fs_imu_regular_packet);
+        packet_length = sizeof(fs_imu_regular_packet_t);
         break;
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
     case C2_PACKET_TYPE_INS:
     case C2_PACKET_TYPE_GNSS:
-        packet_length = sizeof(fs_imu_composite_packet_2);
+        packet_length = sizeof(fs_imu_composite_packet_2_t);
         break;
     default:
         // Assume that data is string
@@ -301,7 +301,7 @@ int obtain_packet_length(int packet_type)
 /// @param str Command string
 /// @param len Command length
 /// @return 0 if successful
-int fs_enqueue_into_packet_queue(fs_device_info *device_handle, const fs_packet_union *packet, size_t len)
+int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packet_union_t *packet, size_t len)
 {
     if (device_handle->packet_buf_queue_size >= FS_MAX_PACKET_QUEUE_LENGTH)
     {
@@ -311,8 +311,8 @@ int fs_enqueue_into_packet_queue(fs_device_info *device_handle, const fs_packet_
     }
 
     device_handle->packet_buf_queue_size++;
-    memset(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], 0, sizeof(fs_packet_union));
-    memcpy(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], packet, sizeof(fs_packet_union));
+    memset(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], 0, sizeof(fs_packet_union_t));
+    memcpy(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], packet, sizeof(fs_packet_union_t));
     return 0;
 }
 
@@ -320,7 +320,7 @@ int fs_enqueue_into_packet_queue(fs_device_info *device_handle, const fs_packet_
 /// @param rx_buf
 /// @param rx_len
 /// @return
-int segment_packets(fs_device_info *device_handle, const void *rx_buf, size_t rx_len)
+int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
 {
     if (rx_buf == NULL || rx_len < 1 || rx_len > FS_MAX_DATA_LENGTH)
     {
@@ -346,7 +346,7 @@ int segment_packets(fs_device_info *device_handle, const void *rx_buf, size_t rx
             return -1;
         }
         // Emplace the packet into the queue
-        fs_enqueue_into_packet_queue(device_handle, (fs_packet_union *)(buf + pos), packet_length);
+        fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos), packet_length);
         packet_count++;
         pos += packet_length;
     }
@@ -358,7 +358,7 @@ int segment_packets(fs_device_info *device_handle, const void *rx_buf, size_t rx
 /// @param segment The Base64 encoded string segment
 /// @param length The length of the Base64 encoded string segment
 /// @return Status code
-int base64_to_packet(fs_device_info *device_handle, char *segment, size_t length)
+int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t length)
 {
     // Check for null pointer
     if (segment == NULL)
@@ -367,8 +367,8 @@ int base64_to_packet(fs_device_info *device_handle, char *segment, size_t length
         return -1;
     }
 
-    fs_packet_union packet_union;
-    memset(&packet_union, 0, sizeof(fs_packet_union));
+    fs_packet_union_t packet_union;
+    memset(&packet_union, 0, sizeof(fs_packet_union_t));
     size_t decoded_size = 0;
 
     if (fs_base64_decode(segment, &packet_union, length, &decoded_size) != 0)

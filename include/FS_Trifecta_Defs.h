@@ -57,14 +57,14 @@ extern "C"
         float x; // Quaternion vector terms
         float y; // Quaternion vector terms
         float z; // Quaternion vector terms
-    } fs_quaternion;
+    } fs_quaternion_t;
 
     typedef struct fs_vector3
     {
         float x;
         float y;
         float z;
-    } fs_vector3;
+    } fs_vector3_t;
 
     /// @brief Type of packet indication
     typedef enum fs_packet_type
@@ -86,7 +86,7 @@ extern "C"
         C2_PACKET_TYPE_AHRS = 9,  // AHRS - IMU + orientation (uncorrected)
         C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
-    } fs_packet_type;
+    } fs_packet_type_t;
 
     /// @brief Command definitions
     typedef enum
@@ -178,7 +178,7 @@ extern "C"
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
         int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_composite_packet;
+    } __attribute__((packed)) fs_imu_composite_packet_t;
 
     /// @brief
     typedef struct fs_imu_regular_packet
@@ -217,7 +217,7 @@ extern "C"
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
         int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_regular_packet;
+    } __attribute__((packed)) fs_imu_regular_packet_t;
 
     /// @brief
     typedef struct fs_imu_composite_packet_2
@@ -277,15 +277,15 @@ extern "C"
         int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
         int8_t c;              // Reserved for future use
         int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_composite_packet_2;
+    } __attribute__((packed)) fs_imu_composite_packet_2_t;
 
     /// @brief Union allowing common storage of all packet types
     typedef union fs_packet_union
     {
-        fs_imu_composite_packet composite;
-        fs_imu_regular_packet regular;
-        fs_imu_composite_packet_2 composite2;
-    } __attribute__((packed)) fs_packet_union;
+        fs_imu_composite_packet_t composite;
+        fs_imu_regular_packet_t regular;
+        fs_imu_composite_packet_2_t composite2;
+    } __attribute__((packed)) fs_packet_union_t;
 
     /// @brief Communication mode between the device and the host (this machine)
     typedef enum fs_communication_mode
@@ -300,14 +300,14 @@ extern "C"
         FS_COMMUNICATION_MODE_ESPN = 32,          // ESP-NOW (2.4 GHz for ESP32 only) -
         FS_COMMUNICATION_MODE_SPI = 64,           // SPI -
         FS_COMMUNICATION_MODE_BLE = 128,          // Bluetooth Low Energy -
-    } fs_communication_mode;
+    } fs_communication_mode_t;
 
     typedef enum fs_run_status
     {
         FS_RUN_STATUS_ERROR = -1,
         FS_RUN_STATUS_IDLE = 0,
         FS_RUN_STATUS_RUNNING = 1,
-    } fs_run_status;
+    } fs_run_status_t;
 
     typedef struct fs_driver_config
     {
@@ -316,63 +316,80 @@ extern "C"
         int read_timeout_micros;           // How long to wait (microseconds) to read data
         int task_wait_ms;                  // How long to wait in between updates of the background task
         int task_stack_size_bytes;         // How much to allocate to the background task
-    } fs_driver_config;
+    } fs_driver_config_t;
 
-#define FS_DRIVER_CONFIG_DEFAULT { \
-    6,                             \
-    1,                             \
-    1000,                          \
-    3,                             \
-    4096,                          \
+#define FS_DRIVER_CONFIG_DEFAULT {      \
+    .background_task_priority = 6,      \
+    .background_task_core_affinity = 1, \
+    .read_timeout_micros = 1000,        \
+    .task_wait_ms = 3,                  \
+    .task_stack_size_bytes = 4096,      \
+}
+
+    typedef struct fs_circular_buffer
+    {
+        uint8_t buffer[FS_MAX_DATA_LENGTH];
+        size_t head;  // write position
+        size_t tail;  // read position
+        size_t count; // number of bytes in buffer
+    } fs_circular_buffer_t;
+
+#define FS_CIRCULAR_BUFFER_EMPTY { \
+    .buffer = {0},                 \
+    .head = 0,                     \
+    .tail = 0,                     \
+    .count = 0,                    \
 }
 
     /// @brief Device information container
     typedef struct fs_device_info
     {
-        char device_name[32];                     // Unique identifier for device name
-        int32_t device_id;                        // Unique identifier for the device type
-        fs_communication_mode communication_mode; // Communication mode
-        int32_t ping;                             // Time since last received communication from device
+        char device_name[32];                       // Unique identifier for device name
+        int32_t device_id;                          // Unique identifier for the device type
+        fs_communication_mode_t communication_mode; // Communication mode
+        int32_t ping;                               // Time since last received communication from device
 
-        fs_driver_config driver_config; // Device driver configuration (each device has its own thread spawned)
-        fs_run_status status;           // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
+        fs_driver_config_t driver_config; // Device driver configuration (each device has its own thread spawned)
+        fs_run_status_t status;           // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
 
         char ip_addr[39]; // If networking is used, this is the corresponding IP address string
         int ip_port;      // Always 8888
         int tcp_sock;     // TCP socket number
         int udp_sock;     // UDP socket number
 
-        int serial_port;  // If serial communication of some kind is used, this is the corresponding port
-        int32_t baudrate; // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
+        int serial_port;                  // If serial communication of some kind is used, this is the corresponding port
+        int32_t baudrate;                 // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
+        fs_circular_buffer_t data_buffer; // Received data of the device, used primarily for serial reads
 
-        fs_packet_union last_received_packet; // The last received packet for this device
+        fs_packet_union_t last_received_packet; // The last received packet for this device
 
-        fs_packet_union packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH]; // Packet queue buffer for the device (read-only)
-        size_t packet_buf_queue_size;                                 // Current number of received packets (read-only)
+        fs_packet_union_t packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH]; // Packet queue buffer for the device (read-only)
+        size_t packet_buf_queue_size;                                   // Current number of received packets (read-only)
 
         char command_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Command buffer for the device (read-only)
         size_t command_queue_size;                                      // Current number of received commands (read-only)
 
-    } fs_device_info;
+    } fs_device_info_t;
 
-#define FS_DEVICE_INFO_UNINITIALIZED {                                                     \
-    .device_name = {0},                                        /* device_name */           \
-    .device_id = 0,                                            /* device_id */             \
-    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */    \
-    .ping = 9999,                                              /* ping */                  \
-    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                 /* driver_config */         \
-    .status = FS_RUN_STATUS_IDLE,                              /* status */                \
-    .ip_addr = {0},                                            /* ip_addr */               \
-    .ip_port = 8888,                                           /* ip_port */               \
-    .tcp_sock = -1,                                            /* tcp_sock */              \
-    .udp_sock = -1,                                            /* udp_sock */              \
-    .serial_port = -1,                                         /* serial_port */           \
-    .baudrate = 0,                                             /* baudrate */              \
-    .last_received_packet = {{0}},                             /* last_received_packet */  \
-    .packet_buf_queue = {{{0}}},                               /* packet_buf_queue */      \
-    .packet_buf_queue_size = 0,                                /* packet_buf_queue_size */ \
-    .command_queue = {{{{0}}}},                                /* command_queue */         \
-    .command_queue_size = 0                                    /* command_queue_size */    \
+#define FS_DEVICE_INFO_UNINITIALIZED {                                                  \
+    .device_name = {0},                                        /* device_name */        \
+    .device_id = 0,                                            /* device_id */          \
+    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */ \
+    .ping = 9999,                                              /* ping */               \
+    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                 /* driver_config */      \
+    .status = FS_RUN_STATUS_IDLE,                              /* status */             \
+    .ip_addr = {0},                                            /* ip_addr */            \
+    .ip_port = 8888,                                           /* ip_port */            \
+    .tcp_sock = -1,                                            /* tcp_sock */           \
+    .udp_sock = -1,                                            /* udp_sock */           \
+    .serial_port = -1,                                         /* serial_port */        \
+    .baudrate = 0,                                             /* baudrate */           \
+    .data_buffer = FS_CIRCULAR_BUFFER_EMPTY,                                            \
+    .last_received_packet = {{0}}, /* last_received_packet */                           \
+    .packet_buf_queue = {{{0}}},   /* packet_buf_queue */                               \
+    .packet_buf_queue_size = 0,    /* packet_buf_queue_size */                          \
+    .command_queue = {{{{0}}}},    /* command_queue */                                  \
+    .command_queue_size = 0        /* command_queue_size */                             \
 }
 
 #ifdef __cplusplus

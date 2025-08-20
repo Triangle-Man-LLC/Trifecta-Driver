@@ -20,17 +20,17 @@
 #include "FS_Trifecta_Serial.h"
 #include "FS_Trifecta_Device.h"
 
-int fs_set_driver_parameters(fs_device_info *device_handle, fs_driver_config *dconfig)
+int fs_set_driver_parameters(fs_device_info_t *device_handle, fs_driver_config_t *dconfig)
 {
   if (dconfig == NULL)
   {
     return -1;
   }
-  memcpy(&device_handle->driver_config, dconfig, sizeof(fs_driver_config));
+  memcpy(&device_handle->driver_config, dconfig, sizeof(fs_driver_config_t));
   return 0;
 }
 
-int fs_initialize_networked(fs_device_info *device_handle, const char *device_ip_address)
+int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_ip_address)
 {
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
   {
@@ -40,7 +40,7 @@ int fs_initialize_networked(fs_device_info *device_handle, const char *device_ip
 
   if (device_handle->driver_config.task_stack_size_bytes == 0)
   {
-    fs_driver_config dconfig = FS_DRIVER_CONFIG_DEFAULT;
+    fs_driver_config_t dconfig = FS_DRIVER_CONFIG_DEFAULT;
     if (fs_set_driver_parameters(device_handle, &dconfig) != 0)
     {
       fs_log_output("[Trifecta] Error: Failed to set the driver configuration!\n");
@@ -74,7 +74,7 @@ int fs_initialize_networked(fs_device_info *device_handle, const char *device_ip
 /// @param fd The serial port (file descriptor on POSIX systems, UART_NUM on microcontrollers),
 /// if -1 then the device-specific implementation should attempt to scan available ports
 /// @return 0 if succeeded
-int fs_initialize_serial(fs_device_info *device_handle, int fd)
+int fs_initialize_serial(fs_device_info_t *device_handle, int fd)
 {
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
   {
@@ -84,7 +84,7 @@ int fs_initialize_serial(fs_device_info *device_handle, int fd)
 
   if (device_handle->driver_config.task_stack_size_bytes == 0)
   {
-    fs_driver_config dconfig = FS_DRIVER_CONFIG_DEFAULT;
+    fs_driver_config_t dconfig = FS_DRIVER_CONFIG_DEFAULT;
     if (fs_set_driver_parameters(device_handle, &dconfig) != 0)
     {
       fs_log_output("[Trifecta] Error: Failed to set the driver configuration!\n");
@@ -117,7 +117,7 @@ int fs_initialize_serial(fs_device_info *device_handle, int fd)
 
 /// @brief Begin device data stream
 /// @return 0 if succeeded, -1 if failed
-int fs_start_stream(fs_device_info *device_handle)
+int fs_start_stream(fs_device_info_t *device_handle)
 {
   switch (device_handle->communication_mode)
   {
@@ -145,7 +145,7 @@ int fs_start_stream(fs_device_info *device_handle)
 
 /// @brief End device data stream
 /// @return 0 if succeeded, -1 if failed
-int fs_stop_stream(fs_device_info *device_handle)
+int fs_stop_stream(fs_device_info_t *device_handle)
 {
   switch (device_handle->communication_mode)
   {
@@ -177,7 +177,7 @@ int fs_stop_stream(fs_device_info *device_handle)
 /// This is generally preferable in most use cases compared to streaming mode, as it negates the need for reconnection
 /// logic in the application layer.
 /// @return 0 if succeeded, -1 if failed
-int fs_read_one_shot(fs_device_info *device_handle)
+int fs_read_one_shot(fs_device_info_t *device_handle)
 {
   switch (device_handle->communication_mode)
   {
@@ -205,7 +205,7 @@ int fs_read_one_shot(fs_device_info *device_handle)
 
 /// @brief Order the device to restart
 /// @return 0 if succeeded, -1 if failed
-int fs_reboot_device(fs_device_info *device_handle)
+int fs_reboot_device(fs_device_info_t *device_handle)
 {
   switch (device_handle->communication_mode)
   {
@@ -239,7 +239,7 @@ int fs_enable_logging(bool do_enable)
   return fs_toggle_logging(do_enable);
 }
 
-int fs_closedown(fs_device_info *device_handle)
+int fs_closedown(fs_device_info_t *device_handle)
 {
   switch (device_handle->communication_mode)
   {
@@ -264,13 +264,13 @@ int fs_closedown(fs_device_info *device_handle)
   }
 
   device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
-  memset(device_handle, 0, sizeof(fs_device_info));
+  memset(device_handle, 0, sizeof(fs_device_info_t));
 
   fs_log_output("[Trifecta] Closedown of driver succeeded, all resources are now released.");
   return 0;
 }
 
-int fs_set_ahrs_heading(fs_device_info *device_handle, float heading_deg)
+int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg)
 {
   char command[16];
   snprintf(command, sizeof(command), "%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
@@ -298,7 +298,7 @@ int fs_set_ahrs_heading(fs_device_info *device_handle, float heading_deg)
   return 0;
 }
 
-int fs_set_ins_position(fs_device_info *device_handle, fs_vector3 *position)
+int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position)
 {
   char command[16];
   snprintf(command, sizeof(command), "%c0;", CMD_REZERO_INS);

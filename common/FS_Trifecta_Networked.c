@@ -21,12 +21,12 @@ static void fs_network_update_thread(void *params)
 {
     if (params == NULL)
     {
-        fs_log_output("[Trifecta] Error: Network thread params point to an invalid instance of fs_device_info!");
+        fs_log_output("[Trifecta] Error: Network thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
         return;
     }
 
-    fs_device_info *active_device = (fs_device_info *)params;
+    fs_device_info_t *active_device = (fs_device_info_t *)params;
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
     active_device->status = FS_RUN_STATUS_RUNNING;
@@ -76,7 +76,7 @@ static void fs_network_update_thread(void *params)
 /// @brief Generic message send over network (TCP).
 /// @param device_handle Pointer to the device information structure.
 /// @return Status code indicating success or failure.
-int fs_network_send_message(fs_device_info *device_handle, char *message, size_t len)
+int fs_network_send_message(fs_device_info_t *device_handle, char *message, size_t len)
 {
     const int transmit_timeout_micros = 10000;
     return fs_transmit_networked_tcp(device_handle, message, len, transmit_timeout_micros);
@@ -86,7 +86,7 @@ int fs_network_send_message(fs_device_info *device_handle, char *message, size_t
 /// @param ip_addr The IP address to connect to.
 /// @param device_handle Handle to the network device.
 /// @return Status of the network start operation (0 for success, -1 for failure).
-int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
+int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 {
     // Clear the device name and parameters
     memset(device_handle->device_name, 0, sizeof(device_handle->device_name));
@@ -164,7 +164,7 @@ int fs_network_start(const char *ip_addr, fs_device_info *device_handle)
 /// @brief Starts streaming data from the device over the network.
 /// @param device_handle Handle to the network device.
 /// @return Status of the command transmission (0 for success, -1 for failure).
-int fs_network_start_device_stream(fs_device_info *device_handle)
+int fs_network_start_device_stream(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 1);
@@ -176,7 +176,7 @@ int fs_network_start_device_stream(fs_device_info *device_handle)
 /// @brief Stops streaming data from the device over the network.
 /// @param device_handle Handle to the network device.
 /// @return Status of the command transmission (0 for success, -1 for failure).
-int fs_network_stop_device_stream(fs_device_info *device_handle)
+int fs_network_stop_device_stream(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 0);
@@ -188,7 +188,7 @@ int fs_network_stop_device_stream(fs_device_info *device_handle)
 /// @brief Stops streaming data from the device over the network.
 /// @param device_handle Handle to the network device.
 /// @return Status of the command transmission (0 for success, -1 for failure).
-int fs_network_read_one_shot(fs_device_info *device_handle)
+int fs_network_read_one_shot(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 2);
@@ -200,7 +200,7 @@ int fs_network_read_one_shot(fs_device_info *device_handle)
 /// @brief Deallocate all allocated network resources.
 /// @param device_handle Handle to the network device.
 /// @return Status of the network shutdown (0 for success, -1 for failure).
-int fs_network_exit(fs_device_info *device_handle)
+int fs_network_exit(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     device_handle->status = FS_RUN_STATUS_IDLE;
@@ -223,7 +223,7 @@ int fs_network_exit(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_network_device_restart(fs_device_info *device_handle)
+int fs_network_device_restart(fs_device_info_t *device_handle)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_RESTART, 0);
@@ -235,7 +235,7 @@ int fs_network_device_restart(fs_device_info *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_network_set_device_operating_mode(fs_device_info *device_handle, fs_communication_mode mode)
+int fs_network_set_device_operating_mode(fs_device_info_t *device_handle, fs_communication_mode_t mode)
 {
     char send_buf[16] = {0};
     snprintf(send_buf, 16, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, mode);
@@ -249,10 +249,10 @@ int fs_network_set_device_operating_mode(fs_device_info *device_handle, fs_commu
 /// @param ssid Null-terminated string with SSID
 /// @param password Null-terminated string with password
 /// @return
-int fs_network_set_network_params(fs_device_info *device_handle, char *ssid, char *password)
+int fs_network_set_network_params(fs_device_info_t *device_handle, char *ssid, char *password)
 {
     char send_buf[128] = {0};
-    snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, ssid);
+    snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, password);
     size_t send_len = strnlen(send_buf, 16) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
@@ -261,7 +261,7 @@ int fs_network_set_network_params(fs_device_info *device_handle, char *ssid, cha
 /// @brief 
 /// @param device_handle 
 /// @return 
-int fs_network_set_host_udp_port(fs_device_info *device_handle, int udp_port)
+int fs_network_set_host_udp_port(fs_device_info_t *device_handle, int udp_port)
 {
     char send_buf[128] = {0};
     if (udp_port < 1024 || udp_port > 65535)

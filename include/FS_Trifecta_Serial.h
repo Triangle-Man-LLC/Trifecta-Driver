@@ -22,16 +22,16 @@ extern "C"
 {
 #endif
 
-    int fs_serial_set_driver_config(fs_driver_config *driver_config);
-    int fs_serial_send_message(fs_device_info *device_handle, char* message, size_t len);
-    int fs_serial_start(fs_device_info *device_handle);
-    int fs_serial_start_device_stream(fs_device_info *device_handle);
-    int fs_serial_stop_device_stream(fs_device_info *device_handle);
-    int fs_serial_read_one_shot(fs_device_info *device_handle);
-    int fs_serial_exit(fs_device_info *device_handle);
-    int fs_serial_device_restart(fs_device_info *device_handle);
-    int fs_serial_set_device_operating_mode(fs_device_info *device_handle, fs_communication_mode mode);
-    int fs_serial_set_network_params(fs_device_info *device_handle, char *ssid, char *password);
+    int fs_serial_set_driver_config(fs_driver_config_t *driver_config);
+    int fs_serial_send_message(fs_device_info_t *device_handle, char* message, size_t len);
+    int fs_serial_start(fs_device_info_t *device_handle);
+    int fs_serial_start_device_stream(fs_device_info_t *device_handle);
+    int fs_serial_stop_device_stream(fs_device_info_t *device_handle);
+    int fs_serial_read_one_shot(fs_device_info_t *device_handle);
+    int fs_serial_exit(fs_device_info_t *device_handle);
+    int fs_serial_device_restart(fs_device_info_t *device_handle);
+    int fs_serial_set_device_operating_mode(fs_device_info_t *device_handle, fs_communication_mode_t mode);
+    int fs_serial_set_network_params(fs_device_info_t *device_handle, char *ssid, char *password);
 
 #ifdef __cplusplus
 }

@@ -17,7 +17,7 @@
 /// @param cmd_buf The buffer containing data blob to process
 /// @param buf_len Size of cmd_buf
 /// @return 0 on success, -1 on failure
-int fs_handle_received_commands(fs_device_info *device_handle, const void *cmd_buf, size_t buf_len)
+int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd_buf, size_t buf_len)
 {
     if (fs_segment_commands(device_handle, cmd_buf, buf_len) != 0)
     {
@@ -46,25 +46,23 @@ int fs_handle_received_commands(fs_device_info *device_handle, const void *cmd_b
     return 0;
 }
 
-static int fs_device_process_packets_serial(fs_device_info *device_handle, const void *rx_buf, size_t rx_len)
+static int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
 {
-    static fs_circular_buffer_t rx_cb;
-    static bool initialized = false;
-
-    if (!initialized)
-    {
-        fs_cb_init(&rx_cb);
-        initialized = true;
-        fs_log_output("[Trifecta] Initialized circular buffer");
-    }
+    // Note: No longer needed, the circular buffer is now initialized in the empty state.
+    // if (!initialized)
+    // {
+    //     fs_cb_init(&rx_cb);
+    //     initialized = true;
+    //     fs_log_output("[Trifecta] Initialized circular buffer");
+    // }
 
     fs_log_output("[Trifecta] RX: Pushing %zu bytes into circular buffer", rx_len);
-    fs_cb_push(&rx_cb, (const uint8_t *)rx_buf, rx_len);
+    fs_cb_push(&device_handle->data_buffer, (const uint8_t *)rx_buf, rx_len);
 
     while (1)
     {
         uint8_t temp[FS_MAX_DATA_LENGTH];
-        size_t peeked = fs_cb_peek(&rx_cb, temp, sizeof(temp));
+        size_t peeked = fs_cb_peek(&device_handle->data_buffer, temp, sizeof(temp));
         if (peeked == 0)
         {
             fs_log_output("[Trifecta] Buffer empty after peek, exiting loop");
@@ -96,7 +94,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
 
             size_t packet_len = indices.exclam_index + 1;
             fs_log_output("[Trifecta] Discarding %zu bytes from buffer after packet", packet_len);
-            fs_cb_pop(&rx_cb, NULL, packet_len);
+            fs_cb_pop(&device_handle->data_buffer, NULL, packet_len);
         }
         else if (indices.semicolon_index != -1)
         {
@@ -109,7 +107,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
                 fs_log_output("[Trifecta] Failed to segment commands");
 
             fs_log_output("[Trifecta] Discarding %zu bytes from buffer after command", cmd_len);
-            fs_cb_pop(&rx_cb, NULL, cmd_len);
+            fs_cb_pop(&device_handle->data_buffer, NULL, cmd_len);
         }
         else
         {
@@ -126,7 +124,7 @@ static int fs_device_process_packets_serial(fs_device_info *device_handle, const
 /// @param rx_len The length to read
 /// @param source FS_COMMUNICATION_MODE_SERIAL, FS_COMMUNICATION_MODE_TCP_UDP, etc. are handled differently
 /// @return
-int fs_device_parse_packet(fs_device_info *device_handle, const void *rx_buf, ssize_t rx_len, fs_communication_mode source)
+int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, ssize_t rx_len, fs_communication_mode_t source)
 {
     if (rx_len <= 0)
     {
@@ -140,7 +138,7 @@ int fs_device_parse_packet(fs_device_info *device_handle, const void *rx_buf, ss
 
     for (int i = 0; i < FS_MAX_PACKET_QUEUE_LENGTH; i++)
     {
-        memset(&device_handle->packet_buf_queue[i], 0, sizeof(fs_packet_union));
+        memset(&device_handle->packet_buf_queue[i], 0, sizeof(fs_packet_union_t));
     }
 
     switch (source)
@@ -182,8 +180,8 @@ int fs_device_parse_packet(fs_device_info *device_handle, const void *rx_buf, ss
         size_t required_size = obtain_packet_length(device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1].composite.type);
 
         // Erase the last received packet
-        memset(&device_handle->last_received_packet, 0, sizeof(fs_packet_union));
-        memcpy(&device_handle->last_received_packet, &device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], sizeof(fs_packet_union));
+        memset(&device_handle->last_received_packet, 0, sizeof(fs_packet_union_t));
+        memcpy(&device_handle->last_received_packet, &device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], sizeof(fs_packet_union_t));
         device_handle->packet_buf_queue_size = 0; // Clean the queue
 
         fs_log_output("[Trifecta] Successful data parsing! Length %d Timestamp: %ld - Orientation: %0.4f %0.4f %0.4f %0.4f", required_size, device_handle->last_received_packet.composite.time, device_handle->last_received_packet.composite.q0, device_handle->last_received_packet.composite.q1, device_handle->last_received_packet.composite.q2, device_handle->last_received_packet.composite.q3);
@@ -216,7 +214,7 @@ void fs_q_to_euler_angles(float *estRoll, float *estPitch, float *estYaw, float 
     }
 }
 
-int fs_get_last_timestamp(fs_device_info *device_handle, uint32_t *time)
+int fs_get_last_timestamp(fs_device_info_t *device_handle, uint32_t *time)
 {
     if (time == NULL)
     {
@@ -226,18 +224,18 @@ int fs_get_last_timestamp(fs_device_info *device_handle, uint32_t *time)
     return 0;
 }
 
-int fs_get_raw_packet(fs_device_info *device_handle, fs_packet_union *packet_buffer)
+int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer)
 {
     if (packet_buffer == NULL)
     {
         return -1;
     }
 
-    memcpy(packet_buffer, &device_handle->last_received_packet, sizeof(fs_packet_union));
+    memcpy(packet_buffer, &device_handle->last_received_packet, sizeof(fs_packet_union_t));
     return 0;
 }
 
-int fs_get_orientation(fs_device_info *device_handle, fs_quaternion *orientation_buffer)
+int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orientation_buffer)
 {
     if (orientation_buffer == NULL)
     {
@@ -251,14 +249,14 @@ int fs_get_orientation(fs_device_info *device_handle, fs_quaternion *orientation
     return 0;
 }
 
-int fs_get_orientation_euler(fs_device_info *device_handle, fs_vector3 *orientation_buffer, bool degrees)
+int fs_get_orientation_euler(fs_device_info_t *device_handle, fs_vector3_t *orientation_buffer, bool degrees)
 {
     if (orientation_buffer == NULL)
     {
         return -1;
     }
 
-    fs_quaternion quat = {0};
+    fs_quaternion_t quat = {0};
     if (fs_get_orientation(device_handle, &quat) != 0)
     {
         return -1;
@@ -268,7 +266,7 @@ int fs_get_orientation_euler(fs_device_info *device_handle, fs_vector3 *orientat
     return 0;
 }
 
-int fs_get_acceleration(fs_device_info *device_handle, fs_vector3 *acceleration_buffer)
+int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *acceleration_buffer)
 {
     if (acceleration_buffer == NULL)
     {
@@ -290,7 +288,7 @@ int fs_get_acceleration(fs_device_info *device_handle, fs_vector3 *acceleration_
     return 0;
 }
 
-int fs_get_angular_velocity(fs_device_info *device_handle, fs_vector3 *angular_velocity_buffer)
+int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angular_velocity_buffer)
 {
     if (angular_velocity_buffer == NULL)
     {
@@ -319,7 +317,7 @@ int fs_get_angular_velocity(fs_device_info *device_handle, fs_vector3 *angular_v
     return -1;
 }
 
-int fs_get_velocity(fs_device_info *device_handle, fs_vector3 *velocity_buffer)
+int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buffer)
 {
     if (velocity_buffer == NULL)
     {
@@ -332,7 +330,7 @@ int fs_get_velocity(fs_device_info *device_handle, fs_vector3 *velocity_buffer)
     return 0;
 }
 
-int fs_get_movement_state(fs_device_info *device_handle, fs_run_status *device_state_buffer)
+int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *device_state_buffer)
 {
     if (device_state_buffer == NULL)
     {
@@ -342,7 +340,7 @@ int fs_get_movement_state(fs_device_info *device_handle, fs_run_status *device_s
     return 0;
 }
 
-int fs_get_position(fs_device_info *device_handle, fs_vector3 *position_buffer)
+int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buffer)
 {
     if (position_buffer == NULL)
     {
