@@ -48,20 +48,12 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
 
 static int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
 {
-    // Note: No longer needed, the circular buffer is now initialized in the empty state.
-    // if (!initialized)
-    // {
-    //     fs_cb_init(&rx_cb);
-    //     initialized = true;
-    //     fs_log_output("[Trifecta] Initialized circular buffer");
-    // }
-
     fs_log_output("[Trifecta] RX: Pushing %zu bytes into circular buffer", rx_len);
     fs_cb_push(&device_handle->data_buffer, (const uint8_t *)rx_buf, rx_len);
 
+    uint8_t temp[FS_MAX_DATA_LENGTH];
     while (1)
     {
-        uint8_t temp[FS_MAX_DATA_LENGTH];
         size_t peeked = fs_cb_peek(&device_handle->data_buffer, temp, sizeof(temp));
         if (peeked == 0)
         {
