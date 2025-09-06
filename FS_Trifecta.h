@@ -37,7 +37,7 @@ extern "C"
     /// @param device_handle Pointer to the device handle.
     /// @param fd File descriptor or USB/UART port number. If set to -1, the driver will auto-scan ports (on supported platforms).
     /// @return 0 on success.
-    int fs_initialize_serial(fs_device_info_t *device_handle, int fd);
+    int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communication_mode_t serial_mode);
 
     /// @brief Request the device to asynchronously stream data. This data will arrive at the native speed (e.g. 200 Hz on Trifecta-K).
     /// Due to the high data rate, this may not work well on smaller host platforms, with large numbers of devices, or at slow baud rates.

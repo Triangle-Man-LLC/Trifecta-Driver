@@ -72,9 +72,10 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 
 /// @brief Start the IMU driver in serial mode
 /// @param fd The serial port (file descriptor on POSIX systems, UART_NUM on microcontrollers),
-/// if -1 then the device-specific implementation should attempt to scan available ports
+/// if -1 then some device-specific implementations may attempt to scan available ports.
+/// @param serial_mode FS_COMMUNICATION_MODE_UART, FS_COMMUNICATION_MODE_USB_CDC, FS_COMMUNICATION_MODE_I2C, or  FS_COMMUNICATION_MODE_SPI
 /// @return 0 if succeeded
-int fs_initialize_serial(fs_device_info_t *device_handle, int fd)
+int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communication_mode_t serial_mode)
 {
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
   {
@@ -92,7 +93,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, int fd)
     }
   }
 
-  device_handle->communication_mode = FS_COMMUNICATION_MODE_UART;
+  device_handle->communication_mode = serial_mode;
   device_handle->serial_port = fd;
 
   if (fs_serial_start(device_handle) != 0)
@@ -105,7 +106,27 @@ int fs_initialize_serial(fs_device_info_t *device_handle, int fd)
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
   {
     device_handle->baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
-    fs_log_output("[Trifecta] Info: Initialized serial driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    fs_log_output("[Trifecta] Info: Initialized UART driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    return 0;
+  }
+  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+  {
+    // CDC ACM will be supported on a number of platforms,
+    // though note that on Linux/Posix systems they are treated the same as serial ports.
+    fs_log_output("[Trifecta] Info: Initialized CDC driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    return 0;
+  }
+  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+  {
+    // TODO: In I2C mode, use the "baudrate" field to instead store device address.
+    // device_handle->baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
+    fs_log_output("[Trifecta] Info: Initialized I2C driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    return 0;
+  }
+
+  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+  {
+    fs_log_output("[Trifecta] Info: Initialized SPI driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
     return 0;
   }
   else
@@ -122,19 +143,26 @@ int fs_start_stream(fs_device_info_t *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
+  case FS_COMMUNICATION_MODE_USB_CDC:
+  case FS_COMMUNICATION_MODE_I2C:
+  case FS_COMMUNICATION_MODE_SPI:
+  {
     if (fs_serial_start_device_stream(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not start device serial stream!");
       return -1;
     }
     break;
+  }
   case FS_COMMUNICATION_MODE_TCP_UDP:
+  {
     if (fs_network_start_device_stream(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not start device network stream!");
       return -1;
     }
     break;
+  }
   default:
     fs_log_output("[Trifecta] Error: Failed to start stream, driver was not operating!");
     return -1;
@@ -150,19 +178,26 @@ int fs_stop_stream(fs_device_info_t *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
+  case FS_COMMUNICATION_MODE_USB_CDC:
+  case FS_COMMUNICATION_MODE_I2C:
+  case FS_COMMUNICATION_MODE_SPI:
+  {
     if (fs_serial_stop_device_stream(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not stop device serial stream!");
       return -1;
     }
     break;
+  }
   case FS_COMMUNICATION_MODE_TCP_UDP:
+  {
     if (fs_network_stop_device_stream(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Error: Could not stop device network stream!");
       return -1;
     }
     break;
+  }
   default:
     fs_log_output("[Trifecta] Error: Invalid operating mode!");
     return -1;
@@ -182,19 +217,26 @@ int fs_read_one_shot(fs_device_info_t *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
+  case FS_COMMUNICATION_MODE_USB_CDC:
+  case FS_COMMUNICATION_MODE_I2C:
+  case FS_COMMUNICATION_MODE_SPI:
+  {
     if (fs_serial_read_one_shot(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not transmit device serial read command!");
       return -1;
     }
     break;
+  }
   case FS_COMMUNICATION_MODE_TCP_UDP:
+  {
     if (fs_network_read_one_shot(device_handle) < 0)
     {
       fs_log_output("[Trifecta] Error: Could not transmit device network read command!");
       return -1;
     }
     break;
+  }
   default:
     fs_log_output("[Trifecta] Error: Invalid operating mode!");
     return -1;

@@ -135,7 +135,10 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
 
     switch (source)
     {
+    // UDP, I2C, and SPI modes all transfer binary data packets.
     case FS_COMMUNICATION_MODE_TCP_UDP:
+    case FS_COMMUNICATION_MODE_I2C:
+    case FS_COMMUNICATION_MODE_SPI: 
     {
         int packets = segment_packets(device_handle, rx_buf, rx_len);
         if (packets < 0)
@@ -146,7 +149,9 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
         fs_log_output("[Trifecta] Successfully processed packets (network format)!");
     }
     break;
-    case FS_COMMUNICATION_MODE_SERIAL:
+    // UART and CDC modes all transfer Base64-encoded packets.
+    case FS_COMMUNICATION_MODE_UART:
+    case FS_COMMUNICATION_MODE_USB_CDC:
     {
         if (fs_device_process_packets_serial(device_handle, rx_buf, rx_len) != 0)
         {
@@ -156,9 +161,9 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
         fs_log_output("[Trifecta] Successfully processed packets!");
     }
     break;
-    case FS_COMMUNICATION_MODE_BLUETOOTH:
+    // BLE/CAN driver support will be added in the future, for platforms which support them.
+    case FS_COMMUNICATION_MODE_BLE:
     case FS_COMMUNICATION_MODE_CAN:
-    case FS_COMMUNICATION_MODE_I2C:
         fs_log_output("[Trifecta] These modes are not yet supported!");
         return -1;
     default:
