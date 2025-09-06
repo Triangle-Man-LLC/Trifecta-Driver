@@ -9,10 +9,14 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "sdkconfig.h"
+
+#if (CONFIG_ESP_WIFI_ENABLED && CONFIG_LWIP_ENABLED)
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/sockets.h"
 #include <lwip/netdb.h>
+#endif
 
 #include "FS_Trifecta_Interfaces.h"
 
@@ -21,6 +25,7 @@
 /// @return 0 on success, -1 on failure
 int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
+#if (CONFIG_ESP_WIFI_ENABLED && CONFIG_LWIP_ENABLED)
     if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
@@ -57,6 +62,11 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 
     device_handle->tcp_sock = sockfd;
     return 0;
+    
+#else
+    fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Start the network UDP driver.
@@ -64,6 +74,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 /// @return 0 on success, -1 on failure
 int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
+#if (CONFIG_ESP_WIFI_ENABLED && CONFIG_LWIP_ENABLED)
     if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
@@ -119,6 +130,10 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 
     device_handle->udp_sock = sockfd;
     return 0;
+#else
+    fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Transmit data over a networked TCP connection
@@ -129,6 +144,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 /// @return -1 if failed, else number of bytes written
 ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (device_handle == NULL)
     {
         fs_log_output("[Trifecta] Error: Device handle is NULL!");
@@ -171,6 +187,10 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
     }
 
     return written;
+#else
+    fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Transmit data over a networked UDP connection
@@ -181,6 +201,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
 /// @return -1 if failed, else number of bytes written
 ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (device_handle == NULL)
     {
         fs_log_output("[Trifecta] Error: Device handle is NULL!");
@@ -223,6 +244,10 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     }
 
     return written;
+#else
+    fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Receive data over a networked TCP connection
@@ -233,6 +258,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
 /// @return -1 if failed, else number of bytes received
 ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (device_handle == NULL)
     {
         fs_log_output("[Trifecta] Error: Device handle is NULL!");
@@ -276,6 +302,10 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
     }
 
     return recv_len;
+#else
+    fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Receive data over a networked UDP connection
@@ -286,6 +316,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
 /// @return -1 if failed, else number of bytes received
 ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (device_handle == NULL)
     {
         fs_log_output("[Trifecta] Error: Device handle is NULL!");
@@ -348,6 +379,10 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
     }
 
     return recv_len;
+#else
+    fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Shutdown the network TCP driver.
@@ -355,6 +390,7 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (close(device_handle->tcp_sock) != 0)
     {
         fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)!", device_handle->tcp_sock);
@@ -363,6 +399,10 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
     }
     device_handle->tcp_sock = -1;
     return 0;
+#else
+    fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
 
 /// @brief Shutdown the network UDP driver.
@@ -370,6 +410,7 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
+#if (CONFIG_WIFI_ENABLED)
     if (close(device_handle->udp_sock) != 0)
     {
         fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)!", device_handle->udp_sock);
@@ -378,4 +419,8 @@ int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
     }
     device_handle->udp_sock = -1;
     return 0;
+#else
+    fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
+    return -1;
+#endif
 }
