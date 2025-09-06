@@ -9,9 +9,18 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "sdkconfig.h"
+
+#define CDC_AVAILABLE ((CONFIG_IDF_TARGET_ESP32P4 || CONFIG_IDF_TARGET_ESP32S3) && CFG_TUD_ENABLED)
+
 #include "driver/uart.h"
 #include "driver/i2c_master.h"
 #include "driver/spi_master.h"
+
+#if (CDC_AVAILABLE)
+#include "tinyusb.h"
+#include "tusb_cdc_acm.h"
+#endif
 
 #include "FS_Trifecta_Interfaces.h"
 
