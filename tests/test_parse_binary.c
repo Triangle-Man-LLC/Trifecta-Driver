@@ -1,13 +1,148 @@
 
+#include <stdlib.h>
+#include <assert.h>
+#include "FS_Trifecta.h"
 #include "FS_Trifecta_Device.h"
 #include "FS_Trifecta_Device_Utils.h"
 
-int fs_log_output()
+int fs_logging_level = 1;
+
+/// @brief Logs output with formatting.
+/// @param format Format string.
+/// @param ... Additional arguments.
+/// @return Number of characters printed.
+int fs_log_output(const char *format, ...)
 {
-    
+    int chars_printed = 0;
+
+    if (fs_logging_level > 0)
+    {
+        va_list args;
+        va_start(args, format);
+
+        // Print formatted string
+        chars_printed = vprintf(format, args);
+
+        // Check if the last character is a newline
+        if (format[chars_printed - 1] != '\n')
+        {
+            printf("\n");
+            chars_printed++;
+        }
+
+        va_end(args);
+    }
+
+    return chars_printed;
 }
+
 
 int main()
 {
+    fs_device_info_t device = FS_DEVICE_INFO_UNINITIALIZED;
+    #define NUM_SAMPLES 64
+    fs_imu_composite_packet_t packets[NUM_SAMPLES] = {{0}};
+    // Populate all packets with monotonically increasing values...
+
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        fs_imu_composite_packet_t *p = &packets[i];
+
+        p->type = i % 5;   // Cycle through packet types 0–4
+        p->time = i * 100; // Simulated RTOS tick time
+
+        float base = (float)i;
+
+        // Raw IMU values
+        p->ax0 = base + 0.1f;
+        p->ay0 = base + 0.2f;
+        p->az0 = base + 0.3f;
+        p->gx0 = base + 0.4f;
+        p->gy0 = base + 0.5f;
+        p->gz0 = base + 0.6f;
+
+        p->ax1 = base + 1.1f;
+        p->ay1 = base + 1.2f;
+        p->az1 = base + 1.3f;
+        p->gx1 = base + 1.4f;
+        p->gy1 = base + 1.5f;
+        p->gz1 = base + 1.6f;
+
+        p->ax2 = base + 2.1f;
+        p->ay2 = base + 2.2f;
+        p->az2 = base + 2.3f;
+        p->gx2 = base + 2.4f;
+        p->gy2 = base + 2.5f;
+        p->gz2 = base + 2.6f;
+
+        // Orientation quaternion
+        p->q0 = 0.1f * i;
+        p->q1 = 0.2f * i;
+        p->q2 = 0.3f * i;
+        p->q3 = 0.4f * i;
+
+        // Absolute acceleration
+        p->ax = base + 3.1f;
+        p->ay = base + 3.2f;
+        p->az = base + 3.3f;
+
+        // Velocity
+        p->vx = base + 4.1f;
+        p->vy = base + 4.2f;
+        p->vz = base + 4.3f;
+
+        // Position
+        p->rx = base + 5.1f;
+        p->ry = base + 5.2f;
+        p->rz = base + 5.3f;
+
+        // Gravity vector
+        p->grav_x = (int16_t)(base * 10);
+        p->grav_y = (int16_t)(base * 10 + 1);
+        p->grav_z = (int16_t)(base * 10 + 2);
+
+        // Motion status
+        p->device_in_motion = (i % 2) + 1; // Alternate between 1 and 2
+        p->label_2 = 0;
+
+        // Temperatures
+        p->temperature[0] = 25 + i % 3;
+        p->temperature[1] = 26 + i % 3;
+        p->temperature[2] = 27 + i % 3;
+
+        // Reserved
+        p->c = 0;
+        p->d = i;
+    }
+
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        // Step 1: Parse the packet (decoding is handled internally)
+        if (fs_device_parse_packet(&device, &packets[i], sizeof(packets[i]), FS_COMMUNICATION_MODE_TCP_UDP) < 0)
+        {
+            printf("Packet parse failed for packet %d\n", i);
+            continue;
+        }
+
+        // Step 2: Retrieve the parsed packet
+        fs_packet_union_t parsed = {{0}};
+        if (fs_get_raw_packet(&device, &parsed) < 0)
+        {
+            printf("Failed to retrieve parsed packet %d\n", i);
+            continue;
+        }
+
+        // Step 3: Compare with original
+        if (memcmp(&parsed.composite, &packets[i], sizeof(fs_imu_composite_packet_t)) != 0)
+        {
+            printf("Mismatch in packet %d\n", i);
+            assert(0 && "Parsed packet does not match original");
+        }
+        else
+        {
+            printf("Packet %d validated successfully\n", i);
+        }
+    }
+
     return 0;
 }

@@ -388,7 +388,7 @@ extern "C"
     .last_received_packet = {{0}}, /* last_received_packet */                           \
     .packet_buf_queue = {{{0}}},   /* packet_buf_queue */                               \
     .packet_buf_queue_size = 0,    /* packet_buf_queue_size */                          \
-    .command_queue = {{{{0}}}},    /* command_queue */                                  \
+    .command_queue = {{0}},    /* command_queue */                                  \
     .command_queue_size = 0        /* command_queue_size */                             \
 }
 

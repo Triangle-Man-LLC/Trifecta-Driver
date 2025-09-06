@@ -23,6 +23,7 @@ enable_testing()
 
 # Collect all test .c files in this directory
 file(GLOB TEST_SOURCES *.c)
+message(STATUS "Test sources: ${TEST_SOURCES}")
 
 # Loop through each test file and create an executable + test
 foreach(TEST_FILE ${TEST_SOURCES})

@@ -1,0 +1,56 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: [self-hosted, Linux]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true 
+
+      - name: Set up CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+            
+      - name: Build all tests
+        run: |
+          echo "Searching for all /tests/ folders..."
+          set -e
+
+          TEST_DIRS=$(find . -type d -name tests)
+
+          for test_dir in $TEST_DIRS; do
+            echo "Building in $test_dir"
+
+            mkdir -p "$test_dir/build"
+            cd "$test_dir/build"
+
+            echo "Running cmake and make..."
+            cmake .. && make
+
+            cd -
+          done
+
+      - name: Run all tests
+        run: |
+          echo "Running tests from all /tests/ folders..."
+          set -e
+
+          TEST_DIRS=$(find . -type d -name tests)
+
+          for test_dir in $TEST_DIRS; do
+            echo "Running tests in $test_dir"
+
+            cd "$test_dir/build"
+            ctest --output-on-failure --verbose
+            cd -
+
+            echo "Completed $test_dir"
+          done
