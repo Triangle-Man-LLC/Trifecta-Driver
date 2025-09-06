@@ -394,15 +394,28 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
 fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 {
     fs_delimiter_indices_t result = { -1, -1, -1 };
+    int colon_candidate = -1;
 
     for (size_t i = 0; i < len; i++)
     {
-        if (buffer[i] == ':' && result.colon_index == -1)
-            result.colon_index = (int)i;
-        else if (buffer[i] == '!' && result.exclam_index == -1)
-            result.exclam_index = (int)i;
-        else if (buffer[i] == ';' && result.semicolon_index == -1)
+        if (buffer[i] == FS_SERIAL_PACKET_HEADER)
+        {
+            // Store colon candidate, override previous if no '!' has been seen
+            colon_candidate = (int)i;
+        }
+        else if (buffer[i] == FS_SERIAL_PACKET_FOOTER)
+        {
+            if (result.exclam_index == -1)
+                result.exclam_index = (int)i;
+
+            // Commit colon only if it hasn't been committed yet
+            if (result.colon_index == -1 && colon_candidate != -1)
+                result.colon_index = colon_candidate;
+        }
+        else if (buffer[i] == FS_SERIAL_COMMAND_TERMINATOR && result.semicolon_index == -1)
+        {
             result.semicolon_index = (int)i;
+        }
 
         // Early exit if all found
         if (result.colon_index != -1 &&
