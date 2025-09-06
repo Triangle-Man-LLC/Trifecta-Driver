@@ -1,4 +1,6 @@
 set(trifecta_component_srcs "esp-idf/FS_Trifecta_Interfaces.c" 
+                            "esp-idf/FS_Trifecta_Interfaces_Serial.c" 
+                            "esp-idf/FS_Trifecta_Interfaces_Networked.c" 
                             "common/FS_Trifecta.c" 
                             "common/FS_Trifecta_Device.c" 
                             "common/FS_Trifecta_Device_Utils.c"
