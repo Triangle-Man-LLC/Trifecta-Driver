@@ -1,4 +1,4 @@
-# name: CI Build (ESP-IDF)
+# name: CI Build Example Programs (ESP-IDF)
 
 # on:
 #   push:
@@ -9,8 +9,8 @@
 #       - esp-idf
 
 # jobs:
-#   build-static-libraries:
-#     name: Build Static Libraries for ESP32 Platforms
+#   build-esp32-example-programs:
+#     name: Build ESP32 Example Programs
 #     runs-on: [self-hosted, ESP-IDF]
 #     steps:
 #       - name: Set up ESP-IDF environment
