@@ -11,18 +11,42 @@
 
 #include "sdkconfig.h"
 
-#define CDC_AVAILABLE ((CONFIG_IDF_TARGET_ESP32P4 || CONFIG_IDF_TARGET_ESP32S3) && CFG_TUD_ENABLED)
+#define CDC_AVAILABLE (CONFIG_USB_ENABLED)
 
 #include "driver/uart.h"
 #include "driver/i2c_master.h"
 #include "driver/spi_master.h"
 
-#if (CDC_AVAILABLE)
-#include "tinyusb.h"
-#include "tusb_cdc_acm.h"
-#endif
-
 #include "FS_Trifecta_Interfaces.h"
+
+#if (CONFIG_USB_ENABLED)
+#include "usb/usb_host.h"
+#include "usb/cdc_acm_host.h"
+
+#define MAX_TRIFECTA_CDC_DEVICES 4
+
+typedef struct
+{
+    int id;
+    cdc_acm_dev_hdl_t handle;
+    bool active;
+} fs_cdc_handle_entry_t;
+
+cdc_handle_entry_t cdc_table[MAX_TRIFECTA_CDC_DEVICES];
+
+cdc_acm_dev_hdl_t get_handle_from_id(int id)
+{
+    for (int i = 0; i < MAX_TRIFECTA_CDC_DEVICES; ++i)
+    {
+        if (cdc_table[i].id == id && cdc_table[i].active)
+        {
+            return cdc_table[i].handle;
+        }
+    }
+    return NULL;
+}
+
+#endif
 
 /// @brief Start the network serial driver.
 /// @param device_handle
@@ -43,7 +67,12 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
     }
     else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
-        // TODO: CDC ACM host start function
+#if (CDC_AVAILABLE)
+        // Exclude device from interrupt-based handling mode
+#else
+        fs_log_output("[Trifecta] CDC ACM host init failed! Features not enabled on device!");
+        return -1;
+#endif
     }
     else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
     {
@@ -54,6 +83,24 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         // Custom setup logic for SPI to be added here, if any exists.
     }
     return 0;
+}
+
+/// @brief Whether interrupt-driven UART etc. is supported by the platform.
+/// Many RTOSes support this, but Linux does not, etc.
+/// @return TRUE if so, FALSE otherwise.
+bool fs_platform_supports_serial_interrupts()
+{
+    return false; // TODO:
+}
+
+/// @brief Start serial in interrupt mode on platforms that support it.
+/// This enables more precise and low latency serial reads than polling.
+/// @param device_handle
+/// @param status_flag
+/// @return 0 on success, -1 on fail (e.g. not supported on platform)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+{
+    return -1; // TODO:
 }
 
 /// @brief Transmit data over serial communication
