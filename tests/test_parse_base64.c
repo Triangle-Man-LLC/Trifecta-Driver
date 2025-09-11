@@ -95,10 +95,10 @@ int main()
         p->ry = base + 5.2f;
         p->rz = base + 5.3f;
 
-        // Gravity vector
-        p->grav_x = (int16_t)(base * 10);
-        p->grav_y = (int16_t)(base * 10 + 1);
-        p->grav_z = (int16_t)(base * 10 + 2);
+        // Reserved
+        p->reserved[0] = 0;
+        p->reserved[1] = 0;
+        p->reserved[2] = 0;
 
         // Motion status
         p->device_in_motion = (i % 2) + 1; // Alternate between 1 and 2
