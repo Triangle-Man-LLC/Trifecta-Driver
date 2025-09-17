@@ -1,60 +1,5 @@
 #include "FS_Trifecta_Device_Utils.h"
 
-void fs_cb_init(fs_circular_buffer_t *cb)
-{
-    cb->head = cb->tail = cb->count = 0;
-}
-
-size_t fs_cb_available(const fs_circular_buffer_t *cb)
-{
-    return cb->count;
-}
-
-void fs_cb_clear(fs_circular_buffer_t *cb)
-{
-    cb->head = cb->tail = cb->count = 0;
-}
-
-size_t fs_cb_push(fs_circular_buffer_t *cb, const uint8_t *data, size_t len)
-{
-    size_t pushed = 0;
-    while (pushed < len && cb->count < FS_CIRCULAR_BUFFER_SIZE)
-    {
-        cb->buffer[cb->head] = data[pushed++];
-        cb->head = (cb->head + 1) % FS_CIRCULAR_BUFFER_SIZE;
-        cb->count++;
-    }
-    return pushed;
-}
-
-size_t fs_cb_pop(fs_circular_buffer_t *cb, uint8_t *out, size_t len)
-{
-    size_t popped = 0;
-    while (popped < len && cb->count > 0)
-    {
-        if (out)
-            out[popped] = cb->buffer[cb->tail];
-        popped++;
-
-        cb->tail = (cb->tail + 1) % FS_CIRCULAR_BUFFER_SIZE;
-        cb->count--;
-    }
-    return popped;
-}
-
-size_t fs_cb_peek(const fs_circular_buffer_t *cb, uint8_t *out, size_t len)
-{
-    size_t peeked = 0;
-    size_t idx = cb->tail;
-    while (peeked < len && peeked < cb->count)
-    {
-        out[peeked++] = cb->buffer[idx];
-        idx = (idx + 1) % FS_CIRCULAR_BUFFER_SIZE;
-    }
-    return peeked;
-}
-
-
 // Base64 character set
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -62,16 +7,13 @@ static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 /// @param str Command string
 /// @param len Command length
 /// @return 0 if successful
-int fs_enqueue_into_command_queue(fs_device_info_t *device_handle, char *str, size_t len)
+static int fs_enqueue_into_command_queue(fs_device_info_t *device_handle, const fs_command_info_t *cmd)
 {
-    if (device_handle->command_queue_size >= FS_MAX_CMD_QUEUE_LENGTH)
+    if (!FS_RINGBUFFER_PUSH(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, cmd))
     {
         fs_log_output("[Trifecta] Device command queue was full!");
         return -1;
     }
-    device_handle->command_queue_size++;
-    memset(&device_handle->command_queue[device_handle->command_queue_size - 1], 0, FS_MAX_CMD_LENGTH);
-    memcpy(&device_handle->command_queue[device_handle->command_queue_size - 1], str, len);
     return 0;
 }
 
@@ -81,7 +23,7 @@ int fs_enqueue_into_command_queue(fs_device_info_t *device_handle, char *str, si
 /// @returns Error code (if any)
 int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, size_t buf_len)
 {
-    char input_line[FS_MAX_DATA_LENGTH];
+    fs_command_info_t cmd = {0};
     unsigned int input_pos = 0;
 
     enum
@@ -90,74 +32,95 @@ int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, si
         READING
     } state = WAITING;
 
+    const char *input = (const char *)cmd_buf;
+
     for (size_t i = 0; i < buf_len; i++)
     {
-        char inByte = *((char *)cmd_buf + i);
+        char inByte = input[i];
 
-        switch (inByte)
+        if (inByte == FS_SERIAL_COMMAND_TERMINATOR)
         {
-        case ';':                         // Command terminated by ; character, this is in case we need to parse a longer command
-            input_line[input_pos] = '\0'; // terminating null byte
-
-            if (fs_enqueue_into_command_queue(device_handle, input_line, strnlen(input_line, FS_MAX_CMD_LENGTH)) != 0)
+            cmd.payload[input_pos] = '\0';
+            if (fs_enqueue_into_command_queue(device_handle, &cmd) != 0)
             {
                 fs_log_output("[Trifecta] Error with device command segment/enqueue!");
                 return -1;
             }
-
-            state = WAITING; // Return back to waiting state
-            // terminator reached! process input_line here ...
-            // reset buffer for next time
             input_pos = 0;
-
-            break;
-        case '\n':
-        case '\r':
-        case '\0':
+            memset(cmd.payload, 0, sizeof(cmd.payload));
+            state = WAITING;
+        }
+        else if (inByte == '\n' || inByte == '\r' || inByte == '\0')
+        {
             if (state == WAITING)
             {
-                input_line[input_pos] = '\0';
                 input_pos = 0;
-                break;
+                memset(cmd.payload, 0, sizeof(cmd.payload));
             }
             else
             {
-                input_line[input_pos] = '\0';
+                cmd.payload[input_pos] = '\0';
                 input_pos = 0;
-                return 3;
+                memset(cmd.payload, 0, sizeof(cmd.payload));
+                return 3; // Unexpected terminator mid-command
             }
-            break;
-
-        default:
-            state = READING; // Reading state
-            // keep adding if not full ... allow for terminating null byte
-            if (input_pos < (FS_MAX_DATA_LENGTH - 1))
-                input_line[input_pos++] = inByte;
-            break;
+        }
+        else
+        {
+            state = READING;
+            if (input_pos < (FS_MAX_CMD_LENGTH - 1))
+            {
+                cmd.payload[input_pos++] = inByte;
+            }
+            else
+            {
+                // Optional: truncate or log overflow
+                fs_log_output("[Trifecta] Command too long, truncating.");
+            }
         }
     }
-
-    // Clear the input_line buffer
-    memset(input_line, 0, sizeof(input_line));
-
     return 0;
 }
 
+static const int8_t base64_lookup[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, // 0–7
+    -1, -1, -1, -1, -1, -1, -1, -1, // 8–15
+    -1, -1, -1, -1, -1, -1, -1, -1, // 16–23
+    -1, -1, -1, -1, -1, -1, -1, -1, // 24–31
+    -1, -1, -1, -1, -1, -1, -1, -1, // 32–39
+    -1, -1, -1, 62, -1, -1, -1, 63, // 40–47 ('+'=62, '/'=63)
+    52, 53, 54, 55, 56, 57, 58, 59, // 48–55 ('0'–'7')
+    60, 61, -1, -1, -1, -1, -1, -1, // 56–63 ('8','9')
+    -1, 0, 1, 2, 3, 4, 5, 6,        // 64–71 ('A'–'G')
+    7, 8, 9, 10, 11, 12, 13, 14,    // 72–79 ('H'–'O')
+    15, 16, 17, 18, 19, 20, 21, 22, // 80–87 ('P'–'W')
+    23, 24, 25, -1, -1, -1, -1, -1, // 88–95 ('X','Y','Z')
+    -1, 26, 27, 28, 29, 30, 31, 32, // 96–103 ('a'–'g')
+    33, 34, 35, 36, 37, 38, 39, 40, // 104–111 ('h'–'o')
+    41, 42, 43, 44, 45, 46, 47, 48, // 112–119 ('p'–'w')
+    49, 50, 51, -1, -1, -1, -1, -1, // 120–127 ('x','y','z')
+    -1, -1, -1, -1, -1, -1, -1, -1, // 128–135
+    -1, -1, -1, -1, -1, -1, -1, -1, // 136–143
+    -1, -1, -1, -1, -1, -1, -1, -1, // 144–151
+    -1, -1, -1, -1, -1, -1, -1, -1, // 152–159
+    -1, -1, -1, -1, -1, -1, -1, -1, // 160–167
+    -1, -1, -1, -1, -1, -1, -1, -1, // 168–175
+    -1, -1, -1, -1, -1, -1, -1, -1, // 176–183
+    -1, -1, -1, -1, -1, -1, -1, -1, // 184–191
+    -1, -1, -1, -1, -1, -1, -1, -1, // 192–199
+    -1, -1, -1, -1, -1, -1, -1, -1, // 200–207
+    -1, -1, -1, -1, -1, -1, -1, -1, // 208–215
+    -1, -1, -1, -1, -1, -1, -1, -1, // 216–223
+    -1, -1, -1, -1, -1, -1, -1, -1, // 224–231
+    -1, -1, -1, -1, -1, -1, -1, -1, // 232–239
+    -1, -1, -1, -1, -1, -1, -1, -1, // 240–247
+    -1, -1, -1, -1, -1, -1, -1, -1  // 248–255
+};
 
 // Helper function to map Base64 characters to values
-static int base64_char_to_value(char c)
+static inline int base64_char_to_value(char c)
 {
-    if (c >= 'A' && c <= 'Z')
-        return c - 'A';
-    if (c >= 'a' && c <= 'z')
-        return c - 'a' + 26;
-    if (c >= '0' && c <= '9')
-        return c - '0' + 52;
-    if (c == '+')
-        return 62;
-    if (c == '/')
-        return 63;
-    return -1; // Should not happen for valid Base64 strings
+    return base64_lookup[(uint8_t)c];
 }
 
 // Base64 encode function
@@ -220,7 +183,7 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
     if (buffer_size < 3 * (input_length / 4) - padding)
     {
         // Buffer size is too small
-        fs_log_output("[Trifecta] Base64 decode failed: Buffer size %d is too small for Base64 decoding. Required: %d", buffer_size,  3 * (input_length / 4) - padding);
+        fs_log_output("[Trifecta] Base64 decode failed: Buffer size %d is too small for Base64 decoding. Required: %d", buffer_size, 3 * (input_length / 4) - padding);
         return -1;
     }
 
@@ -262,7 +225,6 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
     return 0;
 }
 
-
 /// @brief
 /// @param packet_type The packet type indication
 /// @return
@@ -301,17 +263,13 @@ int obtain_packet_length(int packet_type)
 /// @param str Command string
 /// @param len Command length
 /// @return 0 if successful
-int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packet_union_t *packet, size_t len)
+int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packet_union_t *packet)
 {
-    if (device_handle->packet_buf_queue_size >= FS_MAX_PACKET_QUEUE_LENGTH)
+    if (!FS_RINGBUFFER_PUSH_FORCE(&device_handle->packet_buf_queue, FS_MAX_PACKET_QUEUE_LENGTH, packet))
     {
-        fs_log_output("[Trifecta] Warning: Device packet queue was full! Clearing!");
-        device_handle->packet_buf_queue_size = 0; // Clear and reset the queue...
+        fs_log_output("[Trifecta] Warning: Device packet queue was full! Packet dropped.");
+        return -1;
     }
-
-    device_handle->packet_buf_queue_size++;
-    memset(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], 0, sizeof(fs_packet_union_t));
-    memcpy(&device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], packet, sizeof(fs_packet_union_t));
     return 0;
 }
 
@@ -347,11 +305,10 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
         }
         fs_log_output("[Trifecta] Packet type %hhu, len: %ld", packet_type, packet_length);
         // Emplace the packet into the queue
-        fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos), packet_length);
+        fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos));
         packet_count++;
         pos += packet_length;
     }
-
     return packet_count;
 }
 
@@ -378,7 +335,7 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
         return -1;
     }
 
-    if (fs_enqueue_into_packet_queue(device_handle, &packet_union, sizeof(packet_union)) != 0)
+    if (fs_enqueue_into_packet_queue(device_handle, &packet_union) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not place packet into packet queue!");
         return -1;
@@ -394,7 +351,7 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
 /// @return Struct containing first index of each delimiter, or -1 if not found
 fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 {
-    fs_delimiter_indices_t result = { -1, -1, -1, -1 }; // Add binary_index
+    fs_delimiter_indices_t result = {-1, -1, -1, -1}; // Add binary_index
     int b64_candidate = -1;
     int bin_candidate = -1;
 
@@ -433,4 +390,3 @@ fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 
     return result;
 }
-

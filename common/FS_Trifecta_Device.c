@@ -12,6 +12,54 @@
 #include "FS_Trifecta_Device.h"
 #include "FS_Trifecta_Device_Utils.h"
 
+/// @brief Get the current number of packets in device buffer.
+/// Note that the oldest elements are overwritten if overflowed.
+/// @param device_handle 
+/// @return Number of elements, between 0 to FS_MAX_PACKET_QUEUE_LENGTH
+int fs_device_get_packet_count(const fs_device_info_t *device_handle)
+{
+    return device_handle->packet_buf_queue.count;
+}
+
+/// @brief Copy the packet at indicated index to the buffer for consumption.
+/// @param device_handle 
+/// @param packet_buffer Destination buffer.
+/// @param index 
+/// @return An fs_packet_type_t indicating packet ID, else -1 on failure
+int fs_device_get_packet_at_index(const fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer, int index)
+{
+    if (!device_handle || !packet_buffer)
+        return -1;
+
+    const fs_packet_ringbuffer_t *rb = &device_handle->packet_buf_queue;
+
+    if (index < 0 || index >= rb->count)
+        return -1;
+
+    uint16_t pos = (rb->tail + index) % FS_MAX_PACKET_QUEUE_LENGTH;
+    *packet_buffer = rb->buffer[pos];
+
+    return packet_buffer->composite.type;
+}
+
+/// @brief Get a pointer to the packet at the indicated index.
+/// @param device_handle Device handle
+/// @param index Index into the packet queue (0 = oldest)
+/// @return Pointer to packet, or NULL on failure
+const fs_packet_union_t *fs_device_get_packet_pointer_at_index(const fs_device_info_t *device_handle, int index)
+{
+    if (!device_handle || index < 0)
+        return NULL;
+
+    const fs_packet_ringbuffer_t *rb = &device_handle->packet_buf_queue;
+
+    if (index >= rb->count)
+        return NULL;
+
+    uint16_t pos = (rb->tail + index) % FS_MAX_PACKET_QUEUE_LENGTH;
+    return &rb->buffer[pos];
+}
+
 /// @brief Handle all potential received commands from the buffer
 /// @param device_handle Device handle
 /// @param cmd_buf The buffer containing data blob to process
@@ -24,29 +72,23 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
         fs_log_output("[Trifecta-Device] Command parsing failed!");
         return -1;
     }
-
-    char *command = NULL;
-
-    for (int cq_index = 0; cq_index < device_handle->command_queue_size; cq_index++)
+    fs_command_info_t cmd = {0};
+    while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
-        command = device_handle->command_queue[cq_index];
-        size_t command_length = strnlen(command, FS_MAX_CMD_LENGTH);
-
-        fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, command[0], command + 1);
-
-        if (command_length > 0 && command[0] == CMD_IDENTIFY)
+        size_t command_length = strnlen(cmd.payload, FS_MAX_CMD_LENGTH);
+        fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
+        if (command_length > 0 && cmd.payload[0] == CMD_IDENTIFY)
         {
-            size_t name_length = command_length - 1; // Exclude CMD_IDENTIFY and ';'
-            strncpy(device_handle->device_name, command + 1, name_length);
+            size_t name_length = command_length - 1;
+            strncpy(device_handle->device_name, cmd.payload + 1, name_length);
             device_handle->device_name[name_length] = '\0';
         }
+        memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
     }
-
-    device_handle->command_queue_size = 0;
     return 0;
 }
 
-static int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
+int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
 {
     fs_log_output("[Trifecta] RX: Pushing %zu bytes into circular buffer", rx_len);
     fs_cb_push(&device_handle->data_buffer, (const uint8_t *)rx_buf, rx_len);
@@ -127,7 +169,7 @@ static int fs_device_process_packets_serial(fs_device_info_t *device_handle, con
 /// @param rx_buf The buffer to read from
 /// @param rx_len The length to read
 /// @param source FS_COMMUNICATION_MODE_SERIAL, FS_COMMUNICATION_MODE_TCP_UDP, etc. are handled differently
-/// @return
+/// @return Number of parsed packets, or -1 on fail.
 int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, ssize_t rx_len, fs_communication_mode_t source)
 {
     if (rx_len <= 0)
@@ -135,20 +177,11 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
         return -1;
     }
 
-    for (int i = 0; i < FS_MAX_CMD_QUEUE_LENGTH; i++)
-    {
-        memset(&device_handle->command_queue[i], 0, FS_MAX_CMD_LENGTH);
-    }
-
-    for (int i = 0; i < FS_MAX_PACKET_QUEUE_LENGTH; i++)
-    {
-        memset(&device_handle->packet_buf_queue[i], 0, sizeof(fs_packet_union_t));
-    }
-
     switch (source)
     {
     // UDP, I2C, and SPI modes all transfer binary data packets.
     case FS_COMMUNICATION_MODE_TCP_UDP:
+    case FS_COMMUNICATION_MODE_TCP_UDP_AP:
     case FS_COMMUNICATION_MODE_I2C:
     case FS_COMMUNICATION_MODE_SPI:
     {
@@ -182,22 +215,7 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
         fs_log_output("[Trifecta] Unknown packet source!");
         return -1;
     }
-
-    // Retrieve the last packet parsed
-    if (device_handle->packet_buf_queue_size > 0)
-    {
-        size_t required_size = obtain_packet_length(device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1].composite.type);
-
-        // Erase the last received packet
-        memset(&device_handle->last_received_packet, 0, sizeof(fs_packet_union_t));
-        memcpy(&device_handle->last_received_packet, &device_handle->packet_buf_queue[device_handle->packet_buf_queue_size - 1], sizeof(fs_packet_union_t));
-        device_handle->packet_buf_queue_size = 0; // Clean the queue
-
-        fs_log_output("[Trifecta] Successful data parsing! Length %d Timestamp: %ld - Orientation: %0.4f %0.4f %0.4f %0.4f", required_size, device_handle->last_received_packet.composite.time, device_handle->last_received_packet.composite.q0, device_handle->last_received_packet.composite.q1, device_handle->last_received_packet.composite.q2, device_handle->last_received_packet.composite.q3);
-        return 0;
-    }
-
-    return -1;
+    return 0;
 }
 
 /// @brief Utility function to get Euler angles from quaternion
@@ -225,38 +243,51 @@ void fs_q_to_euler_angles(float *estRoll, float *estPitch, float *estYaw, float 
 
 int fs_get_last_timestamp(fs_device_info_t *device_handle, uint32_t *time)
 {
-    if (time == NULL)
-    {
+    if (!device_handle || !time || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
-    *time = device_handle->last_received_packet.composite.time;
+
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    *time = pkt->composite.time;
     return 0;
 }
 
 int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer)
 {
-    if (packet_buffer == NULL)
-    {
+    if (!device_handle || !packet_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    memcpy(packet_buffer, &device_handle->last_received_packet, sizeof(fs_packet_union_t));
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    memcpy(packet_buffer, pkt, sizeof(fs_packet_union_t));
     return 0;
 }
 
 int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orientation_buffer)
 {
-    if (orientation_buffer == NULL)
-    {
+    if (!device_handle || !orientation_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    orientation_buffer->w = device_handle->last_received_packet.composite.q0;
-    orientation_buffer->x = device_handle->last_received_packet.composite.q1;
-    orientation_buffer->y = device_handle->last_received_packet.composite.q2;
-    orientation_buffer->z = device_handle->last_received_packet.composite.q3;
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *most_recent_packet = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+
+    if (!most_recent_packet)
+        return -1;
+
+    orientation_buffer->w = most_recent_packet->composite.q0;
+    orientation_buffer->x = most_recent_packet->composite.q1;
+    orientation_buffer->y = most_recent_packet->composite.q2;
+    orientation_buffer->z = most_recent_packet->composite.q3;
+
     return 0;
 }
+
 
 int fs_get_orientation_euler(fs_device_info_t *device_handle, fs_vector3_t *orientation_buffer, bool degrees)
 {
@@ -277,87 +308,98 @@ int fs_get_orientation_euler(fs_device_info_t *device_handle, fs_vector3_t *orie
 
 int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *acceleration_buffer)
 {
-    if (acceleration_buffer == NULL)
-    {
+    if (!device_handle || !acceleration_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    acceleration_buffer->x = device_handle->last_received_packet.composite.ax0 + device_handle->last_received_packet.composite.ax1 + device_handle->last_received_packet.composite.ax2;
-    acceleration_buffer->y = device_handle->last_received_packet.composite.ay0 + device_handle->last_received_packet.composite.ay1 + device_handle->last_received_packet.composite.ay2;
-    acceleration_buffer->z = device_handle->last_received_packet.composite.az0 + device_handle->last_received_packet.composite.az1 + device_handle->last_received_packet.composite.az2;
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
 
-    acceleration_buffer->x /= (3.0f * (float)INT16_MAX);
-    acceleration_buffer->y /= (3.0f * (float)INT16_MAX);
-    acceleration_buffer->z /= (3.0f * (float)INT16_MAX);
+    acceleration_buffer->x = (pkt->composite.ax0 + pkt->composite.ax1 + pkt->composite.ax2) / (3.0f * (float)INT16_MAX);
+    acceleration_buffer->y = (pkt->composite.ay0 + pkt->composite.ay1 + pkt->composite.ay2) / (3.0f * (float)INT16_MAX);
+    acceleration_buffer->z = (pkt->composite.az0 + pkt->composite.az1 + pkt->composite.az2) / (3.0f * (float)INT16_MAX);
 
-    acceleration_buffer->x *= (float)FS_ACCEL_SCALER_Gs;
-    acceleration_buffer->y *= (float)FS_ACCEL_SCALER_Gs;
-    acceleration_buffer->z *= (float)FS_ACCEL_SCALER_Gs;
+    acceleration_buffer->x *= FS_ACCEL_SCALER_Gs;
+    acceleration_buffer->y *= FS_ACCEL_SCALER_Gs;
+    acceleration_buffer->z *= FS_ACCEL_SCALER_Gs;
 
     return 0;
 }
 
 int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angular_velocity_buffer)
 {
-    if (angular_velocity_buffer == NULL)
-    {
+    if (!device_handle || !angular_velocity_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    switch (device_handle->last_received_packet.composite.type)
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    switch (pkt->composite.type)
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
     case C_PACKET_TYPE_INS:
     case C_PACKET_TYPE_GNSS:
-        angular_velocity_buffer->x = device_handle->last_received_packet.composite.gx0 + device_handle->last_received_packet.composite.gx1 + device_handle->last_received_packet.composite.gx2;
-        angular_velocity_buffer->y = device_handle->last_received_packet.composite.gy0 + device_handle->last_received_packet.composite.gy1 + device_handle->last_received_packet.composite.gy2;
-        angular_velocity_buffer->z = device_handle->last_received_packet.composite.gz0 + device_handle->last_received_packet.composite.gz1 + device_handle->last_received_packet.composite.gz2;
+        angular_velocity_buffer->x = (pkt->composite.gx0 + pkt->composite.gx1 + pkt->composite.gx2) / (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->y = (pkt->composite.gy0 + pkt->composite.gy1 + pkt->composite.gy2) / (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->z = (pkt->composite.gz0 + pkt->composite.gz1 + pkt->composite.gz2) / (3.0f * (float)INT16_MAX);
 
-        angular_velocity_buffer->x /= (3.0f * (float)INT16_MAX);
-        angular_velocity_buffer->y /= (3.0f * (float)INT16_MAX);
-        angular_velocity_buffer->z /= (3.0f * (float)INT16_MAX);
-
-        angular_velocity_buffer->x *= (float)FS_GYRO_SCALER_DPS;
-        angular_velocity_buffer->y *= (float)FS_GYRO_SCALER_DPS;
-        angular_velocity_buffer->z *= (float)FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->x *= FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->y *= FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->z *= FS_GYRO_SCALER_DPS;
         return 0;
     }
+
     return -1;
 }
 
 int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buffer)
 {
-    if (velocity_buffer == NULL)
-    {
+    if (!device_handle || !velocity_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    velocity_buffer->x = device_handle->last_received_packet.composite.vx;
-    velocity_buffer->y = device_handle->last_received_packet.composite.vy;
-    velocity_buffer->z = device_handle->last_received_packet.composite.vz;
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    velocity_buffer->x = pkt->composite.vx;
+    velocity_buffer->y = pkt->composite.vy;
+    velocity_buffer->z = pkt->composite.vz;
+
     return 0;
 }
 
 int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *device_state_buffer)
 {
-    if (device_state_buffer == NULL)
-    {
+    if (!device_handle || !device_state_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
-    *device_state_buffer = (device_handle->last_received_packet.composite.device_in_motion == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    *device_state_buffer = (pkt->composite.device_in_motion == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
     return 0;
 }
 
 int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buffer)
 {
-    if (position_buffer == NULL)
-    {
+    if (!device_handle || !position_buffer || device_handle->packet_buf_queue.count == 0)
         return -1;
-    }
 
-    position_buffer->x = device_handle->last_received_packet.composite.rx;
-    position_buffer->y = device_handle->last_received_packet.composite.ry;
-    position_buffer->z = device_handle->last_received_packet.composite.rz;
+    int last_index = device_handle->packet_buf_queue.count - 1;
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    if (!pkt)
+        return -1;
+
+    position_buffer->x = pkt->composite.rx;
+    position_buffer->y = pkt->composite.ry;
+    position_buffer->z = pkt->composite.rz;
+
     return 0;
 }

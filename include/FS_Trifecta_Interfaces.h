@@ -21,6 +21,7 @@ extern "C"
 
     /// -- Platform-specific methods --
     /// -- Be sure to implement these when porting to a new platform --
+
     /// @brief Initializes a TCP network driver for the given device.
     /// @param device_handle Pointer to the device information structure.
     /// @return 0 on success, or a negative error code on failure.
@@ -36,6 +37,18 @@ extern "C"
     /// @return 0 on success, or a negative error code on failure.
     int fs_init_serial_driver(fs_device_info_t *device_handle);
 
+    /// @brief Whether interrupt-driven UART etc. is supported by the platform.
+    /// Many RTOSes support this, but Linux does not, etc.
+    /// @return TRUE if so, FALSE otherwise.
+    bool fs_platform_supports_serial_interrupts();
+
+    /// @brief Start serial in interrupt mode on platforms that support it. 
+    /// This enables more precise and low latency serial reads than polling.
+    /// @param device_handle 
+    /// @param status_flag 
+    /// @return 0 on success, -1 on fail (e.g. not supported on platform)
+    int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag);
+
     /// @brief Starts a new thread for executing a specific function.
     /// @param thread_func Pointer to the thread's main function.
     /// @param params Parameters to be passed to the thread function.
@@ -46,10 +59,10 @@ extern "C"
     /// @param core_affinity Core affinity for the thread (-1 for no preference).
     /// @return 0 on success, or a negative error code on failure.
     int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity);
-    
+
     /// @brief Exits the currently running thread.
-    /// @param thread_handle Pointer to the thread handle. 
-    /// Some platforms (e.g. FreeRTOS) allow forceful deletion of the thread using the handle, 
+    /// @param thread_handle Pointer to the thread handle.
+    /// Some platforms (e.g. FreeRTOS) allow forceful deletion of the thread using the handle,
     /// while most POSIX and std::thread implementations do not. If unused, use NULL.
     /// @return 0 on success, or a negative error code on failure.
     int fs_thread_exit(void *thread_handle);

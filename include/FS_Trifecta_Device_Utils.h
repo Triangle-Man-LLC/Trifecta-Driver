@@ -29,14 +29,6 @@ extern "C"
 {
 #endif
 
-    /// @section Helper functions for the ringbuffer
-    void fs_cb_init(fs_circular_buffer_t *cb);
-    size_t fs_cb_push(fs_circular_buffer_t *cb, const uint8_t *data, size_t len);
-    size_t fs_cb_pop(fs_circular_buffer_t *cb, uint8_t *out, size_t len);
-    size_t fs_cb_peek(const fs_circular_buffer_t *cb, uint8_t *out, size_t len);
-    size_t fs_cb_available(const fs_circular_buffer_t *cb);
-    void fs_cb_clear(fs_circular_buffer_t *cb);
-
     typedef enum
     {
         FS_SCANNER_IDLE,
@@ -50,6 +42,54 @@ extern "C"
     int obtain_packet_length(int packet_type);
     int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len);
     int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t length);
+
+    static inline void fs_cb_push(fs_bytes_ringbuffer_t *rb, const uint8_t *data, size_t len)
+    {
+        for (size_t i = 0; i < len; i++)
+        {
+            rb->buffer[rb->head] = data[i];
+            rb->head = (rb->head + 1) % FS_MAX_DATA_LENGTH;
+
+            if (rb->count < FS_MAX_DATA_LENGTH)
+            {
+                rb->count++;
+            }
+            else
+            {
+                rb->tail = (rb->tail + 1) % FS_MAX_DATA_LENGTH;
+            }
+        }
+    }
+
+    static inline size_t fs_cb_peek(fs_bytes_ringbuffer_t *rb, uint8_t *out_buf, size_t max_len)
+    {
+        size_t to_copy = (rb->count < max_len) ? rb->count : max_len;
+
+        for (size_t i = 0; i < to_copy; i++)
+        {
+            size_t index = (rb->tail + i) % FS_MAX_DATA_LENGTH;
+            out_buf[i] = rb->buffer[index];
+        }
+
+        return to_copy;
+    }
+    
+    static inline size_t fs_cb_pop(fs_bytes_ringbuffer_t *rb, uint8_t *out_buf, size_t len)
+    {
+        size_t to_pop = (rb->count < len) ? rb->count : len;
+
+        for (size_t i = 0; i < to_pop; i++)
+        {
+            size_t index = rb->tail;
+            if (out_buf)
+                out_buf[i] = rb->buffer[index];
+
+            rb->tail = (rb->tail + 1) % FS_MAX_DATA_LENGTH;
+            rb->count--;
+        }
+
+        return to_pop;
+    }
 
     typedef struct
     {

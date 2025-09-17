@@ -22,6 +22,7 @@
 
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
+#include "FS_Trifecta_Defs_Ringbuffer.h"
 
 #define FS_PI 3.14159265358979f
 
@@ -90,20 +91,18 @@ extern "C"
     .task_stack_size_bytes = 4096,       \
 }
 
-    typedef struct fs_circular_buffer
-    {
-        uint8_t buffer[FS_MAX_DATA_LENGTH];
-        size_t head;  // write position
-        size_t tail;  // read position
-        size_t count; // number of bytes in buffer
-    } fs_circular_buffer_t;
-
-#define FS_CIRCULAR_BUFFER_EMPTY { \
-    .buffer = {0},                 \
-    .head = 0,                     \
-    .tail = 0,                     \
-    .count = 0,                    \
+/// TODO:
+#define FS_DRIVER_CONFIG_DEFAULT_STM32 { \
+    .background_task_priority = 6,       \
+    .background_task_core_affinity = 1,  \
+    .read_timeout_micros = 1000,         \
+    .task_wait_ms = 5,                   \
+    .task_stack_size_bytes = 4096,       \
 }
+
+    FS_RINGBUFFER_DECLARE(fs_packet_union_t, fs_packet_ringbuffer_t, FS_MAX_PACKET_QUEUE_LENGTH);
+    FS_RINGBUFFER_DECLARE(fs_command_info_t, fs_command_ringbuffer_t, FS_MAX_CMD_QUEUE_LENGTH);
+    FS_RINGBUFFER_DECLARE(uint8_t, fs_bytes_ringbuffer_t, FS_MAX_DATA_LENGTH);
 
     /// @brief Device information container
     typedef struct fs_device_info
@@ -121,18 +120,11 @@ extern "C"
         int tcp_sock;     // TCP socket number
         int udp_sock;     // UDP socket number
 
-        int serial_port;                  // If serial communication of some kind is used, this is the corresponding port
-        int32_t baudrate;                 // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
-        fs_circular_buffer_t data_buffer; // Received data of the device, used primarily for serial reads
-
-        fs_packet_union_t last_received_packet; // The last received packet for this device
-
-        fs_packet_union_t packet_buf_queue[FS_MAX_PACKET_QUEUE_LENGTH]; // Packet queue buffer for the device (read-only)
-        size_t packet_buf_queue_size;                                   // Current number of received packets (read-only)
-
-        char command_queue[FS_MAX_CMD_QUEUE_LENGTH][FS_MAX_CMD_LENGTH]; // Command buffer for the device (read-only)
-        size_t command_queue_size;                                      // Current number of received commands (read-only)
-
+        int serial_port;                         // If serial communication of some kind is used, this is the corresponding port
+        int32_t baudrate;                        // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
+        fs_bytes_ringbuffer_t data_buffer;       // Received data of the device, used primarily for serial reads
+        fs_packet_ringbuffer_t packet_buf_queue; // Packet queue buffer for the device (read-only)
+        fs_command_ringbuffer_t command_queue;   // Command buffer for the device (read-only)
     } fs_device_info_t;
 
 #define FS_DEVICE_INFO_UNINITIALIZED {                                                  \
@@ -148,13 +140,21 @@ extern "C"
     .udp_sock = -1,                                            /* udp_sock */           \
     .serial_port = -1,                                         /* serial_port */        \
     .baudrate = 0,                                             /* baudrate */           \
-    .data_buffer = FS_CIRCULAR_BUFFER_EMPTY,                                            \
-    .last_received_packet = {{0}}, /* last_received_packet */                           \
-    .packet_buf_queue = {{{0}}},   /* packet_buf_queue */                               \
-    .packet_buf_queue_size = 0,    /* packet_buf_queue_size */                          \
-    .command_queue = {{0}},        /* command_queue */                                  \
-    .command_queue_size = 0        /* command_queue_size */                             \
-}
+    .data_buffer = {                                           /* data_buffer */        \
+                    .buffer = {0},                                                      \
+                    .head = 0,                                                          \
+                    .tail = 0,                                                          \
+                    .count = 0},                                                        \
+    .packet_buf_queue = {          /* packet_buf_queue */                               \
+                         .buffer = {0},                                                 \
+                         .head = 0,                                                     \
+                         .tail = 0,                                                     \
+                         .count = 0},                                                   \
+    .command_queue = {/* command_queue */                                               \
+                      .buffer = {0},                                                    \
+                      .head = 0,                                                        \
+                      .tail = 0,                                                        \
+                      .count = 0}}
 
 #ifdef __cplusplus
 }
