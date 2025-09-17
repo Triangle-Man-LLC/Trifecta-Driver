@@ -65,40 +65,52 @@ static int fs_device_process_packets_serial(fs_device_info_t *device_handle, con
         fs_log_output("[Trifecta] Peeked data: %.*s", (int)peeked, temp);
 
         fs_delimiter_indices_t indices = fs_scan_delimiters(temp, peeked);
-        fs_log_output("[Trifecta] Delimiter scan: colon=%d, exclam=%d, semicolon=%d",
-                      indices.colon_index, indices.exclam_index, indices.semicolon_index);
-
-        if (indices.colon_index != -1 && indices.exclam_index > indices.colon_index)
+        fs_log_output("[Trifecta] Delimiter scan: colon=%d, binary=%d, exclam=%d, semicolon=%d",
+                      indices.colon_index, indices.binary_index, indices.exclam_index, indices.semicolon_index);
+        if (indices.binary_index != -1 && indices.exclam_index > indices.binary_index)
         {
+            // Binary packet
+            size_t packet_start = indices.binary_index + 1;
+            size_t packet_len = indices.exclam_index - packet_start - 1;
+
+            fs_log_output("[Trifecta] Detected Binary packet framing from %d to %d (length %zu)",
+                          indices.binary_index, indices.exclam_index, packet_len);
+
+            if (segment_packets(device_handle, &temp[packet_start], packet_len) <= 0)
+                fs_log_output("[Trifecta] Failed to segment binary packet");
+
+            fs_cb_pop(&device_handle->data_buffer, NULL, indices.exclam_index + 1);
+        }
+
+        else if (indices.colon_index != -1 && indices.exclam_index > indices.colon_index)
+        {
+            // Base64 packet
             size_t payload_start = indices.colon_index + 1;
             size_t payload_len = indices.exclam_index - payload_start;
 
-            fs_log_output("[Trifecta] Detected packet framing from %d to %d (payload length %zu)",
+            fs_log_output("[Trifecta] Detected Base64 packet framing from %d to %d (payload length %zu)",
                           indices.colon_index, indices.exclam_index, payload_len);
 
-            fs_log_output("[Trifecta] Attempting to decode packet payload: %.*s",
+            fs_log_output("[Trifecta] Attempting to decode Base64 payload: %.*s",
                           (int)payload_len, &temp[payload_start]);
 
             if (base64_to_packet(device_handle, (char *)&temp[payload_start], payload_len) != 0)
-            {
-                fs_log_output("[Trifecta] Failed to decode packet");
-            }
+                fs_log_output("[Trifecta] Failed to decode Base64 packet");
 
             size_t packet_len = indices.exclam_index + 1;
-            fs_log_output("[Trifecta] Discarding %zu bytes from buffer after packet", packet_len);
             fs_cb_pop(&device_handle->data_buffer, NULL, packet_len);
         }
+
         else if (indices.semicolon_index != -1)
         {
+            // Command segment
             size_t cmd_len = indices.semicolon_index + 1;
             fs_log_output("[Trifecta] Detected command ending at index %d (length %zu)",
                           indices.semicolon_index, cmd_len);
 
-            fs_log_output("[Trifecta] Attempting to segment commands...");
             if (fs_segment_commands(device_handle, temp, peeked) != 0)
                 fs_log_output("[Trifecta] Failed to segment commands");
 
-            fs_log_output("[Trifecta] Discarding %zu bytes from buffer after command", cmd_len);
             fs_cb_pop(&device_handle->data_buffer, NULL, cmd_len);
         }
         else
@@ -138,7 +150,7 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
     // UDP, I2C, and SPI modes all transfer binary data packets.
     case FS_COMMUNICATION_MODE_TCP_UDP:
     case FS_COMMUNICATION_MODE_I2C:
-    case FS_COMMUNICATION_MODE_SPI: 
+    case FS_COMMUNICATION_MODE_SPI:
     {
         int packets = segment_packets(device_handle, rx_buf, rx_len);
         if (packets < 0)

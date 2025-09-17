@@ -307,7 +307,6 @@ int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packe
     {
         fs_log_output("[Trifecta] Warning: Device packet queue was full! Clearing!");
         device_handle->packet_buf_queue_size = 0; // Clear and reset the queue...
-        // return -1;
     }
 
     device_handle->packet_buf_queue_size++;
@@ -334,6 +333,7 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
     {
         uint8_t packet_type = (uint8_t)buf[pos];
         size_t packet_length = obtain_packet_length(packet_type);
+
         // Validate packet length
         if (packet_length == 0)
         {
@@ -345,6 +345,7 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
             fs_log_output("[Trifecta] Error: Packet length %ld is out of bounds! RX_len: %ld", packet_length, rx_len);
             return -1;
         }
+        fs_log_output("[Trifecta] Packet type %hhu, len: %ld", packet_type, packet_length);
         // Emplace the packet into the queue
         fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos), packet_length);
         packet_count++;
@@ -393,32 +394,38 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
 /// @return Struct containing first index of each delimiter, or -1 if not found
 fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 {
-    fs_delimiter_indices_t result = { -1, -1, -1 };
-    int colon_candidate = -1;
+    fs_delimiter_indices_t result = { -1, -1, -1, -1 }; // Add binary_index
+    int b64_candidate = -1;
+    int bin_candidate = -1;
 
     for (size_t i = 0; i < len; i++)
     {
-        if (buffer[i] == FS_SERIAL_PACKET_HEADER)
+        if (buffer[i] == FS_SERIAL_PACKET_HEADER_B64)
         {
-            // Store colon candidate, override previous if no '!' has been seen
-            colon_candidate = (int)i;
+            b64_candidate = (int)i;
+        }
+        else if (buffer[i] == FS_SERIAL_PACKET_HEADER_BIN)
+        {
+            bin_candidate = (int)i;
         }
         else if (buffer[i] == FS_SERIAL_PACKET_FOOTER)
         {
             if (result.exclam_index == -1)
                 result.exclam_index = (int)i;
 
-            // Commit colon only if it hasn't been committed yet
-            if (result.colon_index == -1 && colon_candidate != -1)
-                result.colon_index = colon_candidate;
+            if (result.colon_index == -1 && b64_candidate != -1)
+                result.colon_index = b64_candidate;
+
+            if (result.binary_index == -1 && bin_candidate != -1)
+                result.binary_index = bin_candidate;
         }
         else if (buffer[i] == FS_SERIAL_COMMAND_TERMINATOR && result.semicolon_index == -1)
         {
             result.semicolon_index = (int)i;
         }
 
-        // Early exit if all found
         if (result.colon_index != -1 &&
+            result.binary_index != -1 &&
             result.exclam_index != -1 &&
             result.semicolon_index != -1)
             break;
@@ -426,3 +433,4 @@ fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 
     return result;
 }
+
