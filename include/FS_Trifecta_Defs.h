@@ -56,7 +56,8 @@ extern "C"
     } fs_run_status_t;
 
     typedef struct fs_driver_config
-    {
+    {        
+        bool use_serial_interrupt_mode;    // If TRUE, and the platform supports it, then use serial interrupt mode intead
         int background_task_priority;      // Priority of the background task for obtaining updates from the device (leave as -1 if no preference)
         int background_task_core_affinity; // Core to pin the background task to (leave as -1 if no preference)
         int read_timeout_micros;           // How long to wait (microseconds) to read data
@@ -66,6 +67,7 @@ extern "C"
 
 /// TODO:
 #define FS_DRIVER_CONFIG_DEFAULT {      \
+    .use_serial_interrupt_mode = false, \
     .background_task_priority = 6,      \
     .background_task_core_affinity = 1, \
     .read_timeout_micros = 1000,        \
@@ -145,7 +147,7 @@ extern "C"
                     .head = 0,                                                          \
                     .tail = 0,                                                          \
                     .count = 0},                                                        \
-    .packet_buf_queue = {          /* packet_buf_queue */                               \
+    .packet_buf_queue = {/* packet_buf_queue */                                         \
                          .buffer = {0},                                                 \
                          .head = 0,                                                     \
                          .tail = 0,                                                     \
