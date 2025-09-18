@@ -25,7 +25,11 @@
 #define FS_TRIFECTA_SERIAL_BAUDRATE 2000000
 #define FS_MAX_DATA_LENGTH 512
 
-#define FS_SERIAL_PACKET_HEADER ':'
+#define FS_MAX_CMD_QUEUE_LENGTH 4
+#define FS_MAX_CMD_LENGTH 72
+
+#define FS_SERIAL_PACKET_HEADER_B64 ':'
+#define FS_SERIAL_PACKET_HEADER_BIN '?'
 #define FS_SERIAL_PACKET_FOOTER '!'
 #define FS_SERIAL_COMMAND_TERMINATOR ';'
 
@@ -84,6 +88,13 @@ extern "C"
         FS_COMMUNICATION_MODE_SPI = 64,           // SPI -
         FS_COMMUNICATION_MODE_BLE = 128,          // Bluetooth Low Energy -
     } fs_communication_mode_t;
+
+    /// @brief Struct primarily for defining inbound commands
+    typedef struct fs_command_info
+    {
+        fs_communication_mode_t source;
+        uint8_t payload[FS_MAX_CMD_LENGTH];
+    } fs_command_info_t;
 
 #ifdef __cplusplus
 }

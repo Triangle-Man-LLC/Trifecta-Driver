@@ -20,9 +20,6 @@
 #include <string.h>
 #include <math.h>
 
-#define FS_MAX_CMD_QUEUE_LENGTH 4
-#define FS_MAX_CMD_LENGTH 64
-
 #define FS_MAX_PACKET_QUEUE_LENGTH 4
 #define FS_MAX_PACKET_LENGTH 256
 

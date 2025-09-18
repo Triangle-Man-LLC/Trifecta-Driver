@@ -22,6 +22,8 @@ extern "C"
 
     int fs_handle_received_commands(fs_device_info_t *device_info, const void *cmd_buf, size_t buf_len);
     int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, ssize_t rx_len, fs_communication_mode_t source);
+    int fs_device_get_packet_count(const fs_device_info_t *device_handle);
+    int fs_device_get_packet_at_index(const fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer, int index);
     void fs_q_to_euler_angles(float *estRoll, float *estPitch, float *estYaw, float q0, float q1, float q2, float q3, bool degrees);
 
 #ifdef __cplusplus
