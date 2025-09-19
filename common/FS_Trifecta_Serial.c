@@ -125,8 +125,8 @@ int fs_serial_start(fs_device_info_t *device_handle)
 
         fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
                       device_handle->device_name, device_handle->status, device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
-
-        if (!fs_platform_supports_serial_interrupts() || !device_handle->driver_config.use_serial_interrupt_mode)
+        bool interrupts_supported = fs_platform_supported_serial_interrupts() != FS_COMMUNICATION_MODE_UNINITIALIZED && (fs_platform_supported_serial_interrupts() & device_handle->communication_mode) != 0;
+        if (!interrupts_supported || !device_handle->driver_config.use_serial_interrupt_mode)
         {
             // Start the serial update thread if serial interrupts are not enabled
             status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, &device_handle->status, task_stack_size, task_priority, core_affinity);
@@ -139,7 +139,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
         else
         {
             //
-            status = fs_start_serial_interrupts(device_handle, &device_handle->status);
+            status = fs_init_serial_interrupts(device_handle, &device_handle->status);
         }
         return 0;
     }

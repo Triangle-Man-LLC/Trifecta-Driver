@@ -130,35 +130,23 @@ extern "C"
         fs_command_ringbuffer_t command_queue;   // Command buffer for the device (read-only)
     } fs_device_info_t;
 
-#define FS_DEVICE_INFO_UNINITIALIZED {                                                        \
-    .device_name = {0},                                        /* device_name */              \
-    .device_id = 0,                                            /* device_id */                \
-    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, /* communication_mode */       \
-    .ping = 9999,                                              /* ping */                     \
-    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                 /* driver_config */            \
-    .hp_timestamp_micros = 0,                                  /* High precision timestamp */ \
-    .status = FS_RUN_STATUS_IDLE,                              /* status */                   \
-    .ip_addr = {0},                                            /* ip_addr */                  \
-    .ip_port = 8888,                                           /* ip_port */                  \
-    .tcp_sock = -1,                                            /* tcp_sock */                 \
-    .udp_sock = -1,                                            /* udp_sock */                 \
-    .serial_port = -1,                                         /* serial_port */              \
-    .baudrate = 0,                                             /* baudrate */                 \
-    .data_buffer = {                                           /* data_buffer */              \
-                    .buffer = {0},                                                            \
-                    .head = 0,                                                                \
-                    .tail = 0,                                                                \
-                    .count = 0},                                                              \
-    .packet_buf_queue = {/* packet_buf_queue */                                               \
-                         .buffer = {0},                                                       \
-                         .head = 0,                                                           \
-                         .tail = 0,                                                           \
-                         .count = 0},                                                         \
-    .command_queue = {/* command_queue */                                                     \
-                      .buffer = {0},                                                          \
-                      .head = 0,                                                              \
-                      .tail = 0,                                                              \
-                      .count = 0}}
+#define FS_DEVICE_INFO_UNINITIALIZED {                                         \
+    .device_name = {0},                                                        \
+    .device_id = 0,                                                            \
+    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED,                 \
+    .ping = 9999,                                                              \
+    .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                 \
+    .hp_timestamp_micros = 0,                                                  \
+    .status = FS_RUN_STATUS_IDLE,                                              \
+    .ip_addr = {0},                                                            \
+    .ip_port = 8888,                                                           \
+    .tcp_sock = -1,                                                            \
+    .udp_sock = -1,                                                            \
+    .serial_port = -1,                                                         \
+    .baudrate = 0,                                                             \
+    .data_buffer = {.buffer = {0}, .head = 0, .tail = 0, .count = 0},          \                                                      
+    .packet_buf_queue = {.buffer = {{{0}}}, .head = 0, .tail = 0, .count = 0}, \
+    .command_queue = {.buffer = {{{0}}}, .head = 0, .tail = 0, .count = 0}}
 
 #ifdef __cplusplus
 }

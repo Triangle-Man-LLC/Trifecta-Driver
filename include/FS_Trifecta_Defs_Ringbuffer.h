@@ -9,7 +9,7 @@
         volatile uint16_t tail;                 \
         volatile uint16_t count;                \
     } name
-
+  
 /// @section Packet ring buffer functions (implemented using MACROS to allow use with all fs_ringbuffers)
 #define FS_RINGBUFFER_INIT(rb) \
     do                         \

@@ -75,12 +75,12 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
     fs_command_info_t cmd = {0};
     while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
-        size_t command_length = strnlen(cmd.payload, FS_MAX_CMD_LENGTH);
+        size_t command_length = strnlen((char*)cmd.payload, FS_MAX_CMD_LENGTH);
         fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
         if (command_length > 0 && cmd.payload[0] == CMD_IDENTIFY)
         {
             size_t name_length = command_length - 1;
-            strncpy(device_handle->device_name, cmd.payload + 1, name_length);
+            strncpy(device_handle->device_name, (char*)(&cmd.payload[1]), name_length);
             device_handle->device_name[name_length] = '\0';
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
