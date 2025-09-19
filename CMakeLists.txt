@@ -8,9 +8,7 @@ set(trifecta_component_srcs "esp-idf/FS_Trifecta_Interfaces.c"
                             "common/FS_Trifecta_Networked.c")
 set(trifecta_required_components driver)
 
-idf_build_get_config(CONFIG_USB_ENABLED usb_enabled)
-
-if(${usb_enabled})
+if(CONFIG_USB_ENABLED)
     list(APPEND trifecta_required_components usb)
 endif()
 
