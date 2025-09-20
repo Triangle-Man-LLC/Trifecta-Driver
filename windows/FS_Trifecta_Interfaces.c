@@ -16,19 +16,22 @@
 #include <time.h>
 #include <string.h>
 
-#include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#define _WINSOCKAPI_    // Prevent inclusion of winsock.h by windows.h
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <process.h> 
-#include <io.h>      
-#include <fcntl.h>   
-#include <tchar.h>   
-#include <conio.h>   
+#include <windows.h>
+#include <process.h>
+#include <io.h>
+#include <fcntl.h>
+#include <tchar.h>
+#include <conio.h>
 
 #include "FS_Trifecta_Interfaces.h"
 
 // Platform-specific: Functions for initializing communication drivers on target platform
-
+#pragma comment(lib, "ws2_32.lib")
 #define FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS 2000000
 
 int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
@@ -36,7 +39,7 @@ int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
 /// @brief Helper to set device serial field from Windows-specific HANDLE
 /// @param dev Device pointer
 /// @param h HANDLE (Windows fd-like equivalent)
-static inline void fs_set_serial_handle(fs_device_info_t* dev, HANDLE h)
+static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 {
     dev->serial_port = (int)(intptr_t)h;
 }
@@ -44,7 +47,7 @@ static inline void fs_set_serial_handle(fs_device_info_t* dev, HANDLE h)
 /// @brief Helper to get Windows serial handle from device
 /// @param dev Device pointer
 /// @return HANDLE (Windows fd-like equivalent)
-static inline HANDLE fs_get_serial_handle(const fs_device_info_t* dev)
+static inline HANDLE fs_get_serial_handle(const fs_device_info_t *dev)
 {
     return (HANDLE)(intptr_t)(dev->serial_port);
 }
@@ -60,6 +63,15 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
+    // Initialize Winsock
+    WSADATA wsaData;
+    int wsa_result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (wsa_result != 0)
+    {
+        fs_log_output("[Trifecta] Error: WSAStartup failed with code %d\n", wsa_result);
+        return -1;
+    }
+
     // Convert IP address string to binary form
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -69,22 +81,25 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
+        WSACleanup();
         return -1;
     }
 
     // Create TCP socket
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
+    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Could not create TCP socket!\n");
+        fs_log_output("[Trifecta] Error: Could not create TCP socket! Code: %d\n", WSAGetLastError());
+        WSACleanup();
         return -1;
     }
 
     // Connect to the device
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not connect to device!\n");
-        close(sockfd);
+        fs_log_output("[Trifecta] Error: Could not connect to device! Code: %d\n", WSAGetLastError());
+        closesocket(sockfd);
+        WSACleanup();
         return -1;
     }
 
@@ -104,10 +119,19 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     }
 
     // Close existing socket if it's already open
-    if (device_handle->udp_sock >= 0)
+    if (device_handle->udp_sock != INVALID_SOCKET)
     {
-        close(device_handle->udp_sock);
-        device_handle->udp_sock = -1;
+        closesocket(device_handle->udp_sock);
+        device_handle->udp_sock = INVALID_SOCKET;
+    }
+
+    // Initialize Winsock
+    WSADATA wsaData;
+    int wsa_result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (wsa_result != 0)
+    {
+        fs_log_output("[Trifecta] Error: WSAStartup failed with code %d\n", wsa_result);
+        return -1;
     }
 
     // Convert IP address string to binary form
@@ -118,43 +142,48 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
+        WSACleanup();
         return -1;
     }
 
     // Create UDP socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0)
+    SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sockfd == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Could not create UDP socket!\n");
+        fs_log_output("[Trifecta] Error: Could not create UDP socket! Code: %d\n", WSAGetLastError());
+        WSACleanup();
         return -1;
     }
 
-    // Set SO_REUSEADDR to allow multiple sockets to bind to the same port
-    int reuse = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    // Set SO_REUSEADDR
+    BOOL reuse = TRUE;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: setsockopt SO_REUSEADDR failed!\n");
-        close(sockfd);
+        fs_log_output("[Trifecta] Error: setsockopt SO_REUSEADDR failed! Code: %d\n", WSAGetLastError());
+        closesocket(sockfd);
+        WSACleanup();
         return -1;
     }
 
-    // Bind to a local address and port for receiving packets
+    // Bind to local address
     struct sockaddr_in local_addr;
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Listen on all interfaces
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     local_addr.sin_port = htons(FS_TRIFECTA_PORT);
 
-    if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0)
+    if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not bind UDP socket!\n");
-        close(sockfd);
+        fs_log_output("[Trifecta] Error: Could not bind UDP socket! Code: %d\n", WSAGetLastError());
+        closesocket(sockfd);
+        WSACleanup();
         return -1;
     }
 
     device_handle->udp_sock = sockfd;
     return 0;
 }
+
 /// @brief Configure serial port settings (Windows version)
 /// @param hSerial Windows HANDLE to the serial port (stored via fs_set_serial_handle)
 /// @return 0 if successful, -1 if failed
@@ -175,19 +204,19 @@ static int configure_serial_port(HANDLE hSerial)
         return -1;
     }
 
-    dcbSerialParams.BaudRate = FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS;         
-    dcbSerialParams.ByteSize = 8;            
-    dcbSerialParams.StopBits = ONESTOPBIT;   
-    dcbSerialParams.Parity   = NOPARITY;     
+    dcbSerialParams.BaudRate = FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS;
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity = NOPARITY;
 
     // Disable hardware flow control
     dcbSerialParams.fOutxCtsFlow = FALSE;
     dcbSerialParams.fOutxDsrFlow = FALSE;
-    dcbSerialParams.fDtrControl  = DTR_CONTROL_DISABLE;
-    dcbSerialParams.fRtsControl  = RTS_CONTROL_DISABLE;
+    dcbSerialParams.fDtrControl = DTR_CONTROL_DISABLE;
+    dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
 
     // Disable software flow control
-    dcbSerialParams.fInX  = FALSE;
+    dcbSerialParams.fInX = FALSE;
     dcbSerialParams.fOutX = FALSE;
 
     // Raw mode: no processing
@@ -201,11 +230,11 @@ static int configure_serial_port(HANDLE hSerial)
     }
 
     COMMTIMEOUTS timeouts = {0};
-    timeouts.ReadIntervalTimeout         = MAXDWORD;
-    timeouts.ReadTotalTimeoutMultiplier  = 0;
-    timeouts.ReadTotalTimeoutConstant    = 0;
+    timeouts.ReadIntervalTimeout = MAXDWORD;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
+    timeouts.ReadTotalTimeoutConstant = 0;
     timeouts.WriteTotalTimeoutMultiplier = 0;
-    timeouts.WriteTotalTimeoutConstant   = 0;
+    timeouts.WriteTotalTimeoutConstant = 0;
 
     if (!SetCommTimeouts(hSerial, &timeouts))
     {
@@ -242,8 +271,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
                 NULL,
                 OPEN_EXISTING,
                 0,
-                NULL
-            );
+                NULL);
 
             if (hSerial == INVALID_HANDLE_VALUE)
             {
@@ -265,7 +293,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
                 continue;
             }
 
-            Sleep(25);  // 25 ms delay
+            Sleep(25); // 25 ms delay
 
             char response[20] = {0};
             DWORD bytes_read;
@@ -302,8 +330,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
             NULL,
             OPEN_EXISTING,
             0,
-            NULL
-        );
+            NULL);
 
         if (hSerial == INVALID_HANDLE_VALUE)
         {
@@ -341,18 +368,18 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 
     if (stack_size <= 0)
     {
-        stack_size = 0;  // Use default stack size
+        stack_size = 0; // Use default stack size
     }
 
     *thread_running_flag = FS_RUN_STATUS_RUNNING;
 
     HANDLE thread_handle = (HANDLE)_beginthreadex(
-        NULL,               // Security attributes
+        NULL, // Security attributes
         (unsigned)stack_size,
-        (unsigned (__stdcall *)(void *))thread_func,
+        (unsigned(__stdcall *)(void *))thread_func,
         params,
-        0,                  // Run immediately
-        NULL                // Optionally capture thread ID
+        0,   // Run immediately
+        NULL // Optionally capture thread ID
     );
 
     if (thread_handle == 0)
@@ -381,7 +408,7 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
         }
     }
 
-    CloseHandle(thread_handle);  // Detach thread
+    CloseHandle(thread_handle); // Detach thread
 
     fs_log_output("[Trifecta] Thread created successfully.\n");
     return 0;
@@ -393,8 +420,8 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 /// @return Should always return 0...
 int fs_thread_exit(void *thread_handle)
 {
-    ExitThread(0); 
-    return 0;      
+    ExitThread(0);
+    return 0;
 }
 
 /// @brief Transmit data over a networked TCP connection
@@ -417,7 +444,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->tcp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -429,21 +456,20 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    // Set the send timeout
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    // Set the send timeout (in milliseconds for Windows)
+    DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
+    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set send timeout!");
+        fs_log_output("[Trifecta] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
-    int written = send(device_handle->tcp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->tcp_sock, (const char *)tx_buffer, (int)length_bytes, 0);
 
-    if (written < 0)
+    if (written == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Sending data over TCP failed!");
+        fs_log_output("[Trifecta] Error: Sending data over TCP failed! Code: %d\n", WSAGetLastError());
+        return -1;
     }
 
     return written;
@@ -469,7 +495,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->udp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -481,21 +507,20 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    // Set the send timeout
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    // Set the send timeout (in milliseconds for Windows)
+    DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
+    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set send timeout!");
+        fs_log_output("[Trifecta] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
-    int written = send(device_handle->udp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->udp_sock, (const char *)tx_buffer, (int)length_bytes, 0);
 
-    if (written < 0)
+    if (written == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Sending data over UDP failed!");
+        fs_log_output("[Trifecta] Error: Sending data over UDP failed! Code: %d\n", WSAGetLastError());
+        return -1;
     }
 
     return written;
@@ -584,7 +609,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->tcp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -596,21 +621,20 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    // Set the receive timeout
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    // Set the receive timeout (in milliseconds for Windows)
+    DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
+    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set receive timeout (TCP)!");
+        fs_log_output("[Trifecta] Error: Could not set receive timeout (TCP)! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
-    ssize_t recv_len = recv(device_handle->tcp_sock, rx_buffer, length_bytes, 0);
+    int recv_len = recv(device_handle->tcp_sock, (char *)rx_buffer, (int)length_bytes, 0);
 
-    if (recv_len < 0)
+    if (recv_len == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over TCP failed! Error: %s", strerror(errno));
+        fs_log_output("[Trifecta] Error: Receiving data over TCP failed! Code: %d\n", WSAGetLastError());
+        return -1;
     }
 
     return recv_len;
@@ -636,7 +660,7 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->udp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -648,21 +672,20 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    // Set the receive timeout
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    // Set the receive timeout (in milliseconds for Windows)
+    DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
+    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)!");
+        fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
-    ssize_t recv_len = recv(device_handle->udp_sock, rx_buffer, length_bytes, 0);
+    int recv_len = recv(device_handle->udp_sock, (char *)rx_buffer, (int)length_bytes, 0);
 
-    if (recv_len < 0)
+    if (recv_len == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over UDP failed! Error: %s", strerror(errno));
+        fs_log_output("[Trifecta] Error: Receiving data over UDP failed! Code: %d\n", WSAGetLastError());
+        return -1;
     }
 
     return recv_len;
@@ -710,9 +733,9 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    timeouts.ReadIntervalTimeout         = MAXDWORD;
-    timeouts.ReadTotalTimeoutMultiplier  = 0;
-    timeouts.ReadTotalTimeoutConstant    = timeout_micros / 1000;
+    timeouts.ReadIntervalTimeout = MAXDWORD;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
+    timeouts.ReadTotalTimeoutConstant = timeout_micros / 1000;
 
     if (!SetCommTimeouts(hSerial, &timeouts))
     {
@@ -741,19 +764,20 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->tcp_sock < 0)
+    if (device_handle == NULL || device_handle->tcp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Warning: Invalid device handle or TCP socket!");
         return -1;
     }
 
-    if (close(device_handle->tcp_sock) != 0)
+    if (closesocket(device_handle->tcp_sock) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)! Error: %s", device_handle->tcp_sock, strerror(errno));
-        device_handle->tcp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)! Code: %d", (int)device_handle->tcp_sock, WSAGetLastError());
+        device_handle->tcp_sock = INVALID_SOCKET;
         return -1;
     }
-    device_handle->tcp_sock = -1;
+
+    device_handle->tcp_sock = INVALID_SOCKET;
     return 0;
 }
 
@@ -762,19 +786,20 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->udp_sock < 0)
+    if (device_handle == NULL || device_handle->udp_sock == INVALID_SOCKET)
     {
         fs_log_output("[Trifecta] Warning: Invalid device handle or UDP socket!");
         return -1;
     }
 
-    if (close(device_handle->udp_sock) != 0)
+    if (closesocket(device_handle->udp_sock) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)! Error: %s", device_handle->udp_sock, strerror(errno));
-        device_handle->udp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)! Code: %d", (int)device_handle->udp_sock, WSAGetLastError());
+        device_handle->udp_sock = INVALID_SOCKET;
         return -1;
     }
-    device_handle->udp_sock = -1;
+
+    device_handle->udp_sock = INVALID_SOCKET;
     return 0;
 }
 
@@ -851,7 +876,7 @@ int fs_toggle_logging(bool do_log)
 /// @return The number of ticks the delay lasted
 int fs_delay(int millis)
 {
-    Sleep(millis);  
+    Sleep(millis);
     return millis;
 }
 
@@ -882,7 +907,6 @@ int fs_delay_for(uint32_t *current_time, int millis)
     *current_time += elapsed_ms;
     return elapsed_ms;
 }
-
 
 /// @brief Get the current system time
 /// @param current_time Pointer to the current time
