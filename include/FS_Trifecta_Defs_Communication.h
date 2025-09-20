@@ -25,7 +25,7 @@
 #define FS_TRIFECTA_SERIAL_BAUDRATE 2000000
 #define FS_MAX_DATA_LENGTH 512
 
-#define FS_MAX_CMD_QUEUE_LENGTH 4
+#define FS_MAX_CMD_QUEUE_LENGTH 16
 #define FS_MAX_CMD_LENGTH 72
 
 #define FS_SERIAL_PACKET_HEADER_B64 ':'
@@ -62,6 +62,7 @@ extern "C"
         CMD_IDENTIFY_PARAM_UART_BAUD_RATE = 'b', // Respond with UART baud rate "b0;"
         CMD_IDENTIFY_PARAM_SSID = 's',           // Respond with current SSID (STA) for WiFi connection "s0;"
         CMD_IDENTIFY_PARAM_SSID_AP = '1',        // Respond with current SSID (AP) for WiFi connection "l0;"
+        CMD_IDENTIFY_PARAM_PASSWORD_AP = '3',    // Respond with current SSID (AP) for WiFi connection "30;"
         CMD_IDENTIFY_PARAM_TRANSMIT = 't',       // Respond with transmit mode (serial/UDP/etc.) "t-1;" to query, "t<COMMUNICATION_MODE_1 | 2 | ... |>;" to set
 
         CMD_REZERO_IMUS = 'Z',            // Re-calibrate the IMUs (should only do on a flat plane and stationary) "Z<NUM_CALIBRATION_POINTS>;"

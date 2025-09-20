@@ -1,5 +1,6 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
-/// Copyright 2024 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -9,6 +10,7 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Serial.h"
 
 /// @brief Updater thread, there is one of these per device connected.
@@ -40,7 +42,7 @@ static void fs_serial_update_thread(void *params)
         while (last_received_serial > 0)
         {
             fs_log_output("[Trifecta] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
-            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, FS_COMMUNICATION_MODE_UART) < 0)
+            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, active_device->communication_mode) < 0)
             {
                 fs_log_output("[Trifecta] WARN: Could not parse data! Is there corruption?");
             }
@@ -87,9 +89,9 @@ int fs_serial_start(fs_device_info_t *device_handle)
     fs_delay(10);
 
     // Send identification command
-    char send_buf[16] = {0};
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
     snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_IDENTIFY, 0);
-    size_t send_len = strnlen(send_buf, sizeof(send_buf)) + 1;
+    size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf)) + 1;
 
     const int receive_timeout_micros = 100000;
 
@@ -119,7 +121,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
         }
         fs_delay(receive_timeout_micros / 1000);
     }
-    if (strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
+    if (fs_safe_strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
     {
         fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_name);
 
@@ -143,7 +145,6 @@ int fs_serial_start(fs_device_info_t *device_handle)
         }
         return 0;
     }
-
     // If no connection was made, log an error
     fs_log_output("[Trifecta] Error: Device was not detected!");
     return -1;
@@ -152,53 +153,15 @@ int fs_serial_start(fs_device_info_t *device_handle)
 /// @brief
 /// @param device_handle
 /// @return
-int fs_serial_start_device_stream(fs_device_info_t *device_handle)
-{
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 1);
-    size_t send_len = strnlen(send_buf, 16) + 1;
-    const int receive_timeout_micros = 1000;
-    return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
-}
-
-/// @brief
-/// @param device_handle
-/// @return
-int fs_serial_stop_device_stream(fs_device_info_t *device_handle)
-{
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 0);
-    size_t send_len = strnlen(send_buf, 16) + 1;
-    const int receive_timeout_micros = 1000;
-    return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
-}
-
-/// @brief
-/// @param device_handle
-/// @return
-int fs_serial_read_one_shot(fs_device_info_t *device_handle)
-{
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 2);
-    size_t send_len = strnlen(send_buf, 16) + 1;
-    const int receive_timeout_micros = 1000;
-    return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
-}
-
-/// @brief
-/// @param device_handle
-/// @return
 int fs_serial_exit(fs_device_info_t *device_handle)
 {
     device_handle->status = FS_RUN_STATUS_IDLE;
-
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_STREAM, 0);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_STREAM, 0);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 1000;
     fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros);
-
-    fs_delay(5);
+    fs_delay(10);
     return fs_shutdown_serial_driver(device_handle);
 }
 
@@ -207,35 +170,9 @@ int fs_serial_exit(fs_device_info_t *device_handle)
 /// @return
 int fs_serial_device_restart(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_RESTART, 0);
-    size_t send_len = strnlen(send_buf, 16) + 1;
-    const int receive_timeout_micros = 1000;
-    return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
-}
-
-/// @brief
-/// @param device_handle
-/// @return
-int fs_serial_set_device_operating_mode(fs_device_info_t *device_handle, fs_communication_mode_t mode)
-{
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, mode);
-    size_t send_len = strnlen(send_buf, 16) + 1;
-    const int receive_timeout_micros = 1000;
-    return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
-}
-
-/// @brief
-/// @param device_handle The device handle
-/// @param ssid Null-terminated string with SSID
-/// @param password Null-terminated string with password
-/// @return
-int fs_serial_set_network_params(fs_device_info_t *device_handle, char *ssid, char *password)
-{
-    char send_buf[128] = {0};
-    snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, password);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_RESTART, 0);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 1000;
     return (fs_transmit_serial(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }

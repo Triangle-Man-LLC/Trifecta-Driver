@@ -1,3 +1,5 @@
+
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Device_Utils.h"
 
 // Base64 character set
@@ -270,6 +272,8 @@ int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packe
         fs_log_output("[Trifecta] Warning: Device packet queue was full! Packet dropped.");
         return -1;
     }
+    // Update the last received packet...
+    memcpy(&device_handle->last_received_packet, packet, sizeof(device_handle->last_received_packet));
     return 0;
 }
 

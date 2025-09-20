@@ -40,7 +40,7 @@ int fs_log_output(const char *format, ...)
 int main()
 {
     fs_device_info_t device = FS_DEVICE_INFO_UNINITIALIZED;
-    #define NUM_SAMPLES 4096
+    #define NUM_SAMPLES 256
     fs_imu_composite_packet_t packets[NUM_SAMPLES] = {{0}};
     // Populate all packets with monotonically increasing values...
 

@@ -1,5 +1,5 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
-/// Copyright 2024 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -9,6 +9,7 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Networked.h"
 
 /// @brief This counter increments when more network devices are added, since it is necessary to bind UDP sockets to unique ports
@@ -60,7 +61,7 @@ static void fs_network_update_thread(void *params)
         if (last_received_udp > 0)
         {
             // UDP only receive data packets, so handle them here
-            if (fs_device_parse_packet(active_device, &rx_buffer2, last_received_udp, FS_COMMUNICATION_MODE_TCP_UDP) < 0)
+            if (fs_device_parse_packet(active_device, &rx_buffer2, last_received_udp, active_device->communication_mode) < 0)
             {
                 fs_log_output("[Trifecta] Could not parse data! Is there interference?");
             }
@@ -90,11 +91,11 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 {
     // Clear the device name and parameters
     memset(device_handle->device_name, 0, sizeof(device_handle->device_name));
-    memset(device_handle->ip_addr, 0, sizeof(device_handle->ip_addr));
+    memset(device_handle->device_params.ip_addr, 0, sizeof(device_handle->device_params.ip_addr));
 
     // Set target IP address
-    strncpy(device_handle->ip_addr, ip_addr, sizeof(device_handle->ip_addr) - 1);
-    device_handle->ip_port = FS_TRIFECTA_PORT; // TCP port always 8888
+    fs_safe_strncpy(device_handle->device_params.ip_addr, ip_addr, sizeof(device_handle->device_params.ip_addr) - 1);
+    device_handle->device_params.ip_port = FS_TRIFECTA_PORT; // TCP port always 8888
 
     // Initialize TCP driver
     if (fs_init_network_tcp_driver(device_handle) != 0)
@@ -106,9 +107,9 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
     // Begin UDP after establishing connection
     // Note that UDP port should be incremented to enable support for multiple devices
-    device_handle->ip_port = FS_TRIFECTA_PORT + num_network_devices; // Starting at 8888, then 8889, etc.
+    device_handle->device_params.ip_port = FS_TRIFECTA_PORT + num_network_devices; // Starting at 8888, then 8889, etc.
     num_network_devices ++;
-    if (fs_network_set_host_udp_port(device_handle, device_handle->ip_port) != 0)
+    if (fs_network_set_host_udp_port(device_handle, device_handle->device_params.ip_port) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not set UDP host port!");
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
@@ -137,9 +138,9 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     }
 
     // Send identification command
-    char send_buf[16] = {0};
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
     snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_IDENTIFY, 0);
-    size_t send_len = strnlen(send_buf, sizeof(send_buf)) + 1;
+    size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf)) + 1;
 
     const int receive_timeout_micros = 10000;
 
@@ -150,7 +151,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     {
         status = (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
         fs_delay(receive_timeout_micros / 1000);
-        if (strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
+        if (fs_safe_strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
         {
             fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_name);
             return 0;
@@ -166,9 +167,9 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 /// @return Status of the command transmission (0 for success, -1 for failure).
 int fs_network_start_device_stream(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 1);
-    size_t send_len = strnlen(send_buf, 16);
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, "%c%d;", CMD_STREAM, 1);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH);
     int transmit_timeout_micros = 10000;
     return fs_transmit_networked_tcp(device_handle, &send_buf, send_len, transmit_timeout_micros);
 }
@@ -178,9 +179,9 @@ int fs_network_start_device_stream(fs_device_info_t *device_handle)
 /// @return Status of the command transmission (0 for success, -1 for failure).
 int fs_network_stop_device_stream(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 0);
-    size_t send_len = strnlen(send_buf, 16);
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, "%c%d;", CMD_STREAM, 0);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH);
     int transmit_timeout_micros = 10000;
     return fs_transmit_networked_tcp(device_handle, &send_buf, send_len, transmit_timeout_micros);
 }
@@ -190,9 +191,9 @@ int fs_network_stop_device_stream(fs_device_info_t *device_handle)
 /// @return Status of the command transmission (0 for success, -1 for failure).
 int fs_network_read_one_shot(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 2);
-    size_t send_len = strnlen(send_buf, 16);
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, "%c%d;", CMD_STREAM, 2);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH);
     int transmit_timeout_micros = 10000;
     return fs_transmit_networked_tcp(device_handle, &send_buf, send_len, transmit_timeout_micros);
 }
@@ -202,12 +203,12 @@ int fs_network_read_one_shot(fs_device_info_t *device_handle)
 /// @return Status of the network shutdown (0 for success, -1 for failure).
 int fs_network_exit(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
     device_handle->status = FS_RUN_STATUS_IDLE;
 
     // Prepare the command to stop streaming
-    snprintf(send_buf, 16, "%c%d;", CMD_STREAM, 0);
-    size_t send_len = strnlen(send_buf, 16);
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, "%c%d;", CMD_STREAM, 0);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH);
     int transmit_timeout_micros = 10000;
 
     // Transmit the stop command over TCP
@@ -225,9 +226,9 @@ int fs_network_exit(fs_device_info_t *device_handle)
 /// @return
 int fs_network_device_restart(fs_device_info_t *device_handle)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_RESTART, 0);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_RESTART, 0);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }
@@ -237,9 +238,9 @@ int fs_network_device_restart(fs_device_info_t *device_handle)
 /// @return
 int fs_network_set_device_operating_mode(fs_device_info_t *device_handle, fs_communication_mode_t mode)
 {
-    char send_buf[16] = {0};
-    snprintf(send_buf, 16, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, mode);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    char send_buf[FS_MAX_CMD_LENGTH] = {0};
+    snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, mode);
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }
@@ -253,7 +254,7 @@ int fs_network_set_network_params(fs_device_info_t *device_handle, char *ssid, c
 {
     char send_buf[128] = {0};
     snprintf(send_buf, 128, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, password);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }
@@ -270,7 +271,7 @@ int fs_network_set_host_udp_port(fs_device_info_t *device_handle, int udp_port)
         return -1;
     }
     snprintf(send_buf, 128, ";%c%d;", CMD_SET_LISTENING_PORT, udp_port);
-    size_t send_len = strnlen(send_buf, 16) + 1;
+    size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }
