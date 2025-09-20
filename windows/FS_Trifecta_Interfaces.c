@@ -17,7 +17,7 @@
 #include <string.h>
 
 #define WIN32_LEAN_AND_MEAN
-#define _WINSOCKAPI_    // Prevent inclusion of winsock.h by windows.h
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -50,6 +50,25 @@ static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 static inline HANDLE fs_get_serial_handle(const fs_device_info_t *dev)
 {
     return (HANDLE)(intptr_t)(dev->serial_port);
+}
+
+/// @brief Whether interrupt-driven UART etc. is supported by the platform.
+/// Many RTOSes support this, but Linux does not, etc.
+/// @return OR FLAG of serial interfaces which support interrupts.
+/// If the return is FS_COMMUNICATION_MODE_UNINITIALIZED, then no interrupt-driven serial is allowed.
+int fs_platform_supported_serial_interrupts()
+{
+    return FS_COMMUNICATION_MODE_UNINITIALIZED;
+}
+
+/// @brief Start serial in interrupt mode on platforms that support it.
+/// This enables more precise and low latency serial reads than polling.
+/// @param device_handle
+/// @param status_flag
+/// @return 0 on success, -1 on fail (e.g. not supported on platform)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+{
+    return -1;
 }
 
 /// @brief Start the network TCP driver.
@@ -364,11 +383,6 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
     {
         fs_log_output("[Trifecta] Error: Invalid thread function or running flag!\n");
         return -1;
-    }
-
-    if (stack_size <= 0)
-    {
-        stack_size = 0; // Use default stack size
     }
 
     *thread_running_flag = FS_RUN_STATUS_RUNNING;
