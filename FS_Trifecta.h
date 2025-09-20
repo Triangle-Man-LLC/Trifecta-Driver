@@ -79,6 +79,19 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer);
 
+    /// @brief Retrieve the current size of the packet queue.
+    /// @param device_handle Pointer to the device handle.
+    /// @param packet_buffer Pointer to the packet buffer.
+    /// @return 0 on success.
+    FS_API int fs_get_raw_packet_queue_size(fs_device_info_t *device_handle);
+
+    /// @brief Retrieve the indicated packet number from the queue.
+    /// @param device_handle Pointer to the device handle.
+    /// @param packet_buffer Pointer to the packet buffer.
+    /// @param pos The position in queue to obtain, starting from earliest first.
+    /// @return 0 on success.
+    FS_API int fs_get_raw_packet_from_queue(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer, int pos);
+
     /// @brief Retrieve the latest device orientation (quaternion).
     /// @param device_handle Pointer to the device handle.
     /// @param orientation_buffer Pointer to the orientation buffer.

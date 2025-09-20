@@ -14,7 +14,7 @@
 
 /// @brief Get the current number of packets in device buffer.
 /// Note that the oldest elements are overwritten if overflowed.
-/// @param device_handle 
+/// @param device_handle
 /// @return Number of elements, between 0 to FS_MAX_PACKET_QUEUE_LENGTH
 int fs_device_get_packet_count(const fs_device_info_t *device_handle)
 {
@@ -22,9 +22,9 @@ int fs_device_get_packet_count(const fs_device_info_t *device_handle)
 }
 
 /// @brief Copy the packet at indicated index to the buffer for consumption.
-/// @param device_handle 
+/// @param device_handle
 /// @param packet_buffer Destination buffer.
-/// @param index 
+/// @param index
 /// @return An fs_packet_type_t indicating packet ID, else -1 on failure
 int fs_device_get_packet_at_index(const fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer, int index)
 {
@@ -75,12 +75,12 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
     fs_command_info_t cmd = {0};
     while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
-        size_t command_length = strnlen((char*)cmd.payload, FS_MAX_CMD_LENGTH);
+        size_t command_length = strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
         fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
         if (command_length > 0 && cmd.payload[0] == CMD_IDENTIFY)
         {
             size_t name_length = command_length - 1;
-            strncpy(device_handle->device_name, (char*)(&cmd.payload[1]), name_length);
+            strncpy(device_handle->device_name, (char *)(&cmd.payload[1]), name_length);
             device_handle->device_name[name_length] = '\0';
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
@@ -269,6 +269,27 @@ int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet
     return 0;
 }
 
+int fs_get_raw_packet_queue_size(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+        return -1;
+
+    return device_handle->packet_buf_queue.count;
+}
+
+int fs_get_raw_packet_from_queue(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer, int pos)
+{
+    if (!device_handle || !packet_buffer || pos < 0 || pos >= device_handle->packet_buf_queue.count)
+        return -1;
+
+    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, pos);
+    if (!pkt)
+        return -1;
+
+    memcpy(packet_buffer, pkt, sizeof(fs_packet_union_t));
+    return 0;
+}
+
 int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orientation_buffer)
 {
     if (!device_handle || !orientation_buffer || device_handle->packet_buf_queue.count == 0)
@@ -287,7 +308,6 @@ int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orienta
 
     return 0;
 }
-
 
 int fs_get_orientation_euler(fs_device_info_t *device_handle, fs_vector3_t *orientation_buffer, bool degrees)
 {
