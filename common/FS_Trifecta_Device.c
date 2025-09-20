@@ -1,5 +1,6 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
 /// Copyright 2025 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -76,6 +77,7 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
     fs_command_info_t cmd = {0};
     while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
+        size_t command_length = fs_safe_strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
         size_t command_length = fs_safe_strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
         fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
         const char cmd_char = cmd.payload[0];
