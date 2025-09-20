@@ -20,6 +20,11 @@
 #include <string.h>
 #include <math.h>
 
+#ifdef _WIN32
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
@@ -144,7 +149,7 @@ extern "C"
     .udp_sock = -1,                                                            \
     .serial_port = -1,                                                         \
     .baudrate = 0,                                                             \
-    .data_buffer = {.buffer = {0}, .head = 0, .tail = 0, .count = 0},          \                                                      
+    .data_buffer = {.buffer = {0}, .head = 0, .tail = 0, .count = 0},          \
     .packet_buf_queue = {.buffer = {{{0}}}, .head = 0, .tail = 0, .count = 0}, \
     .command_queue = {.buffer = {{{0}}}, .head = 0, .tail = 0, .count = 0}}
 

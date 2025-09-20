@@ -23,6 +23,14 @@
 #define FS_MAX_PACKET_QUEUE_LENGTH 4
 #define FS_MAX_PACKET_LENGTH 256
 
+#ifdef _MSC_VER
+#define FS_PACKED_STRUCT(name) __pragma(pack(push, 1)) struct name __pragma(pack(pop))
+#define FS_PACKED_UNION(name) __pragma(pack(push, 1)) union name __pragma(pack(pop))
+#else
+#define FS_PACKED_STRUCT(name) struct __attribute__((packed)) name
+#define FS_PACKED_UNION(name) union __attribute__((packed)) name
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -64,163 +72,81 @@ extern "C"
         C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type_t;
-
-    /// @brief The Trifecta-K device output data format.
-    typedef struct fs_imu_composite_packet
+    FS_PACKED_STRUCT(fs_imu_composite_packet)
     {
-        uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
-        uint32_t time; // Current time (in RTOS ticks)
+        uint8_t type;
+        uint32_t time;
 
-        float ax0; // Unprocessed accelerometer value x
-        float ay0; // Unprocessed accelerometer value y
-        float az0; // Unprocessed accelerometer value z
-        float gx0; // Unprocessed gyroscope value x
-        float gy0; // Unprocessed gyroscope value y
-        float gz0; // Unprocessed gyroscope value z
+        float ax0, ay0, az0, gx0, gy0, gz0;
+        float ax1, ay1, az1, gx1, gy1, gz1;
+        float ax2, ay2, az2, gx2, gy2, gz2;
 
-        float ax1; // Unprocessed accelerometer value x
-        float ay1; // Unprocessed accelerometer value y
-        float az1; // Unprocessed accelerometer value z
-        float gx1; // Unprocessed gyroscope value x
-        float gy1; // Unprocessed gyroscope value y
-        float gz1; // Unprocessed gyroscope value z
+        float q0, q1, q2, q3;
 
-        float ax2; // Unprocessed accelerometer value x
-        float ay2; // Unprocessed accelerometer value y
-        float az2; // Unprocessed accelerometer value z
-        float gx2; // Unprocessed gyroscope value x
-        float gy2; // Unprocessed gyroscope value y
-        float gz2; // Unprocessed gyroscope value z
+        float ax, ay, az;
+        float vx, vy, vz;
+        float rx, ry, rz;
 
-        float q0; // Quaternion for orientation of device
-        float q1;
-        float q2;
-        float q3;
+        int16_t reserved[3];
+        int8_t device_in_motion;
+        int8_t label_2;
+        int8_t temperature[3];
+        int8_t c;
+        int32_t d;
+    };
+    typedef struct fs_imu_composite_packet fs_imu_composite_packet_t;
 
-        float ax; // Acceleration [m s^-1] - Absolute
-        float ay;
-        float az;
-
-        float vx; // Velocity [m s^-1] - Relative to starting (should be initially zero)
-        float vy;
-        float vz;
-
-        float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point (not very useful)
-        float ry; // In mode 3 (GNSS), this is instead a fixed-point of GNSS coordinates
-        float rz;
-
-        int16_t reserved[3]; //
-
-        int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2;          // Reserved for future use
-
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_composite_packet_t;
-
-    /// @brief
-    typedef struct fs_imu_regular_packet
+    FS_PACKED_STRUCT(fs_imu_regular_packet)
     {
-        uint8_t type;  // Packet type (see typedef packet_type_t)
-        uint32_t time; // Current time (in RTOS ticks = milliseconds)
+        uint8_t type;
+        uint32_t time;
 
-        float omega_x0; // Angular velocity x - deg/s
-        float omega_y0; // Angular velocity y - deg/s
-        float omega_z0; // Angular velocity z - deg/s
+        float omega_x0, omega_y0, omega_z0;
+        float q0, q1, q2, q3;
+        float ax, ay, az;
+        float vx, vy, vz;
+        float rx, ry, rz;
 
-        float q0; // Quaternion for orientation of device
-        float q1;
-        float q2;
-        float q3;
+        int16_t reserved[3];
+        int8_t device_in_motion;
+        int8_t label_2;
+        int8_t temperature[3];
+        int8_t c;
+        int32_t d;
+    };
+    typedef struct fs_imu_regular_packet fs_imu_regular_packet_t;
 
-        float ax; // Acceleration [m s^-1] - Absolute
-        float ay;
-        float az;
-
-        float vx; // Velocity [m s^-1] - Relative to starting (should be initially zero)
-        float vy;
-        float vz;
-
-        float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point
-        float ry;
-        float rz;
-
-        int16_t reserved[3]; //
-
-        int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2;          // Reserved for future use
-
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_regular_packet_t;
-
-    /// @brief The Trifecta-M and Super-Trifecta device output data formats.
-    typedef struct fs_imu_composite_packet_2
+    FS_PACKED_STRUCT(fs_imu_composite_packet_2)
     {
-        uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
-        uint32_t time; // Current time (in RTOS ticks)
+        uint8_t type;
+        uint32_t time;
 
-        float ax0; // Unprocessed accelerometer value x
-        float ay0; // Unprocessed accelerometer value y
-        float az0; // Unprocessed accelerometer value z
-        float gx0; // Unprocessed gyroscope value x
-        float gy0; // Unprocessed gyroscope value y
-        float gz0; // Unprocessed gyroscope value z
+        float ax0, ay0, az0, gx0, gy0, gz0;
+        float ax1, ay1, az1, gx1, gy1, gz1;
+        float ax2, ay2, az2, gx2, gy2, gz2;
 
-        float ax1; // Unprocessed accelerometer value x
-        float ay1; // Unprocessed accelerometer value y
-        float az1; // Unprocessed accelerometer value z
-        float gx1; // Unprocessed gyroscope value x
-        float gy1; // Unprocessed gyroscope value y
-        float gz1; // Unprocessed gyroscope value z
+        float q0, q1, q2, q3;
+        float wx, wy, wz;
+        float ax, ay, az;
+        float vx, vy, vz;
+        float rx, ry, rz;
 
-        float ax2; // Unprocessed accelerometer value x
-        float ay2; // Unprocessed accelerometer value y
-        float az2; // Unprocessed accelerometer value z
-        float gx2; // Unprocessed gyroscope value x
-        float gy2; // Unprocessed gyroscope value y
-        float gz2; // Unprocessed gyroscope value z
+        int16_t reserved[3];
+        int8_t device_in_motion;
+        int8_t label_2;
+        int8_t temperature[3];
+        int8_t c;
+        int32_t d;
+    };
+    typedef struct fs_imu_composite_packet_2 fs_imu_composite_packet_2_t;
 
-        float q0; // Quaternion for orientation of device
-        float q1;
-        float q2;
-        float q3;
-
-        float wx; // Angular velocity [rad/s] - Body relative - This is filtered data derived from gyroscopes
-        float wy;
-        float wz;
-
-        float ax; // Acceleration [m s^-1] - Absolute
-        float ay;
-        float az;
-
-        float vx; // Velocity [m s^-1] - Relative to starting (should be initially zero)
-        float vy;
-        float vz;
-
-        float rx; // Position [m] - In mode 0, 1, and 2, is relative to starting point
-        float ry;
-        float rz;
-
-        int16_t reserved[3]; //
-
-        int8_t device_in_motion; // 1 if stationary, 2 if in motion
-        int8_t label_2;          // Reserved for future use
-
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
-    } __attribute__((packed)) fs_imu_composite_packet_2_t;
-
-    /// @brief Union allowing common storage of all packet types
-    typedef union fs_packet_union
+    FS_PACKED_UNION(fs_packet_union)
     {
         fs_imu_composite_packet_t composite;
         fs_imu_regular_packet_t regular;
         fs_imu_composite_packet_2_t composite2;
-    } __attribute__((packed)) fs_packet_union_t;
+    };
+    typedef union fs_packet_union fs_packet_union_t;
 
 #ifdef __cplusplus
 }
