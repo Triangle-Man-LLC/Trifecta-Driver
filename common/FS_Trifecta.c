@@ -20,6 +20,24 @@
 #include "FS_Trifecta_Serial.h"
 #include "FS_Trifecta_Device.h"
 
+fs_device_info_t* fs_export_allocate_device()
+{
+    fs_device_info_t* dev = (fs_device_info_t*)calloc(1, sizeof(fs_device_info_t));
+    if (dev)
+    {
+        *dev = (fs_device_info_t)FS_DEVICE_INFO_UNINITIALIZED;
+    }
+    return dev;
+}
+
+void fs_export_free_device(fs_device_info_t* device)
+{
+    if (device)
+    {
+        free(device);
+    }
+}
+
 int fs_set_driver_parameters(fs_device_info_t *device_handle, fs_driver_config_t *dconfig)
 {
   if (dconfig == NULL)

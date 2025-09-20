@@ -19,6 +19,19 @@ extern "C"
 {
 #endif
 
+    /// @brief Allocate a new device handle for use externally.
+    /// This should only be used for purposes of external bindings (e.g. C# or Python)
+    /// For native C/C++ uses, it is much more preferable to statically allocate.
+    /// @return A default-initialized device handle.
+    FS_API fs_device_info_t *fs_export_allocate_device();
+
+    /// @brief Deallocate the exported device handle.
+    /// This should only be used for purposes of external bindings (e.g. C# or Python)
+    /// For native C/C++ uses, it is much more preferable to statically allocate.
+    /// @param device The DYNAMICALLY ALLOCATED device handle
+    /// @return None
+    FS_API void fs_export_free_device(fs_device_info_t *device);
+
     /// @brief Sets the connection configuration parameters for the device.
     /// Defaults to FS_DRIVER_CONFIG_DEFAULT if you do not call this function.
     /// @param device_handle Pointer to the device handle.
@@ -125,7 +138,7 @@ extern "C"
 
     /// @brief Retrieve the latest measured device movement state.
     /// @param device_handle Pointer to the device handle.
-    /// @param device_state_buffer Pointer to the buffer for storing the state. 
+    /// @param device_state_buffer Pointer to the buffer for storing the state.
     /// FS_RUN_STATUS_RUNNING when moving, FS_RUN_STATUS_IDLE when stationary.
     /// @return 0 on success.
     FS_API int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *device_state_buffer);
