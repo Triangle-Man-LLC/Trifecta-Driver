@@ -19,11 +19,23 @@
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
+#if defined(_WIN32) || defined(_WIN64)
+  #include <BaseTsd.h>
+  typedef SSIZE_T ssize_t;
 
-#ifdef _WIN32
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
+  #ifdef FS_DRIVER_EXPORTS
+    #define FS_API __declspec(dllexport)
+  #else
+    #define FS_API __declspec(dllimport)
+  #endif
+
+#elif defined(__GNUC__)
+  #define FS_API __attribute__((visibility("default")))
+
+#else
+  #define FS_API
 #endif
+
 
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
