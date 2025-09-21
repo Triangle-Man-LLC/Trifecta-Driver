@@ -92,7 +92,8 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     // Clear the device name and parameters
     memset(device_handle->device_name, 0, sizeof(device_handle->device_name));
     memset(device_handle->device_params.ip_addr, 0, sizeof(device_handle->device_params.ip_addr));
-    
+    memset(device_handle->device_params.ip_addr, 0, sizeof(device_handle->device_params.ip_addr));
+
     // Set target IP address
     fs_safe_strncpy(device_handle->device_params.ip_addr, ip_addr, sizeof(device_handle->device_params.ip_addr) - 1);
     device_handle->device_params.tcp_port = FS_TRIFECTA_PORT; // TCP port always 8888
