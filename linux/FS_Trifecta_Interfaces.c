@@ -49,7 +49,7 @@ int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
 /// @return 0 on success, -1 on failure
 int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
+    if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
         return -1;
@@ -59,9 +59,9 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_port = htons(device_handle->device_params.tcp_port);
 
-    if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
         return -1;
@@ -83,7 +83,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    device_handle->tcp_sock = sockfd;
+    device_handle->device_params.tcp_sock = sockfd;
     return 0;
 }
 
@@ -92,25 +92,25 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 /// @return 0 on success, -1 on failure
 int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
+    if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
         return -1;
     }
 
     // Close existing socket if it's already open
-    if (device_handle->udp_sock >= 0)
+    if (device_handle->device_params.udp_sock >= 0)
     {
-        close(device_handle->udp_sock);
-        device_handle->udp_sock = -1;
+        close(device_handle->device_params.udp_sock);
+        device_handle->device_params.udp_sock = -1;
     }
 
     // Convert IP address string to binary form
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
-    if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
+    server_addr.sin_port = htons(device_handle->device_params.udp_port);
+    if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
         return -1;
@@ -147,7 +147,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    device_handle->udp_sock = sockfd;
+    device_handle->device_params.udp_sock = sockfd;
     return 0;
 }
 
@@ -216,7 +216,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    if (device_handle->serial_port == -1)
+    if (device_handle->device_params.serial_port == -1)
     {
         glob_t globbuf;
         int result;
@@ -270,7 +270,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
                         *end_char = '\0';
                         strncpy(device_handle->device_name, response + 1, sizeof(device_handle->device_name) - 1);
                         device_handle->device_name[sizeof(device_handle->device_name) - 1] = '\0';
-                        device_handle->serial_port = fd;
+                        device_handle->device_params.serial_port = fd;
                         globfree(&globbuf);
                         return 0;
                     }
@@ -295,7 +295,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
     {
         // Open the specified serial port in non-blocking mode
         char port_name[20];
-        snprintf(port_name, sizeof(port_name), "/dev/ttyS%d", device_handle->serial_port);
+        snprintf(port_name, sizeof(port_name), "/dev/ttyS%d", device_handle->device_params.serial_port);
         int fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (fd == -1)
         {
@@ -310,7 +310,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
             return -1;
         }
 
-        device_handle->serial_port = fd;
+        device_handle->device_params.serial_port = fd;
     }
 
     return 0;
@@ -425,7 +425,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->device_params.tcp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -441,13 +441,13 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set send timeout!");
         return -1;
     }
 
-    int written = send(device_handle->tcp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->device_params.tcp_sock, tx_buffer, length_bytes, 0);
 
     if (written < 0)
     {
@@ -477,7 +477,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->device_params.udp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -493,13 +493,13 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set send timeout!");
         return -1;
     }
 
-    int written = send(device_handle->udp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->device_params.udp_sock, tx_buffer, length_bytes, 0);
 
     if (written < 0)
     {
@@ -530,7 +530,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -549,9 +549,9 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
 
     fd_set write_fds;
     FD_ZERO(&write_fds);
-    FD_SET(device_handle->serial_port, &write_fds);
+    FD_SET(device_handle->device_params.serial_port, &write_fds);
 
-    int select_result = select(device_handle->serial_port + 1, NULL, &write_fds, NULL, &timeout);
+    int select_result = select(device_handle->device_params.serial_port + 1, NULL, &write_fds, NULL, &timeout);
     if (select_result == -1)
     {
         fs_log_output("[Trifecta] Error: select() failed! Error: %s", strerror(errno));
@@ -563,14 +563,14 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    ssize_t actual_len = write(device_handle->serial_port, tx_buffer, length_bytes);
+    ssize_t actual_len = write(device_handle->device_params.serial_port, tx_buffer, length_bytes);
     if (actual_len == -1)
     {
         fs_log_output("[Trifecta] Error: Writing data over serial failed! Error: %s", strerror(errno));
         return -1;
     }
 
-    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld", device_handle->serial_port, (long)actual_len);
+    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld", device_handle->device_params.serial_port, (long)actual_len);
 
     return actual_len;
 }
@@ -595,7 +595,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->device_params.tcp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -611,13 +611,13 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set receive timeout (TCP)!");
         return -1;
     }
 
-    ssize_t recv_len = recv(device_handle->tcp_sock, rx_buffer, length_bytes, 0);
+    ssize_t recv_len = recv(device_handle->device_params.tcp_sock, rx_buffer, length_bytes, 0);
 
     if (recv_len < 0)
     {
@@ -647,7 +647,7 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->device_params.udp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -663,13 +663,13 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)!");
         return -1;
     }
 
-    ssize_t recv_len = recv(device_handle->udp_sock, rx_buffer, length_bytes, 0);
+    ssize_t recv_len = recv(device_handle->device_params.udp_sock, rx_buffer, length_bytes, 0);
 
     if (recv_len < 0)
     {
@@ -700,7 +700,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -719,9 +719,9 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 
     fd_set read_fds;
     FD_ZERO(&read_fds);
-    FD_SET(device_handle->serial_port, &read_fds);
+    FD_SET(device_handle->device_params.serial_port, &read_fds);
 
-    int select_result = select(device_handle->serial_port + 1, &read_fds, NULL, NULL, &timeout);
+    int select_result = select(device_handle->device_params.serial_port + 1, &read_fds, NULL, NULL, &timeout);
     if (select_result == -1)
     {
         fs_log_output("[Trifecta] Error: select() failed! Error: %s", strerror(errno));
@@ -735,7 +735,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 
     // Check how much data is available
     int buffer_data_len = 0;
-    if (ioctl(device_handle->serial_port, FIONREAD, &buffer_data_len) < 0)
+    if (ioctl(device_handle->device_params.serial_port, FIONREAD, &buffer_data_len) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not get buffered data length! Error: %s", strerror(errno));
         return -1;
@@ -744,21 +744,21 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     if (buffer_data_len > length_bytes)
     {
         fs_log_output("[Trifecta] Error: Data of length %d would overflow buffer size %ld!", buffer_data_len, length_bytes);
-        tcflush(device_handle->serial_port, TCIFLUSH); // Flush the input buffer
+        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
         return -1;
     }
 
-    ssize_t rx_len = read(device_handle->serial_port, rx_buffer, buffer_data_len);
+    ssize_t rx_len = read(device_handle->device_params.serial_port, rx_buffer, buffer_data_len);
     if (rx_len < 0)
     {
         fs_log_output("[Trifecta] Error: Reading data over serial failed! Error: %s", strerror(errno));
-        tcflush(device_handle->serial_port, TCIFLUSH); // Flush the input buffer
+        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
         return -1;
     }
     else if (rx_len > 0)
     {
-        fs_log_output("[Trifecta] Read data from port %d - length %zd!", device_handle->serial_port, rx_len);
-        tcflush(device_handle->serial_port, TCIFLUSH); // Flush the input buffer
+        fs_log_output("[Trifecta] Read data from port %d - length %zd!", device_handle->device_params.serial_port, rx_len);
+        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
     }
 
     return rx_len;
@@ -769,19 +769,19 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->tcp_sock < 0)
+    if (device_handle == NULL || device_handle->device_params.tcp_sock < 0)
     {
         fs_log_output("[Trifecta] Warning: Invalid device handle or TCP socket!");
         return -1;
     }
 
-    if (close(device_handle->tcp_sock) != 0)
+    if (close(device_handle->device_params.tcp_sock) != 0)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)! Error: %s", device_handle->tcp_sock, strerror(errno));
-        device_handle->tcp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)! Error: %s", device_handle->device_params.tcp_sock, strerror(errno));
+        device_handle->device_params.tcp_sock = -1;
         return -1;
     }
-    device_handle->tcp_sock = -1;
+    device_handle->device_params.tcp_sock = -1;
     return 0;
 }
 
@@ -790,19 +790,19 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->udp_sock < 0)
+    if (device_handle == NULL || device_handle->device_params.udp_sock < 0)
     {
         fs_log_output("[Trifecta] Warning: Invalid device handle or UDP socket!");
         return -1;
     }
 
-    if (close(device_handle->udp_sock) != 0)
+    if (close(device_handle->device_params.udp_sock) != 0)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)! Error: %s", device_handle->udp_sock, strerror(errno));
-        device_handle->udp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)! Error: %s", device_handle->device_params.udp_sock, strerror(errno));
+        device_handle->device_params.udp_sock = -1;
         return -1;
     }
-    device_handle->udp_sock = -1;
+    device_handle->device_params.udp_sock = -1;
     return 0;
 }
 
@@ -811,19 +811,19 @@ int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle == NULL || device_handle->serial_port < 0)
+    if (device_handle == NULL || device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Warning: Invalid device handle or serial port!");
         return -1;
     }
 
-    if (close(device_handle->serial_port) != 0)
+    if (close(device_handle->device_params.serial_port) != 0)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close serial port (port: %d)! Error: %s", device_handle->serial_port, strerror(errno));
-        device_handle->serial_port = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close serial port (port: %d)! Error: %s", device_handle->device_params.serial_port, strerror(errno));
+        device_handle->device_params.serial_port = -1;
         return -1;
     }
-    device_handle->serial_port = -1;
+    device_handle->device_params.serial_port = -1;
     return 0;
 }
 
