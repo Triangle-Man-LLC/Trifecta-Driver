@@ -79,7 +79,7 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
         size_t command_length = fs_safe_strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
         fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
         const char cmd_char = cmd.payload[0];
-        const char *params = &cmd.payload[1];
+        const char *params = (char *)&cmd.payload[1];
         switch (cmd_char)
         {
         case CMD_IDENTIFY:
