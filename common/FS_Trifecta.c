@@ -22,7 +22,7 @@
 #include "FS_Trifecta_Serial.h"
 #include "FS_Trifecta_Device.h"
 
-static inline int fs_send_command(fs_device_info_t *device_handle, const void *payload, size_t length)
+static inline int fs_send_command(fs_device_info_t *device_handle, void *payload, size_t length)
 {
   int result = -1;
   switch (device_handle->communication_mode)
@@ -48,7 +48,7 @@ fs_device_info_t *fs_export_allocate_device()
   fs_device_info_t *dev = (fs_device_info_t *)calloc(1, sizeof(fs_device_info_t));
   if (dev)
   {
-    *dev = (fs_device_info_t)FS_DEVICE_INFO_UNINITIALIZED;
+    *dev = FS_DEVICE_INFO_UNINITIALIZED;
   }
   return dev;
 }
@@ -100,11 +100,13 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_TCP_UDP)
   {
-    fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IP %s:%d\n",
+    fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IPs %s:%d,  %s:%d\n",
                   device_handle->device_params.tcp_sock,
                   device_handle->device_params.udp_sock,
                   device_handle->device_params.ip_addr,
-                  device_handle->device_params.ip_port);
+                  device_handle->device_params.tcp_port,
+                  device_handle->device_params.ip_addr,
+                  device_handle->device_params.udp_port);
     return 0;
   }
   else
@@ -317,7 +319,7 @@ int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_par
   }
   char send_buf[FS_MAX_DATA_LENGTH] = {0};
   snprintf(send_buf, sizeof(send_buf),
-           "%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;",
+           ";%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;",
            CMD_IDENTIFY,
            CMD_IDENTIFY_PARAM_DEVFWVERSION,
            CMD_IDENTIFY_PARAM_DEVDESC,

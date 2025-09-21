@@ -95,7 +95,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
     // Set target IP address
     fs_safe_strncpy(device_handle->device_params.ip_addr, ip_addr, sizeof(device_handle->device_params.ip_addr) - 1);
-    device_handle->device_params.ip_port = FS_TRIFECTA_PORT; // TCP port always 8888
+    device_handle->device_params.tcp_port = FS_TRIFECTA_PORT; // TCP port always 8888
 
     // Initialize TCP driver
     if (fs_init_network_tcp_driver(device_handle) != 0)
@@ -107,9 +107,9 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
     // Begin UDP after establishing connection
     // Note that UDP port should be incremented to enable support for multiple devices
-    device_handle->device_params.ip_port = FS_TRIFECTA_PORT + num_network_devices; // Starting at 8888, then 8889, etc.
+    device_handle->device_params.udp_port = FS_TRIFECTA_PORT + num_network_devices; // Starting at 8888, then 8889, etc.
     num_network_devices ++;
-    if (fs_network_set_host_udp_port(device_handle, device_handle->device_params.ip_port) != 0)
+    if (fs_network_set_host_udp_port(device_handle, device_handle->device_params.udp_port) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not set UDP host port!");
         device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
