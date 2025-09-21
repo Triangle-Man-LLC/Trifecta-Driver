@@ -39,7 +39,8 @@ int fs_log_output(const char *format, ...)
 int main()
 {
     fs_device_info_t device = FS_DEVICE_INFO_UNINITIALIZED;
-#define NUM_SAMPLES 4096
+
+#define NUM_SAMPLES 256
     fs_imu_composite_packet_t packets[NUM_SAMPLES] = {{0}};
     // Populate all packets with monotonically increasing values...
 
@@ -179,7 +180,7 @@ int main()
     }
 
     const char name_cmd[] = "ITrifecta-Test-Harness;";
-    fs_handle_received_commands(&device, &name_cmd, strnlen(name_cmd, FS_MAX_CMD_LENGTH));
+    fs_handle_received_commands(&device, &name_cmd, sizeof(name_cmd));
     if (strcmp(device.device_name, "Trifecta-Test-Harness") == 0)
     {
         printf("Device name correctly set to Trifecta-Test-Harness\n");

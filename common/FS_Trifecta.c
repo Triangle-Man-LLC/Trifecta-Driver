@@ -1,5 +1,6 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
-/// Copyright 2024 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -15,27 +16,49 @@
 #include <string.h>
 
 #include "FS_Trifecta.h"
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Interfaces.h"
 #include "FS_Trifecta_Networked.h"
 #include "FS_Trifecta_Serial.h"
 #include "FS_Trifecta_Device.h"
 
-fs_device_info_t* fs_export_allocate_device()
+static inline int fs_send_command(fs_device_info_t *device_handle, void *payload, size_t length)
 {
-    fs_device_info_t* dev = (fs_device_info_t*)calloc(1, sizeof(fs_device_info_t));
-    if (dev)
-    {
-        *dev = (fs_device_info_t)FS_DEVICE_INFO_UNINITIALIZED;
-    }
-    return dev;
+  int result = -1;
+  switch (device_handle->communication_mode)
+  {
+  case FS_COMMUNICATION_MODE_UART:
+  case FS_COMMUNICATION_MODE_USB_CDC:
+  case FS_COMMUNICATION_MODE_I2C:
+  case FS_COMMUNICATION_MODE_SPI:
+    result = fs_serial_send_message(device_handle, payload, length);
+    break;
+  case FS_COMMUNICATION_MODE_TCP_UDP:
+    result = fs_network_send_message(device_handle, payload, length);
+    break;
+  default:
+    fs_log_output("[Trifecta] Error: Unsupported communication mode!");
+    return -1;
+  }
+  return result;
 }
 
-void fs_export_free_device(fs_device_info_t* device)
+fs_device_info_t *fs_export_allocate_device()
 {
-    if (device)
-    {
-        free(device);
-    }
+  fs_device_info_t *dev = (fs_device_info_t *)calloc(1, sizeof(fs_device_info_t));
+  if (dev)
+  {
+    *dev = FS_DEVICE_INFO_UNINITIALIZED;
+  }
+  return dev;
+}
+
+void fs_export_free_device(fs_device_info_t *device)
+{
+  if (device)
+  {
+    free(device);
+  }
 }
 
 int fs_set_driver_parameters(fs_device_info_t *device_handle, fs_driver_config_t *dconfig)
@@ -77,8 +100,13 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_TCP_UDP)
   {
-    fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IP %s:%d\n",
-                  device_handle->tcp_sock, device_handle->udp_sock, device_handle->ip_addr, device_handle->ip_port);
+    fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IPs %s:%d,  %s:%d\n",
+                  device_handle->device_params.tcp_sock,
+                  device_handle->device_params.udp_sock,
+                  device_handle->device_params.ip_addr,
+                  device_handle->device_params.tcp_port,
+                  device_handle->device_params.ip_addr,
+                  device_handle->device_params.udp_port);
     return 0;
   }
   else
@@ -88,11 +116,6 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
   }
 }
 
-/// @brief Start the IMU driver in serial mode
-/// @param fd The serial port (file descriptor on POSIX systems, UART_NUM on microcontrollers),
-/// if -1 then some device-specific implementations may attempt to scan available ports.
-/// @param serial_mode FS_COMMUNICATION_MODE_UART, FS_COMMUNICATION_MODE_USB_CDC, FS_COMMUNICATION_MODE_I2C, or  FS_COMMUNICATION_MODE_SPI
-/// @return 0 if succeeded
 int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communication_mode_t serial_mode)
 {
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
@@ -112,7 +135,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communicati
   }
 
   device_handle->communication_mode = serial_mode;
-  device_handle->serial_port = fd;
+  device_handle->device_params.serial_port = fd;
 
   if (fs_serial_start(device_handle) != 0)
   {
@@ -123,28 +146,32 @@ int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communicati
 
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
   {
-    device_handle->baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
-    fs_log_output("[Trifecta] Info: Initialized UART driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    device_handle->device_params.baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
+    fs_log_output("[Trifecta] Info: Initialized UART driver for device: (Port %d), Baud rate: %d\n",
+                  device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
   else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
   {
     // CDC ACM will be supported on a number of platforms,
     // though note that on Linux/Posix systems they are treated the same as serial ports.
-    fs_log_output("[Trifecta] Info: Initialized CDC driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    fs_log_output("[Trifecta] Info: Initialized CDC driver for device: (Port %d), Baud rate: %d\n",
+                  device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
   else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
   {
     // TODO: In I2C mode, use the "baudrate" field to instead store device address.
-    // device_handle->baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
-    fs_log_output("[Trifecta] Info: Initialized I2C driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    // device_handle->device_params.baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
+    fs_log_output("[Trifecta] Info: Initialized I2C driver for device: (Port %d), Baud rate: %d\n",
+                  device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
 
   else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
   {
-    fs_log_output("[Trifecta] Info: Initialized SPI driver for device: (Port %d), Baud rate: %d\n", device_handle->serial_port, device_handle->baudrate);
+    fs_log_output("[Trifecta] Info: Initialized SPI driver for device: (Port %d), Baud rate: %d\n",
+                  device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
   else
@@ -154,146 +181,38 @@ int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communicati
   }
 }
 
-/// @brief Begin device data stream
-/// @return 0 if succeeded, -1 if failed
 int fs_start_stream(fs_device_info_t *device_handle)
 {
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_UART:
-  case FS_COMMUNICATION_MODE_USB_CDC:
-  case FS_COMMUNICATION_MODE_I2C:
-  case FS_COMMUNICATION_MODE_SPI:
-  {
-    if (fs_serial_start_device_stream(device_handle) < 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not start device serial stream!");
-      return -1;
-    }
-    break;
-  }
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-  {
-    if (fs_network_start_device_stream(device_handle) < 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not start device network stream!");
-      return -1;
-    }
-    break;
-  }
-  default:
-    fs_log_output("[Trifecta] Error: Failed to start stream, driver was not operating!");
-    return -1;
-    break;
-  }
-  return 0;
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 1);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
-/// @brief End device data stream
-/// @return 0 if succeeded, -1 if failed
 int fs_stop_stream(fs_device_info_t *device_handle)
 {
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_UART:
-  case FS_COMMUNICATION_MODE_USB_CDC:
-  case FS_COMMUNICATION_MODE_I2C:
-  case FS_COMMUNICATION_MODE_SPI:
-  {
-    if (fs_serial_stop_device_stream(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not stop device serial stream!");
-      return -1;
-    }
-    break;
-  }
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-  {
-    if (fs_network_stop_device_stream(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not stop device network stream!");
-      return -1;
-    }
-    break;
-  }
-  default:
-    fs_log_output("[Trifecta] Error: Invalid operating mode!");
-    return -1;
-    break;
-  }
-
-  return 0;
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 0);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
-/// @brief It is helpful to use "one-shot" reading mode instead of continuous streaming instead.
-/// This function reads a single packet into the fs_device buffer, and returns once it is succeeded or timed out.
-/// This is generally preferable in most use cases compared to streaming mode, as it negates the need for reconnection
-/// logic in the application layer.
-/// @return 0 if succeeded, -1 if failed
 int fs_read_one_shot(fs_device_info_t *device_handle)
 {
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_UART:
-  case FS_COMMUNICATION_MODE_USB_CDC:
-  case FS_COMMUNICATION_MODE_I2C:
-  case FS_COMMUNICATION_MODE_SPI:
-  {
-    if (fs_serial_read_one_shot(device_handle) < 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not transmit device serial read command!");
-      return -1;
-    }
-    break;
-  }
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-  {
-    if (fs_network_read_one_shot(device_handle) < 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not transmit device network read command!");
-      return -1;
-    }
-    break;
-  }
-  default:
-    fs_log_output("[Trifecta] Error: Invalid operating mode!");
-    return -1;
-    break;
-  }
-  return 0;
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 2);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
-/// @brief Order the device to restart
-/// @return 0 if succeeded, -1 if failed
 int fs_reboot_device(fs_device_info_t *device_handle)
 {
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_UART:
-    if (fs_serial_device_restart(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not restart device!");
-      return -1;
-    }
-    break;
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_device_restart(device_handle) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not restart device!");
-      return -1;
-    }
-    break;
-  default:
-    fs_log_output("[Trifecta] Error: Failed to restart device, driver was not operating!");
-    return -1;
-    break;
-  }
-  return 0;
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_RESTART, 0);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
-/// @brief Toggle logging
-/// @param do_enable TRUE to enable logging, FALSE to disable
-/// @return Logging level
 int fs_enable_logging(bool do_enable)
 {
   return fs_toggle_logging(do_enable);
@@ -304,6 +223,9 @@ int fs_closedown(fs_device_info_t *device_handle)
   switch (device_handle->communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
+  case FS_COMMUNICATION_MODE_USB_CDC:
+  case FS_COMMUNICATION_MODE_I2C:
+  case FS_COMMUNICATION_MODE_SPI:
     if (fs_serial_exit(device_handle) != 0)
     {
       fs_log_output("[Trifecta] Warning: Closedown of serial driver was abnormal.");
@@ -322,66 +244,91 @@ int fs_closedown(fs_device_info_t *device_handle)
     return -1;
     break;
   }
-
   device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
   memset(device_handle, 0, sizeof(fs_device_info_t));
-
   fs_log_output("[Trifecta] Closedown of driver succeeded, all resources are now released.");
   return 0;
 }
 
 int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg)
 {
-  char command[16];
-  snprintf(command, sizeof(command), "%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
-  switch (device_handle->communication_mode)
-  {
-  case FS_COMMUNICATION_MODE_UART:
-    if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set device AHRS heading!");
-      return -1;
-    }
-    break;
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set device AHRS heading!");
-      return -1;
-    }
-    break;
-  default:
-    fs_log_output("[Trifecta] Error: Failed to set device AHRS heading, driver was not operating!");
-    return -1;
-    break;
-  }
-  return 0;
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
 int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position)
 {
-  char command[16];
-  snprintf(command, sizeof(command), "%c0;", CMD_REZERO_INS);
-  switch (device_handle->communication_mode)
+  // char send_buf[FS_MAX_CMD_LENGTH];
+  // snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
+  // size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  // return fs_send_command(device_handle, send_buf, send_len);
+  return -1; // Not yet supported
+}
+
+int fs_set_communication_mode(fs_device_info_t *device_handle, int modes)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_IDENTIFY_PARAM_TRANSMIT, modes);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
+int fs_set_network_parameters(fs_device_info_t *device_handle, const char ssid[32], const char pw[64], bool access_point)
+{
+  char send_buf[2 * FS_MAX_CMD_LENGTH];
+  if (access_point)
   {
-  case FS_COMMUNICATION_MODE_UART:
-    if (fs_serial_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set INS position!");
-      return -1;
-    }
-    break;
-  case FS_COMMUNICATION_MODE_TCP_UDP:
-    if (fs_network_send_message(device_handle, command, strnlen(command, sizeof(command))) != 0)
-    {
-      fs_log_output("[Trifecta] Error: Could not set INS position!");
-      return -1;
-    }
-    break;
-  default:
-    fs_log_output("[Trifecta] Error: Failed to set INS position!");
-    return -1;
-    break;
+    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s", CMD_SET_SSID_AP, ssid, CMD_SET_PASSWORD_AP, pw);
   }
-  return 0;
+  else
+  {
+    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, pw);
+  }
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
+int fs_set_network_udp_port(fs_device_info_t *device_handle, int udp_port)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  if (udp_port < 1024 || udp_port > 65535)
+  {
+    fs_log_output("[Trifecta] %d is an invalid UDP port!", udp_port);
+    return -1;
+  }
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_SET_LISTENING_PORT, udp_port);
+  size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
+int fs_set_serial_uart_baudrate(fs_device_info_t *device_handle, int baudrate)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_IDENTIFY_PARAM_UART_BAUD_RATE, baudrate);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
+int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_params_t *device_params_info)
+{
+  if (device_handle == NULL || device_params_info == NULL)
+  {
+    return -1;
+  }
+  char send_buf[FS_MAX_DATA_LENGTH] = {0};
+  snprintf(send_buf, sizeof(send_buf),
+           ";%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;",
+           CMD_IDENTIFY,
+           CMD_IDENTIFY_PARAM_DEVFWVERSION,
+           CMD_IDENTIFY_PARAM_DEVDESC,
+           CMD_IDENTIFY_PARAM_DEV_SN,
+           CMD_IDENTIFY_PARAM_TRANSMIT,
+           CMD_IDENTIFY_PARAM_SSID,
+           CMD_IDENTIFY_PARAM_SSID_AP,
+           CMD_IDENTIFY_PARAM_PASSWORD_AP,
+           CMD_IDENTIFY_PARAM_UART_BAUD_RATE);
+  ssize_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len) > 0 ? 0 : -1;
 }

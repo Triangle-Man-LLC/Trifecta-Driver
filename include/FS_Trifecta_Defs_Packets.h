@@ -20,7 +20,7 @@
 #include <string.h>
 #include <math.h>
 
-#define FS_MAX_PACKET_QUEUE_LENGTH 4
+#define FS_MAX_PACKET_QUEUE_LENGTH 16
 #define FS_MAX_PACKET_LENGTH 256
 
 #ifdef _MSC_VER
@@ -51,6 +51,20 @@ extern "C"
         float z;
     } fs_vector3_t;
 
+    typedef struct fs_vector3_d
+    {
+        double x;
+        double y;
+        double z;
+    } fs_vector3_d_t;
+
+    typedef struct fs_vector3_i32
+    {
+        int32_t x;
+        int32_t y;
+        int32_t z;
+    } fs_vector3_i32_t;
+
     /// @brief Type of packet indication
     typedef enum fs_packet_type
     {
@@ -72,6 +86,7 @@ extern "C"
         C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type_t;
+
     FS_PACKED_STRUCT(fs_imu_composite_packet)
     {
         uint8_t type;

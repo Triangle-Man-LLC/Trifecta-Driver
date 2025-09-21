@@ -1,5 +1,5 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
-/// Copyright 2024 4rge.ai and/or Triangle Man LLC
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -9,6 +9,7 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Device.h"
 #include "FS_Trifecta_Device_Utils.h"
 
@@ -75,13 +76,72 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
     fs_command_info_t cmd = {0};
     while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
-        size_t command_length = strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
+        size_t command_length = fs_safe_strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
         fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
-        if (command_length > 0 && cmd.payload[0] == CMD_IDENTIFY)
+        const char cmd_char = cmd.payload[0];
+        const char *params = (char *)&cmd.payload[1];
+        switch (cmd_char)
         {
-            size_t name_length = command_length - 1;
-            strncpy(device_handle->device_name, (char *)(&cmd.payload[1]), name_length);
-            device_handle->device_name[name_length] = '\0';
+        case CMD_IDENTIFY:
+        {
+            fs_safe_strncpy(device_handle->device_name, params, sizeof(device_handle->device_name) - 1);
+            device_handle->device_name[sizeof(device_handle->device_name) - 1] = '\0';
+        }
+        break;
+        case CMD_IDENTIFY_PARAM_UART_BAUD_RATE:
+        {
+            int baud = atoi(params);
+            if (baud > 0)
+            {
+                device_handle->device_params.baudrate = baud;
+                fs_log_output("[Trifecta] Baudrate set to: %d", baud);
+            }
+            else
+            {
+                fs_log_output("[Trifecta] Invalid baudrate: %s", params);
+            }
+        }
+        break;
+        case CMD_IDENTIFY_PARAM_SSID:
+            fs_safe_strncpy(device_handle->device_params.ssid, params, sizeof(device_handle->device_params.ssid) - 1);
+            device_handle->device_params.ssid[sizeof(device_handle->device_params.ssid) - 1] = '\0';
+            fs_log_output("[Trifecta] STA SSID set to: %s", device_handle->device_params.ssid);
+            break;
+        case CMD_IDENTIFY_PARAM_SSID_AP:
+            fs_safe_strncpy(device_handle->device_params.ssid_ap, params, sizeof(device_handle->device_params.ssid_ap) - 1);
+            device_handle->device_params.ssid_ap[sizeof(device_handle->device_params.ssid_ap) - 1] = '\0';
+            fs_log_output("[Trifecta] AP SSID set to: %s", device_handle->device_params.ssid_ap);
+            break;
+        case CMD_IDENTIFY_PARAM_PASSWORD_AP:
+            fs_safe_strncpy(device_handle->device_params.pw_ap, params, sizeof(device_handle->device_params.pw_ap) - 1);
+            device_handle->device_params.pw_ap[sizeof(device_handle->device_params.pw_ap) - 1] = '\0';
+            fs_log_output("[Trifecta] AP Password updated.");
+            break;
+        case CMD_IDENTIFY_PARAM_TRANSMIT:
+            int mode = atoi(params);
+            device_handle->communication_mode = (fs_communication_mode_t)mode;
+            fs_log_output("[Trifecta] Comm mode set to: %d", mode);
+            break;
+        case CMD_IDENTIFY_PARAM_DEV_SN:
+            fs_safe_strncpy(device_handle->device_sn, params, sizeof(device_handle->device_sn) - 1);
+            device_handle->device_sn[sizeof(device_handle->device_sn) - 1] = '\0';
+            fs_log_output("[Trifecta] Serial Number set to: %s", device_handle->device_sn);
+            break;
+        case CMD_IDENTIFY_PARAM_DEVMODEL:
+            fs_safe_strncpy(device_handle->device_model, params, sizeof(device_handle->device_model) - 1);
+            device_handle->device_model[sizeof(device_handle->device_model) - 1] = '\0';
+            fs_log_output("[Trifecta] Device Model set to: %s", device_handle->device_model);
+            break;
+        case CMD_IDENTIFY_PARAM_DEVFWVERSION:
+            fs_safe_strncpy(device_handle->device_fw, params, sizeof(device_handle->device_fw) - 1);
+            device_handle->device_fw[sizeof(device_handle->device_fw) - 1] = '\0';
+            fs_log_output("[Trifecta] Firmware Version set to: %s", device_handle->device_fw);
+            break;
+        case CMD_IDENTIFY_PARAM_DEVDESC:
+            fs_safe_strncpy(device_handle->device_desc, params, sizeof(device_handle->device_desc) - 1);
+            device_handle->device_desc[sizeof(device_handle->device_desc) - 1] = '\0';
+            fs_log_output("[Trifecta] Device Description set to: %s", device_handle->device_desc);
+            break;
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
     }
@@ -150,8 +210,8 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
             fs_log_output("[Trifecta] Detected command ending at index %d (length %zu)",
                           indices.semicolon_index, cmd_len);
 
-            if (fs_segment_commands(device_handle, temp, peeked) != 0)
-                fs_log_output("[Trifecta] Failed to segment commands");
+            if (fs_handle_received_commands(device_handle, temp, peeked) != 0)
+                fs_log_output("[Trifecta] Failed to parse commands");
 
             fs_cb_pop(&device_handle->data_buffer, NULL, cmd_len);
         }
@@ -161,7 +221,6 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
             return -1;
         }
     }
-
     return 0;
 }
 
@@ -243,11 +302,10 @@ void fs_q_to_euler_angles(float *estRoll, float *estPitch, float *estYaw, float 
 
 int fs_get_last_timestamp(fs_device_info_t *device_handle, uint32_t *time)
 {
-    if (!device_handle || !time || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !time)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -257,11 +315,10 @@ int fs_get_last_timestamp(fs_device_info_t *device_handle, uint32_t *time)
 
 int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer)
 {
-    if (!device_handle || !packet_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !packet_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -296,15 +353,15 @@ int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orienta
         return -1;
 
     int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *most_recent_packet = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
 
-    if (!most_recent_packet)
+    if (!pkt)
         return -1;
 
-    orientation_buffer->w = most_recent_packet->composite.q0;
-    orientation_buffer->x = most_recent_packet->composite.q1;
-    orientation_buffer->y = most_recent_packet->composite.q2;
-    orientation_buffer->z = most_recent_packet->composite.q3;
+    orientation_buffer->w = pkt->composite.q0;
+    orientation_buffer->x = pkt->composite.q1;
+    orientation_buffer->y = pkt->composite.q2;
+    orientation_buffer->z = pkt->composite.q3;
 
     return 0;
 }
@@ -328,11 +385,10 @@ int fs_get_orientation_euler(fs_device_info_t *device_handle, fs_vector3_t *orie
 
 int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *acceleration_buffer)
 {
-    if (!device_handle || !acceleration_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !acceleration_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -349,11 +405,10 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
 
 int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angular_velocity_buffer)
 {
-    if (!device_handle || !angular_velocity_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !angular_velocity_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -378,11 +433,10 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
 
 int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buffer)
 {
-    if (!device_handle || !velocity_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !velocity_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -395,11 +449,10 @@ int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buff
 
 int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *device_state_buffer)
 {
-    if (!device_handle || !device_state_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !device_state_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 
@@ -409,11 +462,10 @@ int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *devi
 
 int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buffer)
 {
-    if (!device_handle || !position_buffer || device_handle->packet_buf_queue.count == 0)
+    if (!device_handle || !position_buffer)
         return -1;
 
-    int last_index = device_handle->packet_buf_queue.count - 1;
-    const fs_packet_union_t *pkt = fs_device_get_packet_pointer_at_index(device_handle, last_index);
+    const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
 

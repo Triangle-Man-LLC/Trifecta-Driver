@@ -21,7 +21,7 @@ jobs:
       - name: Run Cppcheck static analyzer
         run: |
           cd $GITHUB_WORKSPACE
-          cppcheck --enable=warning,style,performance,portability --error-exitcode=1 --suppress=missingIncludeSystem --suppress=variableScope --suppress=unknownMacro --suppress=unreadVariable --suppress=constParameterPointer --suppress=constVariable --suppress=cstyleCast --suppress=invalidPrintfArgType_uint --suppress=knownConditionTrueFalse --suppress=invalidPrintfArgType_sint --template=gcc .
+          cppcheck --enable=warning,style,performance,portability --error-exitcode=1 --suppress=missingIncludeSystem --suppress=variableScope --suppress=unknownMacro --suppress=unreadVariable --suppress=constParameterPointer --suppress=constVariable --suppress=cstyleCast --suppress=invalidPrintfArgType_uint --suppress=knownConditionTrueFalse --suppress=invalidPrintfArgType_sint --template=gcc . --force
 
       - name: Mark build status
         if: ${{ success() }}
