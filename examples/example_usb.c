@@ -25,11 +25,11 @@ static fs_device_info_t imu_device = FS_DEVICE_INFO_UNINITIALIZED;
 fs_driver_config_t imu_config = FS_DRIVER_CONFIG_DEFAULT;
 
 /// @brief Helper function to search through possible endpoints.
-/// @param device_handle device_handle->serial_port will be populated if successful.
+/// @param device_handle device_handle->device_params.serial_port will be populated if successful.
 /// @return 0 on success, -1 if failed.
 static int find_endpoint(fs_device_info_t *device_handle)
 {
-    if (!device_handle || device_handle->serial_port != -1)
+    if (!device_handle || device_handle->device_params.serial_port != -1)
     {
         fs_log_output("[Trifecta] Aborted USB device search, the device handle was invalid or interface already initialized!");
         return -1;
