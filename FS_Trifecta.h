@@ -1,6 +1,5 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
 /// Copyright 2025 4rge.ai and/or Triangle Man LLC
-/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 
@@ -23,13 +22,6 @@ extern "C"
 
     /// @section Device handle allocation/deallocation
 
-    /// @section Device handle allocation/deallocation
-    /// This should only be used for purposes of external bindings (e.g. C# or Python)
-    /// For native C/C++ use, you should typically statically allocate instead.
-
-    /// @brief Allocate a new device handle for use externally.
-    /// For native C/C++ use, you should typically statically allocate instead.
-
     /// @brief Allocate a new device handle for use externally.
     /// @return A default-initialized device handle.
     FS_API fs_device_info_t *fs_export_allocate_device();
@@ -40,9 +32,6 @@ extern "C"
     /// @param device The DYNAMICALLY ALLOCATED device handle
     /// @return None
     FS_API void fs_export_free_device(fs_device_info_t *device);
-
-
-    /// @section Device initialization functions
 
 
     /// @section Device initialization functions
@@ -92,24 +81,20 @@ extern "C"
     /// Due to the high data rate, this may not work well on smaller host platforms, with large numbers of devices, or at slow baud rates.
     /// For resource constrained situations, it is recommended to periodically call fs_read_one_shot() instead.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_start_stream(fs_device_info_t *device_handle);
 
     /// @brief Stop the asynchronous data stream from the indicated device.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_stop_stream(fs_device_info_t *device_handle);
 
     /// @brief Request a single reading from the device. The updated reading will arrive within 5 ms.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_read_one_shot(fs_device_info_t *device_handle);
 
     /// @brief Trigger a device restart. Usually, there are not many situations where you would need to call this.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_reboot_device(fs_device_info_t *device_handle);
@@ -126,20 +111,17 @@ extern "C"
 
     /// @brief Retrieve the latest device data packet.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param packet_buffer Pointer to the packet buffer.
     /// @return 0 on success.
     FS_API int fs_get_raw_packet(fs_device_info_t *device_handle, fs_packet_union_t *packet_buffer);
 
     /// @brief Retrieve the current size of the packet queue.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param packet_buffer Pointer to the packet buffer.
     /// @return 0 on success.
     FS_API int fs_get_raw_packet_queue_size(fs_device_info_t *device_handle);
 
     /// @brief Retrieve the indicated packet number from the queue.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @param packet_buffer Pointer to the packet buffer.
     /// @param pos The position in queue to obtain, starting from earliest first.
@@ -148,13 +130,11 @@ extern "C"
 
     /// @brief Retrieve the latest device orientation (quaternion).
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param orientation_buffer Pointer to the orientation buffer.
     /// @return 0 on success.
     FS_API int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orientation_buffer);
 
     /// @brief Retrieve the latest device orientation (euler angles)
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @param orientation_buffer Pointer to the orientation buffer
     /// @param degrees TRUE to output degrees, FALSE to output radians
@@ -163,13 +143,11 @@ extern "C"
 
     /// @brief Retrieve the latest device acceleration.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param acceleration_buffer Pointer to the acceleration buffer.
     /// @return 0 on success.
     FS_API int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *acceleration_buffer);
 
     /// @brief Retrieve the latest device angular velocity.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @param angular_velocity_buffer Pointer to the angular velocity buffer.
     /// @return 0 on success.
@@ -177,13 +155,11 @@ extern "C"
 
     /// @brief Retrieve the latest measured device velocity.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param velocity_buffer Pointer to the velocity buffer.
     /// @return 0 on success.
     FS_API int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buffer);
 
     /// @brief Retrieve the latest measured device movement state.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @param device_state_buffer Pointer to the buffer for storing the state.
     /// FS_RUN_STATUS_RUNNING when moving, FS_RUN_STATUS_IDLE when stationary.
@@ -192,7 +168,6 @@ extern "C"
 
     /// @brief Retrieve the latest device position.
     /// Note that for non-GNSS stabilized systems, there is very little meaning to this value.
-    /// @param device_handle Device handle
     /// @param device_handle Device handle
     /// @param position_buffer Pointer to the position buffer.
     /// @return 0 on success.
@@ -204,14 +179,10 @@ extern "C"
     /// @brief Manually set the AHRS yaw angle. Coupled with fs_set_ins_position(), it is possible to perform INS alignment.
     /// However, this procedure is usually performed automatically when connected with a compatible GNSS.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param heading_deg The desired angle.
     /// @return 0 on success.
     FS_API int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg);
 
-    /// @brief Manually set the INS position, this is typically used to update the device position from a
-    /// GNSS system. 
-    /// @param device_handle Device handle
     /// @brief Manually set the INS position, this is typically used to update the device position from a
     /// GNSS system. 
     /// @param device_handle Device handle

@@ -1,6 +1,5 @@
 /// Driver for the Trifecta series of IMU/AHRS/INS devices
 /// Copyright 2025 4rge.ai and/or Triangle Man LLC
-/// Copyright 2025 4rge.ai and/or Triangle Man LLC
 /// Usage and redistribution of this code is permitted
 /// but this notice must be retained in all copies of the code.
 

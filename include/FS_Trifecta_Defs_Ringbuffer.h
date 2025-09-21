@@ -1,4 +1,16 @@
-#pragma once
+/// Driver for the Trifecta series of IMU/AHRS/INS devices
+/// Copyright 2025 4rge.ai and/or Triangle Man LLC
+/// Usage and redistribution of this code is permitted
+/// but this notice must be retained in all copies of the code.
+
+/// THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+/// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+/// AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+/// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+#ifndef TRIFECTA_DEFS_RINGBUFFER_H
+#define TRIFECTA_DEFS_RINGBUFFER_H
 
 /// @brief Ringbuffer generator.
 #define FS_RINGBUFFER_DECLARE(type, name, size) \
@@ -59,3 +71,5 @@
 /// @return TRUE on success, FALSE if failed (no items)
 #define FS_RINGBUFFER_PEEK_AT(rb, buffer_size, index, out_ptr) \
     (((index) >= (rb)->count) ? false : (*(out_ptr) = (rb)->buffer[((rb)->tail + (index)) % (buffer_size)], true))
+
+#endif
