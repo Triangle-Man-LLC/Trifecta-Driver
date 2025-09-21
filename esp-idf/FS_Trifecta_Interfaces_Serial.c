@@ -55,17 +55,17 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     // On FreeRTOS/microcontroller systems, the serial port is usually a fixed number, so port scanning will not be done
     // Only check to ensure that the serial port was previously set up
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Serial port number cannot be less than zero!");
         return -1;
     }
-    if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
+    if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
     {
         // On ESP-IDF, this is necessary to prevent bytes from being discarded at high baud rates
-        ESP_ERROR_CHECK(uart_set_rx_full_threshold(device_handle->serial_port, 64));
+        ESP_ERROR_CHECK(uart_set_rx_full_threshold(device_handle->device_params.serial_port, 64));
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
 #if (CDC_AVAILABLE)
         // Exclude device from interrupt-based handling mode
@@ -74,11 +74,11 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         return -1;
 #endif
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_I2C)
     {
         // Custom setup logic for I2C to be added here, if any exists.
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_SPI)
     {
         // Custom setup logic for SPI to be added here, if any exists.
     }
@@ -119,13 +119,13 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -138,29 +138,29 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
     }
 
     ssize_t actual_len = 0;
-    if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
+    if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
     {
-        actual_len = uart_write_bytes(device_handle->serial_port, (char *)tx_buffer, length_bytes);
+        actual_len = uart_write_bytes(device_handle->device_params.serial_port, (char *)tx_buffer, length_bytes);
         if (actual_len != length_bytes)
         {
             fs_log_output("[Trifecta] Error: Writing data over serial failed! Expected length: %ld, actual: %ld", length_bytes, actual_len);
             return -1;
         }
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
         // TODO: CDC ACM host write
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_I2C)
     {
         // TODO: I2C write function
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_SPI)
     {
         // TODO: SPI write function
     }
 
-    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld - data %s", device_handle->serial_port, actual_len, tx_buffer);
+    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld - data %s", device_handle->device_params.serial_port, actual_len, tx_buffer);
 
     return actual_len;
 }
@@ -179,13 +179,13 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -200,7 +200,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     memset(rx_buffer, 0, length_bytes);
 
     size_t buffer_data_len = 0;
-    if (uart_get_buffered_data_len(device_handle->serial_port, (size_t *)&buffer_data_len) != 0)
+    if (uart_get_buffered_data_len(device_handle->device_params.serial_port, (size_t *)&buffer_data_len) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not get buffered data length!");
         return -1; // In this case, no data in buffer, so do nothing.
@@ -214,29 +214,29 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     }
 
     ssize_t rx_len = 0;
-    if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
+    if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
     {
-        rx_len = uart_read_bytes(device_handle->serial_port, rx_buffer, buffer_data_len, timeout_micros / 1000);
+        rx_len = uart_read_bytes(device_handle->device_params.serial_port, rx_buffer, buffer_data_len, timeout_micros / 1000);
         if (rx_len > 0)
         {
-            fs_log_output("[Trifecta] Read data from port %d - length %d!", device_handle->serial_port, rx_len);
+            fs_log_output("[Trifecta] Read data from port %d - length %d!", device_handle->device_params.serial_port, rx_len);
         }
         else if (rx_len < 0)
         {
             fs_log_output("[Trifecta] Error: Reading data over serial failed!");
-            uart_flush(device_handle->serial_port);
+            uart_flush(device_handle->device_params.serial_port);
             return -1;
         }
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
         // TODO: CDC ACM host read
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_I2C)
     {
         // TODO: I2C read function
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_SPI)
     {
         // TODO: SPI read function
     }
@@ -249,27 +249,27 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 /// @return 0 if successful, -1 if failed.
 int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
-    if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
+    if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
     {
-        if (uart_driver_delete(device_handle->serial_port) != 0)
+        if (uart_driver_delete(device_handle->device_params.serial_port) != 0)
         {
-            fs_log_output("[Trifecta] Warning: Failed to delete UART driver (serial port: %d)!", device_handle->serial_port);
-            device_handle->serial_port = -1;
+            fs_log_output("[Trifecta] Warning: Failed to delete UART driver (serial port: %d)!", device_handle->device_params.serial_port);
+            device_handle->device_params.serial_port = -1;
             return -1;
         }
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
         // TODO: CDC ACM host shutdown
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_I2C)
     {
         // TODO: I2C shutdown function
     }
-    else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+    else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_SPI)
     {
         // TODO: SPI shutdown function
     }
-    device_handle->serial_port = -1;
+    device_handle->device_params.serial_port = -1;
     return 0;
 }
