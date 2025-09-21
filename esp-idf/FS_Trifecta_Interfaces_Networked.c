@@ -26,7 +26,7 @@
 int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
 #if (CONFIG_ESP_WIFI_ENABLED && CONFIG_LWIP_ENABLED)
-    if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
+    if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
         return -1;
@@ -36,9 +36,9 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_port = htons(device_handle->device_params.ip_port);
 
-    if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
         return -1;
@@ -60,7 +60,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    device_handle->tcp_sock = sockfd;
+    device_handle->device_params.tcp_sock = sockfd;
     return 0;
     
 #else
@@ -75,7 +75,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
 #if (CONFIG_ESP_WIFI_ENABLED && CONFIG_LWIP_ENABLED)
-    if (device_handle == NULL || device_handle->ip_addr[0] == '\0')
+    if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
         fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
         return -1;
@@ -85,10 +85,10 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_port = htons(device_handle->device_params.ip_port);
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (inet_pton(AF_INET, device_handle->ip_addr, &server_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
         fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
         return -1;
@@ -123,12 +123,12 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     // Bind the socket
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port);
+        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d!", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->device_params.ip_port);
         close(sockfd);
         return -1;
     }
 
-    device_handle->udp_sock = sockfd;
+    device_handle->device_params.udp_sock = sockfd;
     return 0;
 #else
     fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
@@ -157,7 +157,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->device_params.tcp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -173,13 +173,13 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set send timeout!");
         return -1;
     }
 
-    int written = send(device_handle->tcp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->device_params.tcp_sock, tx_buffer, length_bytes, 0);
 
     if (written < 0)
     {
@@ -214,7 +214,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->device_params.udp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -230,13 +230,13 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set send timeout!");
         return -1;
     }
 
-    int written = send(device_handle->udp_sock, tx_buffer, length_bytes, 0);
+    int written = send(device_handle->device_params.udp_sock, tx_buffer, length_bytes, 0);
 
     if (written < 0)
     {
@@ -271,7 +271,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->tcp_sock < 0)
+    if (device_handle->device_params.tcp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid TCP socket!");
         return -1;
@@ -287,13 +287,13 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->tcp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set receive timeout (TCP)!");
         return -1;
     }
 
-    ssize_t recv_len = recv(device_handle->tcp_sock, rx_buffer, length_bytes, 0);
+    ssize_t recv_len = recv(device_handle->device_params.tcp_sock, rx_buffer, length_bytes, 0);
 
     if (recv_len < 0)
     {
@@ -329,7 +329,7 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->udp_sock < 0)
+    if (device_handle->device_params.udp_sock < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid UDP socket!");
         return -1;
@@ -344,22 +344,22 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(device_handle->ip_port);
+    server_addr.sin_port = htons(device_handle->device_params.ip_port);
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     // Set the receive timeout
     struct timeval timeout;
     timeout.tv_sec = timeout_micros / 1000000;
     timeout.tv_usec = timeout_micros % 1000000;
-    if (setsockopt(device_handle->udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
         fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)! Errno: %d", errno);
         return -1;
     }
 
-    if (bind(device_handle->udp_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    if (bind(device_handle->device_params.udp_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d! Errno: %d", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->ip_port, errno);
+        fs_log_output("[Trifecta] Error: Failed to bind to %s:%d! Errno: %d", inet_ntoa(server_addr.sin_addr.s_addr), device_handle->device_params.ip_port, errno);
         // close(sockfd);
         return -1;
     }
@@ -367,8 +367,8 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
     struct sockaddr_in source_addr;
     socklen_t addr_len = sizeof(source_addr);
 
-    // ssize_t recv_len = recv(device_handle->udp_sock, rx_buffer, length_bytes, 0);
-    ssize_t recv_len = recvfrom(device_handle->udp_sock, rx_buffer, length_bytes, 0, (struct sockaddr *)&source_addr, &addr_len);
+    // ssize_t recv_len = recv(device_handle->device_params.udp_sock, rx_buffer, length_bytes, 0);
+    ssize_t recv_len = recvfrom(device_handle->device_params.udp_sock, rx_buffer, length_bytes, 0, (struct sockaddr *)&source_addr, &addr_len);
 
     if (recv_len < 0)
     {
@@ -391,13 +391,13 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
 int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
 #if (CONFIG_WIFI_ENABLED)
-    if (close(device_handle->tcp_sock) != 0)
+    if (close(device_handle->device_params.tcp_sock) != 0)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)!", device_handle->tcp_sock);
-        device_handle->tcp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)!", device_handle->device_params.tcp_sock);
+        device_handle->device_params.tcp_sock = -1;
         return -1;
     }
-    device_handle->tcp_sock = -1;
+    device_handle->device_params.tcp_sock = -1;
     return 0;
 #else
     fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
@@ -411,13 +411,13 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
 #if (CONFIG_WIFI_ENABLED)
-    if (close(device_handle->udp_sock) != 0)
+    if (close(device_handle->device_params.udp_sock) != 0)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)!", device_handle->udp_sock);
-        device_handle->udp_sock = -1;
+        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)!", device_handle->device_params.udp_sock);
+        device_handle->device_params.udp_sock = -1;
         return -1;
     }
-    device_handle->udp_sock = -1;
+    device_handle->device_params.udp_sock = -1;
     return 0;
 #else
     fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
