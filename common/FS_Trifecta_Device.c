@@ -84,8 +84,8 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
         {
         case CMD_IDENTIFY:
         {
-            fs_safe_strncpy(device_handle->device_name, params, sizeof(device_handle->device_name) - 1);
-            device_handle->device_name[sizeof(device_handle->device_name) - 1] = '\0';
+            fs_safe_strncpy(device_handle->device_descriptor.device_name, params, sizeof(device_handle->device_descriptor.device_name) - 1);
+            device_handle->device_descriptor.device_name[sizeof(device_handle->device_descriptor.device_name) - 1] = '\0';
         }
         break;
         case CMD_IDENTIFY_PARAM_UART_BAUD_RATE:
@@ -123,24 +123,24 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
             fs_log_output("[Trifecta] Comm mode set to: %d", mode);
             break;
         case CMD_IDENTIFY_PARAM_DEV_SN:
-            fs_safe_strncpy(device_handle->device_sn, params, sizeof(device_handle->device_sn) - 1);
-            device_handle->device_sn[sizeof(device_handle->device_sn) - 1] = '\0';
-            fs_log_output("[Trifecta] Serial Number set to: %s", device_handle->device_sn);
+            fs_safe_strncpy(device_handle->device_descriptor.device_sn, params, sizeof(device_handle->device_descriptor.device_sn) - 1);
+            device_handle->device_descriptor.device_sn[sizeof(device_handle->device_descriptor.device_sn) - 1] = '\0';
+            fs_log_output("[Trifecta] Serial Number set to: %s", device_handle->device_descriptor.device_sn);
             break;
         case CMD_IDENTIFY_PARAM_DEVMODEL:
-            fs_safe_strncpy(device_handle->device_model, params, sizeof(device_handle->device_model) - 1);
-            device_handle->device_model[sizeof(device_handle->device_model) - 1] = '\0';
-            fs_log_output("[Trifecta] Device Model set to: %s", device_handle->device_model);
+            fs_safe_strncpy(device_handle->device_descriptor.device_model, params, sizeof(device_handle->device_descriptor.device_model) - 1);
+            device_handle->device_descriptor.device_model[sizeof(device_handle->device_descriptor.device_model) - 1] = '\0';
+            fs_log_output("[Trifecta] Device Model set to: %s", device_handle->device_descriptor.device_model);
             break;
         case CMD_IDENTIFY_PARAM_DEVFWVERSION:
-            fs_safe_strncpy(device_handle->device_fw, params, sizeof(device_handle->device_fw) - 1);
-            device_handle->device_fw[sizeof(device_handle->device_fw) - 1] = '\0';
-            fs_log_output("[Trifecta] Firmware Version set to: %s", device_handle->device_fw);
+            fs_safe_strncpy(device_handle->device_descriptor.device_fw, params, sizeof(device_handle->device_descriptor.device_fw) - 1);
+            device_handle->device_descriptor.device_fw[sizeof(device_handle->device_descriptor.device_fw) - 1] = '\0';
+            fs_log_output("[Trifecta] Firmware Version set to: %s", device_handle->device_descriptor.device_fw);
             break;
         case CMD_IDENTIFY_PARAM_DEVDESC:
-            fs_safe_strncpy(device_handle->device_desc, params, sizeof(device_handle->device_desc) - 1);
-            device_handle->device_desc[sizeof(device_handle->device_desc) - 1] = '\0';
-            fs_log_output("[Trifecta] Device Description set to: %s", device_handle->device_desc);
+            fs_safe_strncpy(device_handle->device_descriptor.device_desc, params, sizeof(device_handle->device_descriptor.device_desc) - 1);
+            device_handle->device_descriptor.device_desc[sizeof(device_handle->device_descriptor.device_desc) - 1] = '\0';
+            fs_log_output("[Trifecta] Device Description set to: %s", device_handle->device_descriptor.device_desc);
             break;
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration

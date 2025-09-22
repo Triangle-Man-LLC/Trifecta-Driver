@@ -64,12 +64,15 @@
         .serial_port = -1,           \
         .baudrate = 0})
 
+#define FS_DEVICE_DESCRIPTOR_BLANK                \
+    ((fs_device_descriptor_t){.device_name = {0}, \
+                              .device_fw = {0},   \
+                              .device_desc = {0}, \
+                              .device_sn = {0},   \
+                              .device_model = {0}})
+
 #define FS_DEVICE_INFO_UNINITIALIZED ((fs_device_info_t){                                              \
-    .device_name = {0},                                                                                \
-    .device_fw = {0},                                                                                  \
-    .device_desc = {0},                                                                                \
-    .device_sn = {0},                                                                                  \
-    .device_model = {0},                                                                               \
+    .device_descriptor = FS_DEVICE_DESCRIPTOR_BLANK,                                                   \
     .device_id = 0,                                                                                    \
     .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED,                                         \
     .ping = 9999,                                                                                      \

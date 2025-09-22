@@ -32,7 +32,7 @@ static void fs_serial_update_thread(void *params)
     uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
 
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                  active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
+                  active_device->device_descriptor.device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_serial = 0;
     while (active_device->status == FS_RUN_STATUS_RUNNING)
@@ -69,7 +69,7 @@ int fs_serial_send_message(fs_device_info_t *device_handle, char *message, size_
 int fs_serial_start(fs_device_info_t *device_handle)
 {
     // Clear the device name
-    memset(&device_handle->device_name, 0, sizeof(device_handle->device_name));
+    memset(&device_handle->device_descriptor.device_name, 0, sizeof(device_handle->device_descriptor.device_name));
 
     // Initialize the serial driver
     int status = fs_init_serial_driver(device_handle);
@@ -120,12 +120,12 @@ int fs_serial_start(fs_device_info_t *device_handle)
         }
         fs_delay(receive_timeout_micros / 1000);
     }
-    if (fs_safe_strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
+    if (fs_safe_strnlen(device_handle->device_descriptor.device_name, sizeof(device_handle->device_descriptor.device_name)) > 0)
     {
-        fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_name);
+        fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_descriptor.device_name);
 
         fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                      device_handle->device_name, device_handle->status, device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
+                      device_handle->device_descriptor.device_name, device_handle->status, device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
         bool interrupts_supported = fs_platform_supported_serial_interrupts() != FS_COMMUNICATION_MODE_UNINITIALIZED && (fs_platform_supported_serial_interrupts() & device_handle->communication_mode) != 0;
         if (!interrupts_supported || !device_handle->driver_config.use_serial_interrupt_mode)
         {

@@ -57,16 +57,7 @@ extern "C"
     /// @param device_handle Device handle
     /// @param fd File descriptor or USB/UART port number. If set to -1, the driver will auto-scan ports (on supported platforms).
     /// @return 0 on success.
-    FS_API int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communication_mode_t serial_mode);
-
-    /// @brief Deallocate the resources for the indicated device.
-    /// Note that if you have obtained the handle through dynamic allocation, you will still need to free
-    /// @param device_handle Device handle
-    /// @return 0 on success.
-    FS_API int fs_closedown(fs_device_info_t *device_handle);
-
-    
-    /// @section Stream control
+    FS_API int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd, fs_communication_mode_t serial_mode);
 
     /// @brief Deallocate the resources for the indicated device.
     /// Note that if you have obtained the handle through dynamic allocation, you will still need to free
@@ -222,6 +213,11 @@ extern "C"
     /// @return 0 on success. 
     FS_API int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_params_t *device_params_info);
 
+    /// @brief 
+    /// @param device_handle 
+    /// @param desc 
+    /// @return 
+    FS_API int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descriptor_t *desc);
 
     /// @section Debug utilities - This should typically not be used at all.
 
