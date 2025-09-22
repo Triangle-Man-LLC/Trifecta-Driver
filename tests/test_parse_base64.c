@@ -181,13 +181,13 @@ int main()
 
     const char name_cmd[] = "ITrifecta-Test-Harness;";
     fs_handle_received_commands(&device, &name_cmd, sizeof(name_cmd));
-    if (strcmp(device.device_name, "Trifecta-Test-Harness") == 0)
+    if (strcmp(device.device_descriptor.device_name, "Trifecta-Test-Harness") == 0)
     {
         printf("Device name correctly set to Trifecta-Test-Harness\n");
     }
     else
     {
-        printf("Device name mismatch: got '%s'\n", device.device_name);
+        printf("Device name mismatch: got '%s'\n", device.device_descriptor.device_name);
     }
 
     return 0;

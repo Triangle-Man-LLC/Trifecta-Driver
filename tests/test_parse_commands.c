@@ -70,9 +70,9 @@ int main()
     fs_handle_received_commands(&device, cmd_buf, strlen(cmd_buf));
 
     // Validate all fields
-    if (strcmp(device.device_name, expected_name) != 0)
+    if (strcmp(device.device_descriptor.device_name, expected_name) != 0)
     {
-        printf("❌ Device name mismatch: got '%s'\n", device.device_name);
+        printf("❌ Device name mismatch: got '%s'\n", device.device_descriptor.device_name);
         ret_val++;
     }
 
@@ -106,27 +106,27 @@ int main()
         ret_val++;
     }
 
-    if (strcmp(device.device_sn, expected_serial) != 0)
+    if (strcmp(device.device_descriptor.device_sn, expected_serial) != 0)
     {
-        printf("❌ Serial number mismatch: got '%s'\n", device.device_sn);
+        printf("❌ Serial number mismatch: got '%s'\n", device.device_descriptor.device_sn);
         ret_val++;
     }
 
-    if (strcmp(device.device_model, expected_model) != 0)
+    if (strcmp(device.device_descriptor.device_model, expected_model) != 0)
     {
-        printf("❌ Device model mismatch: got '%s'\n", device.device_model);
+        printf("❌ Device model mismatch: got '%s'\n", device.device_descriptor.device_model);
         ret_val++;
     }
 
-    if (strcmp(device.device_fw, expected_fw) != 0)
+    if (strcmp(device.device_descriptor.device_fw, expected_fw) != 0)
     {
-        printf("❌ Firmware version mismatch: got '%s'\n", device.device_fw);
+        printf("❌ Firmware version mismatch: got '%s'\n", device.device_descriptor.device_fw);
         ret_val++;
     }
 
-    if (strcmp(device.device_desc, expected_desc) != 0)
+    if (strcmp(device.device_descriptor.device_desc, expected_desc) != 0)
     {
-        printf("❌ Device description mismatch: got '%s'\n", device.device_desc);
+        printf("❌ Device description mismatch: got '%s'\n", device.device_descriptor.device_desc);
         ret_val++;
     }
 
