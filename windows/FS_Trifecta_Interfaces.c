@@ -323,8 +323,8 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
                 if (end_char)
                 {
                     *end_char = '\0';
-                    fs_safe_strncpy(device_handle->device_name, response + 1, sizeof(device_handle->device_name) - 1);
-                    device_handle->device_name[sizeof(device_handle->device_name) - 1] = '\0';
+                    fs_safe_strncpy(device_handle->device_descriptor.device_name, response + 1, sizeof(device_handle->device_descriptor.device_name) - 1);
+                    device_handle->device_descriptor.device_name[sizeof(device_handle->device_descriptor.device_name) - 1] = '\0';
                     fs_set_serial_handle(device_handle, hSerial);
                     return 0;
                 }
