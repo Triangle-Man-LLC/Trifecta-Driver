@@ -47,10 +47,17 @@ typedef SSIZE_T ssize_t;
 #define FS_API
 #endif
 
+#ifdef _WIN32
+typedef intptr_t fs_sock_t;
+typedef intptr_t fs_serial_handle_t;
+#else
+typedef int fs_sock_t;
+typedef int fs_serial_handle_t;
+#endif
+
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
-#include "FS_Trifecta_Defs_Initializers.h"
 #include "FS_Trifecta_Defs_Initializers.h"
 
 #define FS_PI 3.14159265358979f
@@ -96,18 +103,27 @@ extern "C"
 
     typedef struct fs_device_params
     {
-        int all_enabled_interfaces; // OR flag of fs_communication_mode_t defining all enabled interfaces, if the device has more than one interface available.
-        char ip_addr[39];           // If networking is used, this is the corresponding IP address string
+        int all_enabled_interfaces;
+        char ip_addr[39];
         char ssid[32];
         char ssid_ap[32];
         char pw_ap[64];
-        int tcp_port;     // Always 8888
-        int udp_port;     // Can be set by user
-        int tcp_sock;     // TCP socket number
-        int udp_sock;     // UDP socket number
-        int serial_port;  // If serial communication of some kind is used, this is the corresponding port
-        int32_t baudrate; // If serial communication is used, baud rate. NOTE: USB-CDC ignores this completely
+        int tcp_port;
+        int udp_port;
+        fs_sock_t tcp_sock;
+        fs_sock_t udp_sock;
+        fs_serial_handle_t serial_port;
+        int32_t baudrate;
     } fs_device_params_t;
+
+    typedef struct fs_device_descriptor
+    {
+        char device_name[32];  //
+        char device_fw[32];    //
+        char device_desc[64];  //
+        char device_sn[32];    //
+        char device_model[32]; //
+    } fs_device_descriptor_t;
 
     FS_RINGBUFFER_DECLARE(fs_packet_union_t, fs_packet_ringbuffer_t, FS_MAX_PACKET_QUEUE_LENGTH);
     FS_RINGBUFFER_DECLARE(fs_command_info_t, fs_command_ringbuffer_t, FS_MAX_CMD_QUEUE_LENGTH);
@@ -116,12 +132,7 @@ extern "C"
     /// @brief Device information container
     typedef struct fs_device_info
     {
-        char device_name[32];  //
-        char device_fw[32];    //
-        char device_desc[64];  //
-        char device_sn[32];    //
-        char device_model[32]; //
-
+        fs_device_descriptor_t device_descriptor;   // Device name, etc.
         fs_device_id_t device_id;                   // Unique identifier for the device type
         fs_communication_mode_t communication_mode; // Selected communication mode (how this driver is interfacing with the device)
         fs_run_status_t status;                     // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR

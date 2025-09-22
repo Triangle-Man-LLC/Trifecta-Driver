@@ -115,7 +115,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
   }
 }
 
-int fs_initialize_serial(fs_device_info_t *device_handle, int fd, fs_communication_mode_t serial_mode)
+int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd, fs_communication_mode_t serial_mode)
 {
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
   {
@@ -329,5 +329,21 @@ int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_par
            CMD_IDENTIFY_PARAM_PASSWORD_AP,
            CMD_IDENTIFY_PARAM_UART_BAUD_RATE);
   ssize_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
-  return fs_send_command(device_handle, send_buf, send_len) > 0 ? 0 : -1;
+  if (fs_send_command(device_handle, send_buf, send_len) < 0)
+  {
+    return -1;
+  }
+  fs_delay(200);
+  memcpy(device_params_info, &device_handle->device_params, sizeof(device_handle->device_params));
+  return 0;
+}
+
+int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descriptor_t *desc)
+{
+  if (device_handle == NULL || desc == NULL)
+  {
+    return -1;
+  }
+  memcpy(desc, &device_handle->device_descriptor, sizeof(device_handle->device_descriptor));
+  return 0;
 }

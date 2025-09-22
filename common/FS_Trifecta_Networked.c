@@ -38,7 +38,7 @@ static void fs_network_update_thread(void *params)
     memset(rx_buffer2, 0, FS_MAX_DATA_LENGTH);
 
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                  active_device->device_name, active_device->status, delay_time_millis, receive_timeout_micros);
+                  active_device->device_descriptor.device_name, active_device->status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_tcp = 0;
     ssize_t last_received_udp = 0;
@@ -90,7 +90,7 @@ int fs_network_send_message(fs_device_info_t *device_handle, char *message, size
 int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 {
     // Clear the device name and parameters
-    memset(device_handle->device_name, 0, sizeof(device_handle->device_name));
+    memset(device_handle->device_descriptor.device_name, 0, sizeof(device_handle->device_descriptor.device_name));
     memset(device_handle->device_params.ip_addr, 0, sizeof(device_handle->device_params.ip_addr));
 
     // Set target IP address
@@ -151,9 +151,9 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     {
         status = (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
         fs_delay(receive_timeout_micros / 1000);
-        if (fs_safe_strnlen(device_handle->device_name, sizeof(device_handle->device_name)) > 0)
+        if (fs_safe_strnlen(device_handle->device_descriptor.device_name, sizeof(device_handle->device_descriptor.device_name)) > 0)
         {
-            fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_name);
+            fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_descriptor.device_name);
             return 0;
         }
     }
