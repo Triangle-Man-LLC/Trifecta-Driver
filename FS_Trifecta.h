@@ -54,8 +54,10 @@ extern "C"
     /// @brief Start the device in wired serial mode, this will attempt to connect to the device at the given port.
     /// If the device_handle has a name set, it will only connect to a device with that name.
     /// @param device_handle Device handle
-    /// @param device_handle Device handle
     /// @param fd File descriptor or USB/UART port number. If set to -1, the driver will auto-scan ports (on supported platforms).
+    /// NOTES: On POSIX, pass the fd that you obtain from opening a serial port.
+    /// On Windows, pass the number that appears after the COM port, e.g. 7 for COM7 or 14 for COM14.
+    /// @param serial_mode FS_COMMUNICATION_MODE_<>
     /// @return 0 on success.
     FS_API int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd, fs_communication_mode_t serial_mode);
 

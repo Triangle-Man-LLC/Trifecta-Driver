@@ -62,7 +62,10 @@
         .tcp_sock = -1,              \
         .udp_sock = -1,              \
         .serial_port = -1,           \
-        .baudrate = 0})
+        .baudrate = 0,               \
+        .ping = 0,                   \
+        .hp_timestamp_micros = 0,    \
+    })
 
 #define FS_DEVICE_DESCRIPTOR_BLANK                \
     ((fs_device_descriptor_t){.device_name = {0}, \
@@ -75,13 +78,10 @@
     .device_descriptor = FS_DEVICE_DESCRIPTOR_BLANK,                                                   \
     .device_id = 0,                                                                                    \
     .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED,                                         \
-    .ping = 9999,                                                                                      \
     .device_params = FS_DEVICE_PARAMS_BLANK,                                                           \
     .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                                         \
-    .hp_timestamp_micros = 0,                                                                          \
     .last_received_packet = (fs_packet_union_t){{{0}}},                                                \
     .data_buffer = (fs_bytes_ringbuffer_t){.buffer = {0}, .head = 0, .tail = 0, .count = 0},           \
     .packet_buf_queue = (fs_packet_ringbuffer_t){.buffer = {{{0}}}, .head = 0, .tail = 0, .count = 0}, \
     .command_queue = (fs_command_ringbuffer_t){.buffer = {{0}}, .head = 0, .tail = 0, .count = 0}})
-
 #endif

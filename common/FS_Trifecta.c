@@ -120,7 +120,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
   if (device_handle->status == FS_RUN_STATUS_RUNNING)
   {
     fs_log_output("[Trifecta] Error: Driver already running with active device! Shut that one down before continuing.\n");
-    return -1;
+    return -11;
   }
 
   if (device_handle->driver_config.task_stack_size_bytes == 0)
@@ -129,18 +129,19 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
     if (fs_set_driver_parameters(device_handle, &dconfig) != 0)
     {
       fs_log_output("[Trifecta] Error: Failed to set the driver configuration!\n");
-      return -1;
+      return -12;
     }
   }
 
   device_handle->communication_mode = serial_mode;
   device_handle->device_params.serial_port = fd;
 
-  if (fs_serial_start(device_handle) != 0)
+  int sstart_status = fs_serial_start(device_handle);
+  if (sstart_status != 0)
   {
     fs_log_output("[Trifecta] Error: Failed to start the serial driver!\n");
     device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
-    return -1;
+    return sstart_status;
   }
 
   if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
@@ -183,7 +184,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
 int fs_start_stream(fs_device_info_t *device_handle)
 {
   char send_buf[FS_MAX_CMD_LENGTH];
-  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 1);
+  snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_STREAM, 1);
   size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
   return fs_send_command(device_handle, send_buf, send_len);
 }
@@ -191,7 +192,7 @@ int fs_start_stream(fs_device_info_t *device_handle)
 int fs_stop_stream(fs_device_info_t *device_handle)
 {
   char send_buf[FS_MAX_CMD_LENGTH];
-  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 0);
+  snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_STREAM, 0);
   size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
   return fs_send_command(device_handle, send_buf, send_len);
 }
@@ -199,7 +200,7 @@ int fs_stop_stream(fs_device_info_t *device_handle)
 int fs_read_one_shot(fs_device_info_t *device_handle)
 {
   char send_buf[FS_MAX_CMD_LENGTH];
-  snprintf(send_buf, sizeof(send_buf), "%c%d;", CMD_STREAM, 2);
+  snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_STREAM, 2);
   size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
   return fs_send_command(device_handle, send_buf, send_len);
 }

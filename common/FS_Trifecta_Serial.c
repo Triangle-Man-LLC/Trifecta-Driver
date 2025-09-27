@@ -47,6 +47,14 @@ static void fs_serial_update_thread(void *params)
             }
             last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         }
+        if (last_received_serial <= 0)
+        {
+            active_device->device_params.ping += delay_time_millis;
+        }
+        else
+        {
+            active_device->device_params.ping = 0;
+        }
         fs_delay(delay_time_millis);
     }
 
@@ -103,12 +111,12 @@ int fs_serial_start(fs_device_info_t *device_handle)
         if (status != 0)
         {
             fs_log_output("[Trifecta] Error: Could not transmit identification command!");
-            continue;
+            return -9;
         }
 
-        uint8_t rx_buffer[FS_MAX_CMD_LENGTH] = {0};
+        uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
 
-        size_t last_received_serial = fs_receive_serial(device_handle, rx_buffer, FS_MAX_CMD_LENGTH, receive_timeout_micros);
+        size_t last_received_serial = fs_receive_serial(device_handle, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         if (last_received_serial > 0)
         {
             fs_log_output("[Trifecta] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
@@ -116,7 +124,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
             {
                 break;
             }
-            last_received_serial = fs_receive_serial(device_handle, rx_buffer, FS_MAX_CMD_LENGTH, receive_timeout_micros);
+            last_received_serial = fs_receive_serial(device_handle, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         }
         fs_delay(receive_timeout_micros / 1000);
     }
@@ -134,19 +142,20 @@ int fs_serial_start(fs_device_info_t *device_handle)
             if (status != 0)
             {
                 fs_log_output("[Trifecta] Error: Could not start serial thread!");
-                return -1;
+                return -5;
             }
         }
         else
         {
-            //
+            // Not yet supported
             status = fs_init_serial_interrupts(device_handle, &device_handle->status);
         }
         return 0;
     }
     // If no connection was made, log an error
     fs_log_output("[Trifecta] Error: Device was not detected!");
-    return -1;
+    fs_serial_exit(device_handle);
+    return -6;
 }
 
 /// @brief

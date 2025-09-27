@@ -114,6 +114,8 @@ extern "C"
         fs_sock_t udp_sock;
         fs_serial_handle_t serial_port;
         int32_t baudrate;
+        int32_t ping;                 // Time since last received communication from device
+        uint64_t hp_timestamp_micros; // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
     } fs_device_params_t;
 
     typedef struct fs_device_descriptor
@@ -136,11 +138,9 @@ extern "C"
         fs_device_id_t device_id;                   // Unique identifier for the device type
         fs_communication_mode_t communication_mode; // Selected communication mode (how this driver is interfacing with the device)
         fs_run_status_t status;                     // 0 = UNINITIALIZED/STOPPED, 1 = RUNNING, -1 = ERROR
-        int32_t ping;                               // Time since last received communication from device
 
         fs_device_params_t device_params; // Parameters, such as serial baudrate, Wi-Fi SSID, etc.
         fs_driver_config_t driver_config; // Device driver configuration (each device has its own thread spawned unless interrupt mode is active)
-        uint64_t hp_timestamp_micros;     // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
 
         fs_packet_union_t last_received_packet; // The most recent packet from the device
 
