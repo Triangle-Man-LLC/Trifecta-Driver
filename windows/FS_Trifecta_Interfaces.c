@@ -35,13 +35,14 @@
 #define FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS 2000000
 
 int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
+static FILE *log_file_ptr = NULL;
 
 /// @brief Helper to set device serial field from Windows-specific HANDLE
 /// @param dev Device pointer
 /// @param h HANDLE (Windows fd-like equivalent)
 static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 {
-    dev->device_params.serial_port = (int)(intptr_t)h;
+    dev->device_params.serial_port = (fs_serial_handle_t)h;
 }
 
 /// @brief Helper to get Windows serial handle from device
@@ -49,7 +50,7 @@ static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 /// @return HANDLE (Windows fd-like equivalent)
 static inline HANDLE fs_get_serial_handle(const fs_device_info_t *dev)
 {
-    return (HANDLE)(intptr_t)(dev->device_params.serial_port);
+    return (HANDLE)(dev->device_params.serial_port);
 }
 
 /// @brief Whether interrupt-driven UART etc. is supported by the platform.
@@ -334,7 +335,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         }
 
         fs_log_output("[Trifecta] No valid COM port found!");
-        return -1;
+        return -2;
     }
     else
     {
@@ -354,13 +355,13 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         if (hSerial == INVALID_HANDLE_VALUE)
         {
             fs_log_output("[Trifecta] Failed to open serial port %s", port_name);
-            return -1;
+            return -3;
         }
 
         if (configure_serial_port(hSerial) != 0)
         {
             CloseHandle(hSerial);
-            return -1;
+            return -4;
         }
 
         fs_set_serial_handle(device_handle, hSerial);
@@ -599,7 +600,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    fs_log_output("[Trifecta] Serial transmit to HANDLE %p - Length %lu", hSerial, bytes_written);
+    fs_log_output("[Trifecta] Serial transmit to HANDLE %p - Length %lu, Data: %s", hSerial, bytes_written, tx_buffer);
     return (ssize_t)bytes_written;
 }
 
@@ -881,6 +882,24 @@ int fs_log_output(const char *format, ...)
 /// @return 1 if logging turned on, 0 if logging turned off
 int fs_toggle_logging(bool do_log)
 {
+    if (do_log && !log_file_ptr)
+    {
+        log_file_ptr = freopen("trifecta_driver.log", "w", stdout);
+        if (!log_file_ptr)
+        {
+            perror("Failed to redirect stdout");
+            return 1;
+        }
+    }
+    else if (!do_log)
+    {
+        if (log_file_ptr)
+        {
+            fclose(log_file_ptr);
+            log_file_ptr = NULL;
+            // Restore stdout to console if needed (platform-specific)
+        }
+    }
     fs_logging_level = do_log ? 1 : 0;
     return fs_logging_level;
 }
