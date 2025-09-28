@@ -50,25 +50,28 @@
 }
 #endif
 
-#define FS_DEVICE_PARAMS_BLANK       \
-    ((fs_device_params_t){           \
-        .all_enabled_interfaces = 0, \
-        .ip_addr = {0},              \
-        .ssid = {0},                 \
-        .ssid_ap = {0},              \
-        .pw_ap = {0},                \
-        .tcp_port = 8888,            \
-        .udp_port = 0,               \
-        .tcp_sock = -1,              \
-        .udp_sock = -1,              \
-        .serial_port = -1,           \
-        .baudrate = 0,               \
-        .ping = 0,                   \
-        .hp_timestamp_micros = 0,    \
+#define FS_DEVICE_PARAMS_BLANK                                     \
+    ((fs_device_params_t){                                         \
+        .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED, \
+        .status = FS_RUN_STATUS_IDLE,                              \
+        .all_enabled_interfaces = 0,                               \
+        .ip_addr = {0},                                            \
+        .ssid = {0},                                               \
+        .ssid_ap = {0},                                            \
+        .pw_ap = {0},                                              \
+        .tcp_port = 8888,                                          \
+        .udp_port = 0,                                             \
+        .tcp_sock = -1,                                            \
+        .udp_sock = -1,                                            \
+        .serial_port = -1,                                         \
+        .baudrate = 0,                                             \
+        .ping = 0,                                                 \
+        .hp_timestamp_micros = 0,                                  \
     })
 
 #define FS_DEVICE_DESCRIPTOR_BLANK                \
-    ((fs_device_descriptor_t){.device_name = {0}, \
+    ((fs_device_descriptor_t){.device_id = 0,     \
+                              .device_name = {0}, \
                               .device_fw = {0},   \
                               .device_desc = {0}, \
                               .device_sn = {0},   \
@@ -76,8 +79,6 @@
 
 #define FS_DEVICE_INFO_UNINITIALIZED ((fs_device_info_t){                                              \
     .device_descriptor = FS_DEVICE_DESCRIPTOR_BLANK,                                                   \
-    .device_id = 0,                                                                                    \
-    .communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED,                                         \
     .device_params = FS_DEVICE_PARAMS_BLANK,                                                           \
     .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                                         \
     .last_received_packet = (fs_packet_union_t){{{0}}},                                                \

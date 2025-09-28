@@ -27,21 +27,21 @@ static void fs_serial_update_thread(void *params)
     fs_device_info_t *active_device = (fs_device_info_t *)params;
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
-    active_device->status = FS_RUN_STATUS_RUNNING;
+    active_device->device_params.status = FS_RUN_STATUS_RUNNING;
 
     uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
 
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                  active_device->device_descriptor.device_name, active_device->status, delay_time_millis, receive_timeout_micros);
+                  active_device->device_descriptor.device_name, active_device->device_params.status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_serial = 0;
-    while (active_device->status == FS_RUN_STATUS_RUNNING)
+    while (active_device->device_params.status == FS_RUN_STATUS_RUNNING)
     {
         last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         while (last_received_serial > 0)
         {
             fs_log_output("[Trifecta] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
-            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, active_device->communication_mode) < 0)
+            if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, active_device->device_params.communication_mode) < 0)
             {
                 fs_log_output("[Trifecta] WARN: Could not parse data! Is there corruption?");
             }
@@ -97,7 +97,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
 
     // Send identification command
     char send_buf[FS_MAX_CMD_LENGTH] = {0};
-    snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_IDENTIFY, 0);
+    snprintf(send_buf, sizeof(send_buf), ";%c%d;%c%d;%c%d;", CMD_IDENTIFY, 0, CMD_IDENTIFY, 0, CMD_IDENTIFY, 0);
     size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf)) + 1;
 
     const int receive_timeout_micros = 100000;
@@ -133,12 +133,12 @@ int fs_serial_start(fs_device_info_t *device_handle)
         fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_descriptor.device_name);
 
         fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                      device_handle->device_descriptor.device_name, device_handle->status, device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
-        bool interrupts_supported = fs_platform_supported_serial_interrupts() != FS_COMMUNICATION_MODE_UNINITIALIZED && (fs_platform_supported_serial_interrupts() & device_handle->communication_mode) != 0;
+                      device_handle->device_descriptor.device_name, device_handle->device_params.status, device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
+        bool interrupts_supported = fs_platform_supported_serial_interrupts() != FS_COMMUNICATION_MODE_UNINITIALIZED && (fs_platform_supported_serial_interrupts() & device_handle->device_params.communication_mode) != 0;
         if (!interrupts_supported || !device_handle->driver_config.use_serial_interrupt_mode)
         {
             // Start the serial update thread if serial interrupts are not enabled
-            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, &device_handle->status, task_stack_size, task_priority, core_affinity);
+            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, &device_handle->device_params.status, task_stack_size, task_priority, core_affinity);
             if (status != 0)
             {
                 fs_log_output("[Trifecta] Error: Could not start serial thread!");
@@ -148,7 +148,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
         else
         {
             // Not yet supported
-            status = fs_init_serial_interrupts(device_handle, &device_handle->status);
+            status = fs_init_serial_interrupts(device_handle, &device_handle->device_params.status);
         }
         return 0;
     }
@@ -163,7 +163,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
 /// @return
 int fs_serial_exit(fs_device_info_t *device_handle)
 {
-    device_handle->status = FS_RUN_STATUS_IDLE;
+    device_handle->device_params.status = FS_RUN_STATUS_IDLE;
     char send_buf[FS_MAX_CMD_LENGTH] = {0};
     snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_STREAM, 0);
     size_t send_len = fs_safe_strnlen(send_buf, FS_MAX_CMD_LENGTH) + 1;

@@ -12,7 +12,7 @@
 #ifndef TRIFECTA_DEVICE_H
 #define TRIFECTA_DEVICE_H
 
-#include "FS_Trifecta_Defs.h"
+#include "FS_Trifecta.h"
 #include "FS_Trifecta_Interfaces.h"
 
 #ifdef __cplusplus

@@ -9,7 +9,6 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Device.h"
 #include "FS_Trifecta_Device_Utils.h"
 
@@ -119,7 +118,7 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
             break;
         case CMD_IDENTIFY_PARAM_TRANSMIT:
             int mode = atoi(params);
-            device_handle->communication_mode = (fs_communication_mode_t)mode;
+            device_handle->device_params.all_enabled_interfaces = (fs_communication_mode_t)mode;
             fs_log_output("[Trifecta] Comm mode set to: %d", mode);
             break;
         case CMD_IDENTIFY_PARAM_DEV_SN:

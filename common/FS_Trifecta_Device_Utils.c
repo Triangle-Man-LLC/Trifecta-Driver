@@ -86,8 +86,8 @@ int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, si
             }
             else
             {
-                // Optional: truncate or log overflow
-                fs_log_output("[Trifecta] Command too long, truncating.");
+                input_pos = 0; // Truncate and discard overflowed commands
+                memset(cmd.payload, 0, sizeof(cmd.payload));
             }
         }
     }
@@ -355,7 +355,7 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
         return -1;
     }
 
-    fs_log_output("[Trifecta] Scanned packet (B64)! Timestamp: %ld - Type: %d", packet_union.composite.time, packet_union.composite.type);
+    fs_log_output("[Trifecta] Scanned packet (B64)! Timestamp: %lu - Type: %d", packet_union.composite.time, packet_union.composite.type);
     return 0;
 }
 

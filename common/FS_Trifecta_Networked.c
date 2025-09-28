@@ -30,7 +30,7 @@ static void fs_network_update_thread(void *params)
     fs_device_info_t *active_device = (fs_device_info_t *)params;
     const int delay_time_millis = active_device->driver_config.task_wait_ms;
     const int receive_timeout_micros = active_device->driver_config.read_timeout_micros;
-    active_device->status = FS_RUN_STATUS_RUNNING;
+    active_device->device_params.status = FS_RUN_STATUS_RUNNING;
 
     uint8_t rx_buffer[FS_MAX_DATA_LENGTH] = {0};
     memset(rx_buffer, 0, FS_MAX_DATA_LENGTH);
@@ -38,12 +38,12 @@ static void fs_network_update_thread(void *params)
     memset(rx_buffer2, 0, FS_MAX_DATA_LENGTH);
 
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                  active_device->device_descriptor.device_name, active_device->status, delay_time_millis, receive_timeout_micros);
+                  active_device->device_descriptor.device_name, active_device->device_params.status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_tcp = 0;
     ssize_t last_received_udp = 0;
 
-    while (active_device->status == FS_RUN_STATUS_RUNNING)
+    while (active_device->device_params.status == FS_RUN_STATUS_RUNNING)
     {
         last_received_tcp = fs_receive_networked_tcp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         // fs_log_output("[Trifecta] TCP:RX %d", last_received_tcp);
@@ -61,7 +61,7 @@ static void fs_network_update_thread(void *params)
         if (last_received_udp > 0)
         {
             // UDP only receive data packets, so handle them here
-            if (fs_device_parse_packet(active_device, &rx_buffer2, last_received_udp, active_device->communication_mode) < 0)
+            if (fs_device_parse_packet(active_device, &rx_buffer2, last_received_udp, active_device->device_params.communication_mode) < 0)
             {
                 fs_log_output("[Trifecta] Could not parse data! Is there interference?");
             }
@@ -109,7 +109,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     if (fs_init_network_tcp_driver(device_handle) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not start TCP driver!");
-        device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+        device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         fs_shutdown_network_tcp_driver(device_handle);
         return -1;
     }
@@ -119,7 +119,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
     // Send identification command
     char send_buf[FS_MAX_CMD_LENGTH] = {0};
-    snprintf(send_buf, sizeof(send_buf), ";%c%d;", CMD_IDENTIFY, 0);
+    snprintf(send_buf, sizeof(send_buf), ";%c%d;%c%d;%c%d;", CMD_IDENTIFY, 0, CMD_IDENTIFY, 0, CMD_IDENTIFY, 0);
     size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf)) + 1;
 
     const int receive_timeout_micros = 100000;
@@ -164,7 +164,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
         fs_init_network_udp_driver(device_handle) != 0)
     {
         fs_log_output("[Trifecta] Error: Could not start UDP driver!");
-        device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+        device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         fs_shutdown_network_udp_driver(device_handle);
         fs_shutdown_network_tcp_driver(device_handle);
         return -2;
@@ -173,7 +173,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     // Log device parameters
     fs_log_output("[Trifecta] Connected to device! Device name: %s", device_handle->device_descriptor.device_name);
     fs_log_output("[Trifecta] Device %s parameters: Run status: %d, Delay time %d ms, Receive timeout %d us",
-                  device_handle->device_descriptor.device_name, device_handle->status,
+                  device_handle->device_descriptor.device_name, device_handle->device_params.status,
                   device_handle->driver_config.task_wait_ms, device_handle->driver_config.read_timeout_micros);
 
     // Start network thread
@@ -181,7 +181,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     const int core_affinity = device_handle->driver_config.background_task_core_affinity;
     const int task_stack_size = device_handle->driver_config.task_stack_size_bytes;
 
-    int thread_status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &device_handle->status,
+    int thread_status = fs_thread_start(fs_network_update_thread, (void *)device_handle, &device_handle->device_params.status,
                                         task_stack_size, task_priority, core_affinity);
 
     if (thread_status != 0)
@@ -237,7 +237,7 @@ int fs_network_read_one_shot(fs_device_info_t *device_handle)
 int fs_network_exit(fs_device_info_t *device_handle)
 {
     char send_buf[FS_MAX_CMD_LENGTH] = {0};
-    device_handle->status = FS_RUN_STATUS_IDLE;
+    device_handle->device_params.status = FS_RUN_STATUS_IDLE;
 
     // Prepare the command to stop streaming
     snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_STREAM, 0);

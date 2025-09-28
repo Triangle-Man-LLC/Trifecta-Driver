@@ -24,7 +24,7 @@
 static inline int fs_send_command(fs_device_info_t *device_handle, void *payload, size_t length)
 {
   int result = -1;
-  switch (device_handle->communication_mode)
+  switch (device_handle->device_params.communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
   case FS_COMMUNICATION_MODE_USB_CDC:
@@ -33,6 +33,7 @@ static inline int fs_send_command(fs_device_info_t *device_handle, void *payload
     result = fs_serial_send_message(device_handle, payload, length);
     break;
   case FS_COMMUNICATION_MODE_TCP_UDP:
+  case FS_COMMUNICATION_MODE_TCP_UDP_AP:
     result = fs_network_send_message(device_handle, payload, length);
     break;
   default:
@@ -72,7 +73,7 @@ int fs_set_driver_parameters(fs_device_info_t *device_handle, fs_driver_config_t
 
 int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_ip_address)
 {
-  if (device_handle->status == FS_RUN_STATUS_RUNNING)
+  if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
   {
     fs_log_output("[Trifecta] Error: Driver already running with active device! Shut that one down before continuing.\n");
     return -1;
@@ -88,16 +89,16 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
     }
   }
 
-  device_handle->communication_mode = FS_COMMUNICATION_MODE_TCP_UDP;
+  device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_TCP_UDP;
 
   if (fs_network_start(device_ip_address, device_handle) != 0)
   {
     fs_log_output("[Trifecta] Error: Could not start networked device!\n");
-    device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+    device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
     return -1;
   }
 
-  if (device_handle->communication_mode == FS_COMMUNICATION_MODE_TCP_UDP)
+  if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_TCP_UDP)
   {
     fs_log_output("[Trifecta] Opened TCP sock %d and UDP sock %d corresponding to device IPs %s:%d,  %s:%d\n",
                   device_handle->device_params.tcp_sock,
@@ -117,7 +118,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 
 int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd, fs_communication_mode_t serial_mode)
 {
-  if (device_handle->status == FS_RUN_STATUS_RUNNING)
+  if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
   {
     fs_log_output("[Trifecta] Error: Driver already running with active device! Shut that one down before continuing.\n");
     return -11;
@@ -133,25 +134,25 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
     }
   }
 
-  device_handle->communication_mode = serial_mode;
+  device_handle->device_params.communication_mode = serial_mode;
   device_handle->device_params.serial_port = fd;
 
   int sstart_status = fs_serial_start(device_handle);
   if (sstart_status != 0)
   {
     fs_log_output("[Trifecta] Error: Failed to start the serial driver!\n");
-    device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+    device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
     return sstart_status;
   }
 
-  if (device_handle->communication_mode == FS_COMMUNICATION_MODE_UART)
+  if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
   {
     device_handle->device_params.baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
     fs_log_output("[Trifecta] Info: Initialized UART driver for device: (Port %d), Baud rate: %d\n",
                   device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
-  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
+  else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
   {
     // CDC ACM will be supported on a number of platforms,
     // though note that on Linux/Posix systems they are treated the same as serial ports.
@@ -159,7 +160,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
                   device_handle->device_params.serial_port, device_handle->device_params.baudrate);
     return 0;
   }
-  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_I2C)
+  else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_I2C)
   {
     // TODO: In I2C mode, use the "baudrate" field to instead store device address.
     // device_handle->device_params.baudrate = FS_TRIFECTA_SERIAL_BAUDRATE;
@@ -168,7 +169,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
     return 0;
   }
 
-  else if (device_handle->communication_mode == FS_COMMUNICATION_MODE_SPI)
+  else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_SPI)
   {
     fs_log_output("[Trifecta] Info: Initialized SPI driver for device: (Port %d), Baud rate: %d\n",
                   device_handle->device_params.serial_port, device_handle->device_params.baudrate);
@@ -220,7 +221,7 @@ int fs_enable_logging(bool do_enable)
 
 int fs_closedown(fs_device_info_t *device_handle)
 {
-  switch (device_handle->communication_mode)
+  switch (device_handle->device_params.communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
   case FS_COMMUNICATION_MODE_USB_CDC:
@@ -244,7 +245,7 @@ int fs_closedown(fs_device_info_t *device_handle)
     return -1;
     break;
   }
-  device_handle->communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
+  device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
   memset(device_handle, 0, sizeof(fs_device_info_t));
   fs_log_output("[Trifecta] Closedown of driver succeeded, all resources are now released.");
   return 0;
@@ -334,7 +335,6 @@ int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_par
   {
     return -1;
   }
-  fs_delay(200);
   memcpy(device_params_info, &device_handle->device_params, sizeof(device_handle->device_params));
   return 0;
 }

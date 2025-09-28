@@ -97,10 +97,9 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(device_handle->device_params.tcp_port);
-
     if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
-        fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
+        fs_log_output("[Trifecta] Error: Invalid IP address format! IP address was: %s\n", device_handle->device_params.ip_addr);
         WSACleanup();
         return -1;
     }
@@ -453,7 +452,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
@@ -504,7 +503,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
@@ -555,8 +554,8 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART &&
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
@@ -618,7 +617,7 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
@@ -669,7 +668,7 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
@@ -720,8 +719,8 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART &&
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
