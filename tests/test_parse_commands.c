@@ -46,15 +46,15 @@ int main()
     // Build compound command string
     snprintf(cmd_buf, sizeof(cmd_buf),
              ";%c%s;"
-             ";%c%d;"
-             ";%c%s;"
-             ";%c%s;"
-             ";%c%s;"
-             ";%c%d;"
-             ";%c%s;"
-             ";%c%s;"
-             ";%c%s;"
-             ";%c%s;",
+             "%c%d;"
+             "%c%s;"
+             "%c%s;"
+             "%c%s;"
+             "%c%d;"
+             "%c%s;"
+             "%c%s;"
+             "%c%s;"
+             "%c%s;",
              CMD_IDENTIFY, expected_name,
              CMD_IDENTIFY_PARAM_UART_BAUD_RATE, expected_baudrate,
              CMD_IDENTIFY_PARAM_SSID, expected_ssid,
@@ -100,9 +100,9 @@ int main()
         ret_val++;
     }
 
-    if (device.communication_mode != expected_comm_mode)
+    if (device.device_params.all_enabled_interfaces != expected_comm_mode)
     {
-        printf("❌ Communication mode mismatch: got %d\n", device.communication_mode);
+        printf("❌ Communication mode mismatch: got %d\n", device.device_params.all_enabled_interfaces);
         ret_val++;
     }
 

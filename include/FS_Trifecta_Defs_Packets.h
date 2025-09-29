@@ -24,11 +24,11 @@
 #define FS_MAX_PACKET_LENGTH 256
 
 #ifdef _MSC_VER
-#define FS_PACKED_STRUCT(name) __pragma(pack(push, 1)) struct name __pragma(pack(pop))
-#define FS_PACKED_UNION(name) __pragma(pack(push, 1)) union name __pragma(pack(pop))
+#define FS_PACKED_BEGIN __pragma(pack(push, 1))
+#define FS_PACKED_END __pragma(pack(pop))
 #else
-#define FS_PACKED_STRUCT(name) struct __attribute__((packed)) name
-#define FS_PACKED_UNION(name) union __attribute__((packed)) name
+#define FS_PACKED_BEGIN
+#define FS_PACKED_END __attribute__((packed))
 #endif
 
 #ifdef __cplusplus
@@ -86,8 +86,8 @@ extern "C"
         C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type_t;
-
-    FS_PACKED_STRUCT(fs_imu_composite_packet)
+    FS_PACKED_BEGIN
+    struct fs_imu_composite_packet
     {
         uint8_t type;
         uint32_t time;
@@ -108,10 +108,12 @@ extern "C"
         int8_t temperature[3];
         int8_t c;
         int32_t d;
-    };
+    } FS_PACKED_END;
     typedef struct fs_imu_composite_packet fs_imu_composite_packet_t;
+    _Static_assert(sizeof(fs_imu_composite_packet_t) == 145, "fs_imu_composite_packet_t size mismatch");
 
-    FS_PACKED_STRUCT(fs_imu_regular_packet)
+    FS_PACKED_BEGIN
+    struct fs_imu_regular_packet
     {
         uint8_t type;
         uint32_t time;
@@ -128,10 +130,12 @@ extern "C"
         int8_t temperature[3];
         int8_t c;
         int32_t d;
-    };
+    } FS_PACKED_END;
     typedef struct fs_imu_regular_packet fs_imu_regular_packet_t;
+    _Static_assert(sizeof(fs_imu_regular_packet_t) == 85, "fs_imu_regular_packet_t size mismatch");
 
-    FS_PACKED_STRUCT(fs_imu_composite_packet_2)
+    FS_PACKED_BEGIN
+    struct fs_imu_composite_packet_2
     {
         uint8_t type;
         uint32_t time;
@@ -152,17 +156,19 @@ extern "C"
         int8_t temperature[3];
         int8_t c;
         int32_t d;
-    };
+    } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_2 fs_imu_composite_packet_2_t;
+    _Static_assert(sizeof(fs_imu_composite_packet_2_t) == 157, "fs_imu_composite_packet_2_t size mismatch");
 
-    FS_PACKED_UNION(fs_packet_union)
+    FS_PACKED_BEGIN
+    union fs_packet_union
     {
         fs_imu_composite_packet_t composite;
         fs_imu_regular_packet_t regular;
         fs_imu_composite_packet_2_t composite2;
-    };
+    } FS_PACKED_END;
     typedef union fs_packet_union fs_packet_union_t;
-
+    _Static_assert(sizeof(fs_packet_union_t) == 157, "fs_packet_union_t size mismatch");
 #ifdef __cplusplus
 }
 #endif

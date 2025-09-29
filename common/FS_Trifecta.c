@@ -219,6 +219,15 @@ int fs_enable_logging(bool do_enable)
   return fs_toggle_logging(do_enable);
 }
 
+int fs_enable_logging_at_path(const char *path, bool do_enable)
+{
+  int ret = fs_set_log_location(path);
+  if (!ret)
+    return -1;
+  ret += fs_enable_logging(do_enable);
+  return ret;
+}
+
 int fs_closedown(fs_device_info_t *device_handle)
 {
   switch (device_handle->device_params.communication_mode)

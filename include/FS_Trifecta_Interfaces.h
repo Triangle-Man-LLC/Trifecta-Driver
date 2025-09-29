@@ -144,6 +144,12 @@ extern "C"
     /// @return 0 on success, or a negative error code on failure.
     int fs_toggle_logging(bool do_log);
 
+    /// @brief Redirect logs to the indicated path. 
+    /// Only some platforms support this. (E.g. a filesystem needed.)
+    /// @param context The path to store logs into.
+    /// @return 0 on success, or a negative error code on failure.
+    int fs_set_log_location(const char *directory);
+
     /// @brief Delays execution for a specified number of milliseconds.
     /// @param millis Number of milliseconds to delay.
     /// @return 0 on success, or a negative error code on failure.

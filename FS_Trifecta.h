@@ -228,6 +228,7 @@ extern "C"
     /// @param do_enable TRUE to turn logging on.
     /// @return
     FS_API int fs_enable_logging(bool do_enable);
+    FS_API int fs_enable_logging_at_path(const char *path, bool do_enable);
     
 
 #ifdef __cplusplus

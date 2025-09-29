@@ -23,7 +23,7 @@ static int fs_enqueue_into_command_queue(fs_device_info_t *device_handle, const 
 {
     if (!FS_RINGBUFFER_PUSH(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, cmd))
     {
-        fs_log_output("[Trifecta] Device command queue was full!");
+        fs_log_output("[Trifecta-Device-Utils] Device command queue was full!");
         return -1;
     }
     return 0;
@@ -55,7 +55,7 @@ int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, si
             cmd.payload[input_pos] = '\0';
             if (fs_enqueue_into_command_queue(device_handle, &cmd) != 0)
             {
-                fs_log_output("[Trifecta] Error with device command segment/enqueue!");
+                fs_log_output("[Trifecta-Device-Utils] Error with device command segment/enqueue!");
                 return -1;
             }
             input_pos = 0;
@@ -177,7 +177,7 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
 {
     if (buffer_size > FS_MAX_DATA_LENGTH)
     {
-        fs_log_output("[Trifecta] Base64 decode failed: Size of %d is greater than allowed %d!", buffer_size, FS_MAX_DATA_LENGTH);
+        fs_log_output("[Trifecta-Device-Utils] Base64 decode failed: Size of %d is greater than allowed %d!", buffer_size, FS_MAX_DATA_LENGTH);
         return -1; // Prevent overflow
     }
 
@@ -195,7 +195,7 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
     if (buffer_size < 3 * (input_length / 4) - padding)
     {
         // Buffer size is too small
-        fs_log_output("[Trifecta] Base64 decode failed: Buffer size %d is too small for Base64 decoding. Required: %d", buffer_size, 3 * (input_length / 4) - padding);
+        fs_log_output("[Trifecta-Device-Utils] Base64 decode failed: Buffer size %d is too small for Base64 decoding. Required: %d", buffer_size, 3 * (input_length / 4) - padding);
         return -1;
     }
 
@@ -216,7 +216,7 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
             // {
             //     continue; // Ignore the space which appears for some reason...
             // }
-            fs_log_output("[Trifecta] Base64 decode failed: Invalid Base64 character detected at index %u: 0x%X\n", i, input[i - 1]);
+            fs_log_output("[Trifecta-Device-Utils] Base64 decode failed: Invalid Base64 character detected at index %u: 0x%X\n", i, input[i - 1]);
             return -1;
         }
 
@@ -279,7 +279,7 @@ int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packe
 {
     if (!FS_RINGBUFFER_PUSH_FORCE(&device_handle->packet_buf_queue, FS_MAX_PACKET_QUEUE_LENGTH, packet))
     {
-        fs_log_output("[Trifecta] Warning: Device packet queue was full! Packet dropped.");
+        fs_log_output("[Trifecta-Device-Utils] Warning: Device packet queue was full! Packet dropped.");
         return -1;
     }
     // Update the last received packet...
@@ -295,7 +295,7 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
 {
     if (rx_buf == NULL || rx_len < 1 || rx_len > FS_MAX_DATA_LENGTH)
     {
-        fs_log_output("[Trifecta] Cannot segment packets from invalid receive buffer!");
+        fs_log_output("[Trifecta-Device-Utils] Cannot segment packets from invalid receive buffer!");
         return -1;
     }
     uint8_t *buf = (uint8_t *)rx_buf;
@@ -314,10 +314,13 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
         }
         if (pos + packet_length > rx_len)
         {
-            fs_log_output("[Trifecta] Error: Packet length %ld is out of bounds! RX_len: %ld", packet_length, rx_len);
+            fs_log_output("[Trifecta-Device-Utils] Error: Packet length %ld is out of bounds! RX_len: %ld", packet_length, rx_len);
             return -1;
         }
-        fs_log_output("[Trifecta] Packet type %hhu, len: %ld", packet_type, packet_length);
+        
+        uint32_t packet_time = ((fs_packet_union_t *)(buf + pos))->composite.time;
+        fs_log_output("[Trifecta-Device-Utils] Packet type %hhu, len: %ld, timestamp: %lu", packet_type, packet_length, packet_time);
+        
         // Emplace the packet into the queue
         fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos));
         packet_count++;
@@ -335,7 +338,7 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
     // Check for null pointer
     if (segment == NULL)
     {
-        fs_log_output("[Trifecta] Base64 decode failed: Segment was NULL!");
+        fs_log_output("[Trifecta-Device-Utils] Base64 decode failed: Segment was NULL!");
         return -1;
     }
 
@@ -345,17 +348,17 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
 
     if (fs_base64_decode(segment, &packet_union, length, &decoded_size) != 0)
     {
-        fs_log_output("[Trifecta] Base64 decode failed!");
+        fs_log_output("[Trifecta-Device-Utils] Base64 decode failed!");
         return -1;
     }
 
     if (fs_enqueue_into_packet_queue(device_handle, &packet_union) != 0)
     {
-        fs_log_output("[Trifecta] Error: Could not place packet into packet queue!");
+        fs_log_output("[Trifecta-Device-Utils] Error: Could not place packet into packet queue!");
         return -1;
     }
 
-    fs_log_output("[Trifecta] Scanned packet (B64)! Timestamp: %lu - Type: %d", packet_union.composite.time, packet_union.composite.type);
+    fs_log_output("[Trifecta-Device-Utils] Scanned packet (B64)! Timestamp: %lu - Type: %d", packet_union.composite.time, packet_union.composite.type);
     return 0;
 }
 
