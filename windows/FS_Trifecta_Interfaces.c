@@ -34,7 +34,7 @@
 #pragma comment(lib, "ws2_32.lib")
 #define FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS 2000000
 
-int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
+int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
 static FILE *log_file_ptr = NULL;
 
 /// @brief Helper to set device serial field from Windows-specific HANDLE
@@ -935,7 +935,7 @@ int fs_toggle_logging(bool do_log)
 /// @return 0 on success, or a negative error code on failure.
 int fs_set_log_location(const char *path)
 {
-    if (!log_file_ptr && strnlen(path, 256) > 0)
+    if (!log_file_ptr && strnlen(path, 256) > 0 && strnlen(path, 256) <= 255)
     {
         log_file_ptr = freopen(path, "w", stdout);
         if (!log_file_ptr)
@@ -948,7 +948,7 @@ int fs_set_log_location(const char *path)
     {
         fclose(log_file_ptr);
         log_file_ptr = NULL;
-        // Restore stdout to console if needed (platform-specific)
+        // TODO: Maybe restore stdout to console if needed (platform-specific)
     }
     return 0;
 }
