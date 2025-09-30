@@ -211,7 +211,10 @@ int fs_reboot_device(fs_device_info_t *device_handle)
   char send_buf[FS_MAX_CMD_LENGTH];
   snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_RESTART, 0);
   size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
-  return fs_send_command(device_handle, send_buf, send_len);
+  int ret = fs_send_command(device_handle, send_buf, send_len);
+  if (ret < 0)
+    return ret;
+  return fs_closedown(device_handle);
 }
 
 int fs_enable_logging(bool do_enable)
@@ -222,7 +225,7 @@ int fs_enable_logging(bool do_enable)
 int fs_enable_logging_at_path(const char *path, bool do_enable)
 {
   int ret = fs_set_log_location(path);
-  if (!ret)
+  if (ret < 0)
     return -1;
   ret += fs_enable_logging(do_enable);
   return ret;
@@ -277,6 +280,14 @@ int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position)
   return -1; // Not yet supported
 }
 
+int fs_set_device_name(fs_device_info_t *device_handle, const char name[32])
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%s;", CMD_SET_DEV_NAME, name);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
 int fs_set_communication_mode(fs_device_info_t *device_handle, int modes)
 {
   char send_buf[FS_MAX_CMD_LENGTH];
@@ -290,11 +301,11 @@ int fs_set_network_parameters(fs_device_info_t *device_handle, const char ssid[3
   char send_buf[2 * FS_MAX_CMD_LENGTH];
   if (access_point)
   {
-    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s", CMD_SET_SSID_AP, ssid, CMD_SET_PASSWORD_AP, pw);
+    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s;", CMD_SET_SSID_AP, ssid, CMD_SET_PASSWORD_AP, pw);
   }
   else
   {
-    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, pw);
+    snprintf(send_buf, 2 * FS_MAX_CMD_LENGTH, ";%c%s;%c%s;", CMD_SET_SSID, ssid, CMD_SET_PASSWORD, pw);
   }
   size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
   return fs_send_command(device_handle, send_buf, send_len);
@@ -356,4 +367,15 @@ int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descrip
   }
   memcpy(desc, &device_handle->device_descriptor, sizeof(device_handle->device_descriptor));
   return 0;
+}
+
+int fs_factory_reset(fs_device_info_t *device_handle)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d;", CMD_CLEAR_CONFIG, 0);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  int ret = fs_send_command(device_handle, send_buf, send_len);
+  if (ret == -1)
+    return ret;
+  return fs_reboot_device(device_handle);
 }

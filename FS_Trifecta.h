@@ -87,7 +87,8 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_read_one_shot(fs_device_info_t *device_handle);
 
-    /// @brief Trigger a device restart. Usually, there are not many situations where you would need to call this.
+    /// @brief Trigger a device restart. Afterwards, you must re-scan for the device.
+    /// This function internally calls fs_closedown() to shut down the device handle.
     /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_reboot_device(fs_device_info_t *device_handle);
@@ -169,8 +170,8 @@ extern "C"
 
     /// @section Device configuration methods
     
-    /// @brief Manually set the AHRS yaw angle. Coupled with fs_set_ins_position(), it is possible to perform INS alignment.
-    /// However, this procedure is usually performed automatically when connected with a compatible GNSS.
+    /// @brief Manually set the AHRS yaw angle to a known value. Non-volatile.
+    /// NOTE: However, this procedure is usually performed automatically when connected with a compatible GNSS.
     /// @param device_handle Device handle
     /// @param heading_deg The desired angle.
     /// @return 0 on success.
@@ -183,29 +184,35 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position);
 
-    /// @brief Set all enabled communication modes of the device.
+    /// @brief Sets the device name. Note that changes are applied on restart.
+    /// @param device_handle 
+    /// @param name 
+    /// @return 
+    FS_API int fs_set_device_name(fs_device_info_t *device_handle, const char name[32]);
+
+    /// @brief Set all enabled communication modes of the device. Note that changes are applied on restart.
     /// @param device_handle Device handle
     /// @param modes The device operating modes, should be an OR flag of fs_communication_mode_t
     /// @return 0 on success.
     FS_API int fs_set_communication_mode(fs_device_info_t *device_handle, int modes);
 
-    /// @brief 
+    /// @brief Set the network SSID/PW of the device. Note that changes are applied on restart.
     /// @param device_handle 
     /// @param ssid 
     /// @param pw 
-    /// @param access_point 
+    /// @param access_point TRUE to set for AP mode, FALSE to set for STA mode.
     /// @return 0 on success. 
     FS_API int fs_set_network_parameters(fs_device_info_t *device_handle, const char ssid[32], const char pw[64], bool access_point);
 
-    /// @brief Device UDP port is typically controlled in the backend, but can be changed if necessary.
+    /// @brief Device UDP port is typically controlled in the backend, but can be changed if necessary. Non-volatile.
     /// @param device_handle Device handle (Wi-Fi mode should be enabled)
     /// @param port Between 1024-65535
     /// @return 0 on success.
     FS_API int fs_set_network_udp_port(fs_device_info_t *device_handle, int port);
 
-    /// @brief 
+    /// @brief Set baudrate of UART interface. Non-volatile, so it must be applied after every restart.
     /// @param device_handle 
-    /// @param baudrate 
+    /// @param baudrate Allowed range: 921,600 - 3,000,000. Exceeding these limits may cause lag or instability.
     /// @return 0 on success. 
     FS_API int fs_set_serial_uart_baudrate(fs_device_info_t *device_handle, int baudrate);
 
@@ -218,7 +225,7 @@ extern "C"
     /// @brief 
     /// @param device_handle 
     /// @param desc 
-    /// @return 
+    /// @return 0 on success.
     FS_API int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descriptor_t *desc);
 
     /// @section Debug utilities - This should typically not be used at all.
@@ -226,10 +233,14 @@ extern "C"
     /// @brief Toggle logging (logging is disabled by default because it is a severe latency penalty).
     /// You should never enable it unless debugging some issue.
     /// @param do_enable TRUE to turn logging on.
-    /// @return
+    /// @return 0 on success.
     FS_API int fs_enable_logging(bool do_enable);
     FS_API int fs_enable_logging_at_path(const char *path, bool do_enable);
-    
+
+    /// @brief Danger! Factory reset clears all user configurations. Use only when needed.
+    /// @param device_handle 
+    /// @return 0 on success.
+    FS_API int fs_factory_reset(fs_device_info_t *device_handle);
 
 #ifdef __cplusplus
 }
