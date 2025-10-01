@@ -9,7 +9,6 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "FS_Trifecta_Defs.h"
 #include "FS_Trifecta_Device.h"
 #include "FS_Trifecta_Device_Utils.h"
 
@@ -77,7 +76,7 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
     while (FS_RINGBUFFER_POP(&device_handle->command_queue, FS_MAX_CMD_QUEUE_LENGTH, &cmd))
     {
         size_t command_length = fs_safe_strnlen((char *)cmd.payload, FS_MAX_CMD_LENGTH);
-        fs_log_output("[Trifecta] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
+        fs_log_output("[Trifecta-Device] Command (len %ld): %c Params: %s", command_length, cmd.payload[0], cmd.payload + 1);
         const char cmd_char = cmd.payload[0];
         const char *params = (char *)&cmd.payload[1];
         switch (cmd_char)
@@ -94,53 +93,53 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
             if (baud > 0)
             {
                 device_handle->device_params.baudrate = baud;
-                fs_log_output("[Trifecta] Baudrate set to: %d", baud);
+                fs_log_output("[Trifecta-Device] Baudrate set to: %d", baud);
             }
             else
             {
-                fs_log_output("[Trifecta] Invalid baudrate: %s", params);
+                fs_log_output("[Trifecta-Device] Invalid baudrate: %s", params);
             }
         }
         break;
         case CMD_IDENTIFY_PARAM_SSID:
             fs_safe_strncpy(device_handle->device_params.ssid, params, sizeof(device_handle->device_params.ssid) - 1);
             device_handle->device_params.ssid[sizeof(device_handle->device_params.ssid) - 1] = '\0';
-            fs_log_output("[Trifecta] STA SSID set to: %s", device_handle->device_params.ssid);
+            fs_log_output("[Trifecta-Device] STA SSID set to: %s", device_handle->device_params.ssid);
             break;
         case CMD_IDENTIFY_PARAM_SSID_AP:
             fs_safe_strncpy(device_handle->device_params.ssid_ap, params, sizeof(device_handle->device_params.ssid_ap) - 1);
             device_handle->device_params.ssid_ap[sizeof(device_handle->device_params.ssid_ap) - 1] = '\0';
-            fs_log_output("[Trifecta] AP SSID set to: %s", device_handle->device_params.ssid_ap);
+            fs_log_output("[Trifecta-Device] AP SSID set to: %s", device_handle->device_params.ssid_ap);
             break;
         case CMD_IDENTIFY_PARAM_PASSWORD_AP:
             fs_safe_strncpy(device_handle->device_params.pw_ap, params, sizeof(device_handle->device_params.pw_ap) - 1);
             device_handle->device_params.pw_ap[sizeof(device_handle->device_params.pw_ap) - 1] = '\0';
-            fs_log_output("[Trifecta] AP Password updated.");
+            fs_log_output("[Trifecta-Device] AP Password updated.");
             break;
         case CMD_IDENTIFY_PARAM_TRANSMIT:
             int mode = atoi(params);
-            device_handle->communication_mode = (fs_communication_mode_t)mode;
-            fs_log_output("[Trifecta] Comm mode set to: %d", mode);
+            device_handle->device_params.all_enabled_interfaces = (fs_communication_mode_t)mode;
+            fs_log_output("[Trifecta-Device] Comm mode set to: %d", mode);
             break;
         case CMD_IDENTIFY_PARAM_DEV_SN:
             fs_safe_strncpy(device_handle->device_descriptor.device_sn, params, sizeof(device_handle->device_descriptor.device_sn) - 1);
             device_handle->device_descriptor.device_sn[sizeof(device_handle->device_descriptor.device_sn) - 1] = '\0';
-            fs_log_output("[Trifecta] Serial Number set to: %s", device_handle->device_descriptor.device_sn);
+            fs_log_output("[Trifecta-Device] Serial Number set to: %s", device_handle->device_descriptor.device_sn);
             break;
         case CMD_IDENTIFY_PARAM_DEVMODEL:
             fs_safe_strncpy(device_handle->device_descriptor.device_model, params, sizeof(device_handle->device_descriptor.device_model) - 1);
             device_handle->device_descriptor.device_model[sizeof(device_handle->device_descriptor.device_model) - 1] = '\0';
-            fs_log_output("[Trifecta] Device Model set to: %s", device_handle->device_descriptor.device_model);
+            fs_log_output("[Trifecta-Device] Device Model set to: %s", device_handle->device_descriptor.device_model);
             break;
         case CMD_IDENTIFY_PARAM_DEVFWVERSION:
             fs_safe_strncpy(device_handle->device_descriptor.device_fw, params, sizeof(device_handle->device_descriptor.device_fw) - 1);
             device_handle->device_descriptor.device_fw[sizeof(device_handle->device_descriptor.device_fw) - 1] = '\0';
-            fs_log_output("[Trifecta] Firmware Version set to: %s", device_handle->device_descriptor.device_fw);
+            fs_log_output("[Trifecta-Device] Firmware Version set to: %s", device_handle->device_descriptor.device_fw);
             break;
         case CMD_IDENTIFY_PARAM_DEVDESC:
             fs_safe_strncpy(device_handle->device_descriptor.device_desc, params, sizeof(device_handle->device_descriptor.device_desc) - 1);
             device_handle->device_descriptor.device_desc[sizeof(device_handle->device_descriptor.device_desc) - 1] = '\0';
-            fs_log_output("[Trifecta] Device Description set to: %s", device_handle->device_descriptor.device_desc);
+            fs_log_output("[Trifecta-Device] Device Description set to: %s", device_handle->device_descriptor.device_desc);
             break;
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
@@ -150,7 +149,7 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
 
 int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
 {
-    fs_log_output("[Trifecta] RX: Pushing %zu bytes into circular buffer", rx_len);
+    fs_log_output("[Trifecta-Device] RX: Pushing %zu bytes into circular buffer", rx_len);
     fs_cb_push(&device_handle->data_buffer, (const uint8_t *)rx_buf, rx_len);
 
     uint8_t temp[FS_MAX_DATA_LENGTH];
@@ -159,15 +158,15 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
         size_t peeked = fs_cb_peek(&device_handle->data_buffer, temp, sizeof(temp));
         if (peeked == 0)
         {
-            fs_log_output("[Trifecta] Buffer empty after peek, exiting loop");
+            fs_log_output("[Trifecta-Device] Buffer empty after peek, exiting loop");
             break;
         }
 
-        fs_log_output("[Trifecta] Peeked %zu bytes from buffer", peeked);
-        fs_log_output("[Trifecta] Peeked data: %.*s", (int)peeked, temp);
+        fs_log_output("[Trifecta-Device] Peeked %zu bytes from buffer", peeked);
+        fs_log_output("[Trifecta-Device] Peeked data: %.*s", (int)peeked, temp);
 
         fs_delimiter_indices_t indices = fs_scan_delimiters(temp, peeked);
-        fs_log_output("[Trifecta] Delimiter scan: colon=%d, binary=%d, exclam=%d, semicolon=%d",
+        fs_log_output("[Trifecta-Device] Delimiter scan: colon=%d, binary=%d, exclam=%d, semicolon=%d",
                       indices.colon_index, indices.binary_index, indices.exclam_index, indices.semicolon_index);
         if (indices.binary_index != -1 && indices.exclam_index > indices.binary_index)
         {
@@ -175,11 +174,11 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
             size_t packet_start = indices.binary_index + 1;
             size_t packet_len = indices.exclam_index - packet_start - 1;
 
-            fs_log_output("[Trifecta] Detected Binary packet framing from %d to %d (length %zu)",
+            fs_log_output("[Trifecta-Device] Detected Binary packet framing from %d to %d (length %zu)",
                           indices.binary_index, indices.exclam_index, packet_len);
 
             if (segment_packets(device_handle, &temp[packet_start], packet_len) <= 0)
-                fs_log_output("[Trifecta] Failed to segment binary packet");
+                fs_log_output("[Trifecta-Device] Failed to segment binary packet");
 
             fs_cb_pop(&device_handle->data_buffer, NULL, indices.exclam_index + 1);
         }
@@ -190,14 +189,14 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
             size_t payload_start = indices.colon_index + 1;
             size_t payload_len = indices.exclam_index - payload_start;
 
-            fs_log_output("[Trifecta] Detected Base64 packet framing from %d to %d (payload length %zu)",
+            fs_log_output("[Trifecta-Device] Detected Base64 packet framing from %d to %d (payload length %zu)",
                           indices.colon_index, indices.exclam_index, payload_len);
 
-            fs_log_output("[Trifecta] Attempting to decode Base64 payload: %.*s",
+            fs_log_output("[Trifecta-Device] Attempting to decode Base64 payload: %.*s",
                           (int)payload_len, &temp[payload_start]);
 
             if (base64_to_packet(device_handle, (char *)&temp[payload_start], payload_len) != 0)
-                fs_log_output("[Trifecta] Failed to decode Base64 packet");
+                fs_log_output("[Trifecta-Device] Failed to decode Base64 packet");
 
             size_t packet_len = indices.exclam_index + 1;
             fs_cb_pop(&device_handle->data_buffer, NULL, packet_len);
@@ -207,17 +206,17 @@ int fs_device_process_packets_serial(fs_device_info_t *device_handle, const void
         {
             // Command segment
             size_t cmd_len = indices.semicolon_index + 1;
-            fs_log_output("[Trifecta] Detected command ending at index %d (length %zu)",
+            fs_log_output("[Trifecta-Device] Detected command ending at index %d (length %zu)",
                           indices.semicolon_index, cmd_len);
 
             if (fs_handle_received_commands(device_handle, temp, peeked) != 0)
-                fs_log_output("[Trifecta] Failed to parse commands");
+                fs_log_output("[Trifecta-Device] Failed to parse commands");
 
             fs_cb_pop(&device_handle->data_buffer, NULL, cmd_len);
         }
         else
         {
-            fs_log_output("[Trifecta] No complete segment found ... waiting for more data");
+            fs_log_output("[Trifecta-Device] No complete segment found ... waiting for more data");
             return -1;
         }
     }
@@ -247,10 +246,10 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
         int packets = segment_packets(device_handle, rx_buf, rx_len);
         if (packets < 0)
         {
-            fs_log_output("[Trifecta] Error parsing packets!");
+            fs_log_output("[Trifecta-Device] Error parsing packets!");
             return -1;
         }
-        fs_log_output("[Trifecta] Successfully processed packets (network format)!");
+        fs_log_output("[Trifecta-Device] Successfully processed packets (network format)!");
     }
     break;
     // UART and CDC modes all transfer Base64-encoded packets.
@@ -259,19 +258,19 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
     {
         if (fs_device_process_packets_serial(device_handle, rx_buf, rx_len) != 0)
         {
-            fs_log_output("[Trifecta] Error parsing packets!");
+            fs_log_output("[Trifecta-Device] Error parsing packets!");
             return -1;
         }
-        fs_log_output("[Trifecta] Successfully processed packets!");
+        fs_log_output("[Trifecta-Device] Successfully processed packets!");
     }
     break;
     // BLE/CAN driver support will be added in the future, for platforms which support them.
     case FS_COMMUNICATION_MODE_BLE:
     case FS_COMMUNICATION_MODE_CAN:
-        fs_log_output("[Trifecta] These modes are not yet supported!");
+        fs_log_output("[Trifecta-Device] These modes are not yet supported!");
         return -1;
     default:
-        fs_log_output("[Trifecta] Unknown packet source!");
+        fs_log_output("[Trifecta-Device] Unknown packet source!");
         return -1;
     }
     return 0;
