@@ -5,7 +5,7 @@ project(DriverTrifectaWindows C)
 set(DriverTrifectaWindows_VERSION_MAJOR 1)
 set(DriverTrifectaWindows_VERSION_MINOR 0)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Build as a shared library (.dll)
