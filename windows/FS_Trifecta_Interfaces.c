@@ -34,14 +34,15 @@
 #pragma comment(lib, "ws2_32.lib")
 #define FS_TRIFECTA_SERIAL_BAUDRATE_WINDOWS 2000000
 
-int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
+int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
+static FILE *log_file_ptr = NULL;
 
 /// @brief Helper to set device serial field from Windows-specific HANDLE
 /// @param dev Device pointer
 /// @param h HANDLE (Windows fd-like equivalent)
 static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 {
-    dev->device_params.serial_port = (int)(intptr_t)h;
+    dev->device_params.serial_port = (fs_serial_handle_t)h;
 }
 
 /// @brief Helper to get Windows serial handle from device
@@ -49,7 +50,7 @@ static inline void fs_set_serial_handle(fs_device_info_t *dev, HANDLE h)
 /// @return HANDLE (Windows fd-like equivalent)
 static inline HANDLE fs_get_serial_handle(const fs_device_info_t *dev)
 {
-    return (HANDLE)(intptr_t)(dev->device_params.serial_port);
+    return (HANDLE)(dev->device_params.serial_port);
 }
 
 /// @brief Whether interrupt-driven UART etc. is supported by the platform.
@@ -78,7 +79,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
-        fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
+        fs_log_output("[Trifecta-Interface] Error: Invalid device handle or IP address!\n");
         return -1;
     }
 
@@ -87,7 +88,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     int wsa_result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (wsa_result != 0)
     {
-        fs_log_output("[Trifecta] Error: WSAStartup failed with code %d\n", wsa_result);
+        fs_log_output("[Trifecta-Interface] Error: WSAStartup failed with code %d\n", wsa_result);
         return -1;
     }
 
@@ -96,10 +97,9 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(device_handle->device_params.tcp_port);
-
     if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
-        fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
+        fs_log_output("[Trifecta-Interface] Error: Invalid IP address format! IP address was: %s\n", device_handle->device_params.ip_addr);
         WSACleanup();
         return -1;
     }
@@ -108,7 +108,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     SOCKET sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Could not create TCP socket! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not create TCP socket! Code: %d\n", WSAGetLastError());
         WSACleanup();
         return -1;
     }
@@ -116,7 +116,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
     // Connect to the device
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not connect to device! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not connect to device! Code: %d\n", WSAGetLastError());
         closesocket(sockfd);
         WSACleanup();
         return -1;
@@ -133,7 +133,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->device_params.ip_addr[0] == '\0')
     {
-        fs_log_output("[Trifecta] Error: Invalid device handle or IP address!\n");
+        fs_log_output("[Trifecta-Interface] Error: Invalid device handle or IP address!\n");
         return -1;
     }
 
@@ -149,7 +149,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     int wsa_result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (wsa_result != 0)
     {
-        fs_log_output("[Trifecta] Error: WSAStartup failed with code %d\n", wsa_result);
+        fs_log_output("[Trifecta-Interface] Error: WSAStartup failed with code %d\n", wsa_result);
         return -1;
     }
 
@@ -160,7 +160,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     server_addr.sin_port = htons(device_handle->device_params.udp_port);
     if (inet_pton(AF_INET, device_handle->device_params.ip_addr, &server_addr.sin_addr) <= 0)
     {
-        fs_log_output("[Trifecta] Error: Invalid IP address format!\n");
+        fs_log_output("[Trifecta-Interface] Error: Invalid IP address format!\n");
         WSACleanup();
         return -1;
     }
@@ -169,7 +169,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sockfd == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Could not create UDP socket! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not create UDP socket! Code: %d\n", WSAGetLastError());
         WSACleanup();
         return -1;
     }
@@ -178,7 +178,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     BOOL reuse = TRUE;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: setsockopt SO_REUSEADDR failed! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: setsockopt SO_REUSEADDR failed! Code: %d\n", WSAGetLastError());
         closesocket(sockfd);
         WSACleanup();
         return -1;
@@ -189,11 +189,11 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
     local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    local_addr.sin_port = htons(FS_TRIFECTA_PORT);
+    local_addr.sin_port = htons(device_handle->device_params.udp_port);
 
     if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not bind UDP socket! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not bind UDP socket! Code: %d\n", WSAGetLastError());
         closesocket(sockfd);
         WSACleanup();
         return -1;
@@ -210,7 +210,7 @@ static int configure_serial_port(HANDLE hSerial)
 {
     if (hSerial == INVALID_HANDLE_VALUE)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial handle!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid serial handle!");
         return -1;
     }
 
@@ -219,7 +219,7 @@ static int configure_serial_port(HANDLE hSerial)
 
     if (!GetCommState(hSerial, &dcbSerialParams))
     {
-        fs_log_output("[Trifecta] Error: Failed to get serial port state: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to get serial port state: %lu", GetLastError());
         return -1;
     }
 
@@ -244,7 +244,7 @@ static int configure_serial_port(HANDLE hSerial)
 
     if (!SetCommState(hSerial, &dcbSerialParams))
     {
-        fs_log_output("[Trifecta] Error: Failed to set serial port state: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to set serial port state: %lu", GetLastError());
         return -1;
     }
 
@@ -257,7 +257,7 @@ static int configure_serial_port(HANDLE hSerial)
 
     if (!SetCommTimeouts(hSerial, &timeouts))
     {
-        fs_log_output("[Trifecta] Error: Failed to set serial timeouts: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to set serial timeouts: %lu", GetLastError());
         return -1;
     }
 
@@ -271,7 +271,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Device handle is NULL!");
         return -1;
     }
 
@@ -307,7 +307,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
             DWORD bytes_written;
             if (!WriteFile(hSerial, init_cmd, (DWORD)strlen(init_cmd), &bytes_written, NULL))
             {
-                fs_log_output("[Trifecta] Failed to write to %s", port_name);
+                fs_log_output("[Trifecta-Interface] Failed to write to %s", port_name);
                 CloseHandle(hSerial);
                 continue;
             }
@@ -333,8 +333,8 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
             CloseHandle(hSerial);
         }
 
-        fs_log_output("[Trifecta] No valid COM port found!");
-        return -1;
+        fs_log_output("[Trifecta-Interface] No valid COM port found!");
+        return -2;
     }
     else
     {
@@ -353,14 +353,14 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 
         if (hSerial == INVALID_HANDLE_VALUE)
         {
-            fs_log_output("[Trifecta] Failed to open serial port %s", port_name);
-            return -1;
+            fs_log_output("[Trifecta-Interface] Failed to open serial port %s", port_name);
+            return -3;
         }
 
         if (configure_serial_port(hSerial) != 0)
         {
             CloseHandle(hSerial);
-            return -1;
+            return -4;
         }
 
         fs_set_serial_handle(device_handle, hSerial);
@@ -381,7 +381,7 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
-        fs_log_output("[Trifecta] Error: Invalid thread function or running flag!\n");
+        fs_log_output("[Trifecta-Interface] Error: Invalid thread function or running flag!\n");
         return -1;
     }
 
@@ -398,7 +398,7 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 
     if (thread_handle == 0)
     {
-        fs_log_output("[Trifecta] Error: Thread creation failed: errno %d!\n", errno);
+        fs_log_output("[Trifecta-Interface] Error: Thread creation failed: errno %d!\n", errno);
         *thread_running_flag = FS_RUN_STATUS_ERROR;
         return -1;
     }
@@ -408,7 +408,7 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
     {
         if (!SetThreadPriority(thread_handle, priority))
         {
-            fs_log_output("[Trifecta] Warning: Failed to set thread priority: %lu\n", GetLastError());
+            fs_log_output("[Trifecta-Interface] Warning: Failed to set thread priority: %lu\n", GetLastError());
         }
     }
 
@@ -418,13 +418,13 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
         DWORD_PTR affinity_mask = 1ULL << core_affinity;
         if (SetThreadAffinityMask(thread_handle, affinity_mask) == 0)
         {
-            fs_log_output("[Trifecta] Warning: Failed to set thread affinity: %lu\n", GetLastError());
+            fs_log_output("[Trifecta-Interface] Warning: Failed to set thread affinity: %lu\n", GetLastError());
         }
     }
 
     CloseHandle(thread_handle); // Detach thread
 
-    fs_log_output("[Trifecta] Thread created successfully.\n");
+    fs_log_output("[Trifecta-Interface] Thread created successfully.\n");
     return 0;
 }
 
@@ -448,25 +448,25 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
     }
 
     if (device_handle->device_params.tcp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Invalid TCP socket!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid TCP socket!");
         return -1;
     }
 
     if (tx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Transmit buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Transmit buffer is NULL!");
         return -1;
     }
 
@@ -474,7 +474,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
     DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
     if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -482,7 +482,7 @@ ssize_t fs_transmit_networked_tcp(fs_device_info_t *device_handle, void *tx_buff
 
     if (written == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Sending data over TCP failed! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Sending data over TCP failed! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -499,25 +499,25 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
     }
 
     if (device_handle->device_params.udp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Invalid UDP socket!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid UDP socket!");
         return -1;
     }
 
     if (tx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Transmit buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Transmit buffer is NULL!");
         return -1;
     }
 
@@ -525,7 +525,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
     if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Could not set send timeout! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -533,7 +533,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
 
     if (written == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Sending data over UDP failed! Code: %d\n", WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Sending data over UDP failed! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -550,27 +550,27 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART &&
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
     HANDLE hSerial = fs_get_serial_handle(device_handle);
     if (hSerial == INVALID_HANDLE_VALUE || hSerial == NULL)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial handle!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid serial handle!");
         return -1;
     }
 
     if (tx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Transmit buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Transmit buffer is NULL!");
         return -1;
     }
 
@@ -578,7 +578,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
     COMMTIMEOUTS timeouts;
     if (!GetCommTimeouts(hSerial, &timeouts))
     {
-        fs_log_output("[Trifecta] Error: Failed to get serial timeouts: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to get serial timeouts: %lu", GetLastError());
         return -1;
     }
 
@@ -587,7 +587,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
 
     if (!SetCommTimeouts(hSerial, &timeouts))
     {
-        fs_log_output("[Trifecta] Error: Failed to set serial timeouts: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to set serial timeouts: %lu", GetLastError());
         return -1;
     }
 
@@ -595,11 +595,11 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
     BOOL result = WriteFile(hSerial, tx_buffer, (DWORD)length_bytes, &bytes_written, NULL);
     if (!result)
     {
-        fs_log_output("[Trifecta] Error: Writing data over serial failed: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Writing data over serial failed: %lu", GetLastError());
         return -1;
     }
 
-    fs_log_output("[Trifecta] Serial transmit to HANDLE %p - Length %lu", hSerial, bytes_written);
+    fs_log_output("[Trifecta-Interface] Serial transmit to HANDLE %p - Length %lu, Data: %s", hSerial, bytes_written, tx_buffer);
     return (ssize_t)bytes_written;
 }
 
@@ -613,41 +613,63 @@ ssize_t fs_receive_networked_tcp(fs_device_info_t *device_handle, void *rx_buffe
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
     }
 
     if (device_handle->device_params.tcp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Invalid TCP socket!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid TCP socket!");
         return -1;
     }
 
     if (rx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Receive buffer is NULL!");
         return -1;
     }
 
     // Set the receive timeout (in milliseconds for Windows)
     DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
-    if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+    DWORD current_timeout = 0;
+    int optlen = sizeof(current_timeout);
+
+    if (getsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                   (char *)&current_timeout, &optlen) == 0)
     {
-        fs_log_output("[Trifecta] Error: Could not set receive timeout (TCP)! Code: %d\n", WSAGetLastError());
-        return -1;
+        if (current_timeout != timeout_ms)
+        {
+            if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                           (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+            {
+                fs_log_output("[Trifecta-Interface] Error: Could not set receive timeout (TCP)! Code: %d\n", WSAGetLastError());
+                return -1;
+            }
+        }
+    }
+    else
+    {
+        fs_log_output("[Trifecta-Interface] Warning: Could not query current TCP timeout. Proceeding to set it.");
+        if (setsockopt(device_handle->device_params.tcp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                       (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+        {
+            fs_log_output("[Trifecta-Interface] Error: Could not set receive timeout (TCP)! Code: %d\n", WSAGetLastError());
+            return -1;
+        }
     }
 
     int recv_len = recv(device_handle->device_params.tcp_sock, (char *)rx_buffer, (int)length_bytes, 0);
 
     if (recv_len == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over TCP failed! Code: %d\n", WSAGetLastError());
+        if (WSAGetLastError() != WSAETIMEDOUT)
+            fs_log_output("[Trifecta-Interface] Error: Receiving data over TCP failed! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -664,41 +686,63 @@ ssize_t fs_receive_networked_udp(fs_device_info_t *device_handle, void *rx_buffe
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_TCP_UDP)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_TCP_UDP_AP)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_TCP_UDP.");
         return -1;
     }
 
     if (device_handle->device_params.udp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Error: Invalid UDP socket!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid UDP socket!");
         return -1;
     }
 
     if (rx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Receive buffer is NULL!");
         return -1;
     }
 
     // Set the receive timeout (in milliseconds for Windows)
     DWORD timeout_ms = (DWORD)(timeout_micros / 1000);
-    if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+    DWORD current_timeout = 0;
+    int optlen = sizeof(current_timeout);
+
+    if (getsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                   (char *)&current_timeout, &optlen) == 0)
     {
-        fs_log_output("[Trifecta] Error: Could not set receive timeout (UDP)! Code: %d\n", WSAGetLastError());
-        return -1;
+        if (current_timeout != timeout_ms)
+        {
+            if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                           (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+            {
+                fs_log_output("[Trifecta-Interface] Error: Could not set receive timeout (UDP)! Code: %d\n", WSAGetLastError());
+                return -1;
+            }
+        }
+    }
+    else
+    {
+        fs_log_output("[Trifecta-Interface] Warning: Could not query current timeout. Proceeding to set it.");
+        if (setsockopt(device_handle->device_params.udp_sock, SOL_SOCKET, SO_RCVTIMEO,
+                       (const char *)&timeout_ms, sizeof(timeout_ms)) == SOCKET_ERROR)
+        {
+            fs_log_output("[Trifecta-Interface] Error: Could not set receive timeout (UDP)! Code: %d\n", WSAGetLastError());
+            return -1;
+        }
     }
 
     int recv_len = recv(device_handle->device_params.udp_sock, (char *)rx_buffer, (int)length_bytes, 0);
 
     if (recv_len == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Error: Receiving data over UDP failed! Code: %d\n", WSAGetLastError());
+        if (WSAGetLastError() != WSAETIMEDOUT)
+            fs_log_output("[Trifecta-Interface] Error: Receiving data over UDP failed! Code: %d\n", WSAGetLastError());
         return -1;
     }
 
@@ -715,27 +759,27 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART &&
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
+        fs_log_output("[Trifecta-Interface] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
     HANDLE hSerial = fs_get_serial_handle(device_handle);
     if (hSerial == INVALID_HANDLE_VALUE || hSerial == NULL)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial handle!");
+        fs_log_output("[Trifecta-Interface] Error: Invalid serial handle!");
         return -1;
     }
 
     if (rx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
+        fs_log_output("[Trifecta-Interface] Error: Receive buffer is NULL!");
         return -1;
     }
 
@@ -743,7 +787,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     COMMTIMEOUTS timeouts;
     if (!GetCommTimeouts(hSerial, &timeouts))
     {
-        fs_log_output("[Trifecta] Error: Failed to get serial timeouts: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to get serial timeouts: %lu", GetLastError());
         return -1;
     }
 
@@ -753,7 +797,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 
     if (!SetCommTimeouts(hSerial, &timeouts))
     {
-        fs_log_output("[Trifecta] Error: Failed to set serial timeouts: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Failed to set serial timeouts: %lu", GetLastError());
         return -1;
     }
 
@@ -761,13 +805,13 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     BOOL result = ReadFile(hSerial, rx_buffer, (DWORD)length_bytes, &bytes_read, NULL);
     if (!result)
     {
-        fs_log_output("[Trifecta] Error: Reading data over serial failed: %lu", GetLastError());
+        fs_log_output("[Trifecta-Interface] Error: Reading data over serial failed: %lu", GetLastError());
         return -1;
     }
 
     if (bytes_read > 0)
     {
-        fs_log_output("[Trifecta] Read data from HANDLE %p - length %lu", hSerial, bytes_read);
+        fs_log_output("[Trifecta-Interface] Read data from HANDLE %p - length %lu", hSerial, bytes_read);
     }
 
     return (ssize_t)bytes_read;
@@ -780,13 +824,13 @@ int fs_shutdown_network_tcp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->device_params.tcp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Warning: Invalid device handle or TCP socket!");
+        fs_log_output("[Trifecta-Interface] Warning: Invalid device handle or TCP socket!");
         return -1;
     }
 
     if (closesocket(device_handle->device_params.tcp_sock) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close TCP socket (socket: %d)! Code: %d", (int)device_handle->device_params.tcp_sock, WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Warning: Failed to close TCP socket (socket: %d)! Code: %d", (int)device_handle->device_params.tcp_sock, WSAGetLastError());
         device_handle->device_params.tcp_sock = INVALID_SOCKET;
         return -1;
     }
@@ -802,13 +846,13 @@ int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL || device_handle->device_params.udp_sock == INVALID_SOCKET)
     {
-        fs_log_output("[Trifecta] Warning: Invalid device handle or UDP socket!");
+        fs_log_output("[Trifecta-Interface] Warning: Invalid device handle or UDP socket!");
         return -1;
     }
 
     if (closesocket(device_handle->device_params.udp_sock) == SOCKET_ERROR)
     {
-        fs_log_output("[Trifecta] Warning: Failed to close UDP socket (socket: %d)! Code: %d", (int)device_handle->device_params.udp_sock, WSAGetLastError());
+        fs_log_output("[Trifecta-Interface] Warning: Failed to close UDP socket (socket: %d)! Code: %d", (int)device_handle->device_params.udp_sock, WSAGetLastError());
         device_handle->device_params.udp_sock = INVALID_SOCKET;
         return -1;
     }
@@ -824,21 +868,21 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Warning: Device handle is NULL!");
+        fs_log_output("[Trifecta-Interface] Warning: Device handle is NULL!");
         return -1;
     }
 
     HANDLE hSerial = fs_get_serial_handle(device_handle);
     if (hSerial == NULL || hSerial == INVALID_HANDLE_VALUE)
     {
-        fs_log_output("[Trifecta] Warning: Invalid serial handle!");
+        fs_log_output("[Trifecta-Interface] Warning: Invalid serial handle!");
         device_handle->device_params.serial_port = -1;
         return -1;
     }
 
     if (!CloseHandle(hSerial))
     {
-        fs_log_output("[Trifecta] Warning: Failed to close serial handle %p! Error: %lu", hSerial, GetLastError());
+        fs_log_output("[Trifecta-Interface] Warning: Failed to close serial handle %p! Error: %lu", hSerial, GetLastError());
         device_handle->device_params.serial_port = -1;
         return -1;
     }
@@ -883,6 +927,30 @@ int fs_toggle_logging(bool do_log)
 {
     fs_logging_level = do_log ? 1 : 0;
     return fs_logging_level;
+}
+
+/// @brief Redirect logs to the indicated path.
+/// Only some platforms support this. (E.g. a filesystem needed.)
+/// @param context The path to store logs into.
+/// @return 0 on success, or a negative error code on failure.
+int fs_set_log_location(const char *path)
+{
+    if (!log_file_ptr && strnlen(path, 256) > 0 && strnlen(path, 256) <= 255)
+    {
+        log_file_ptr = freopen(path, "w", stdout);
+        if (!log_file_ptr)
+        {
+            fs_log_output("[Trifecta-Interface] Failed to redirect stdout");
+            return -1;
+        }
+    }
+    else if (log_file_ptr)
+    {
+        fclose(log_file_ptr);
+        log_file_ptr = NULL;
+        // TODO: Maybe restore stdout to console if needed (platform-specific)
+    }
+    return 0;
 }
 
 /// @brief Delay by at least this amount of time
