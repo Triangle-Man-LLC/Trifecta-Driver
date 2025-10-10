@@ -275,97 +275,33 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    if (device_handle->device_params.serial_port == -1)
+    // Use specified COM port
+    TCHAR port_name[16];
+    snprintf(port_name, sizeof(port_name), "\\\\.\\COM%d", (int)device_handle->device_params.serial_port);
+
+    HANDLE hSerial = CreateFileA(
+        port_name,
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL);
+
+    if (hSerial == INVALID_HANDLE_VALUE)
     {
-        // Scan COM1 to COM32
-        for (int i = 1; i <= 32; ++i)
-        {
-            TCHAR port_name[16];
-            snprintf(port_name, sizeof(port_name), "\\\\.\\COM%d", i);
-
-            HANDLE hSerial = CreateFileA(
-                port_name,
-                GENERIC_READ | GENERIC_WRITE,
-                0,
-                NULL,
-                OPEN_EXISTING,
-                0,
-                NULL);
-
-            if (hSerial == INVALID_HANDLE_VALUE)
-            {
-                continue;
-            }
-
-            if (configure_serial_port(hSerial) != 0)
-            {
-                CloseHandle(hSerial);
-                continue;
-            }
-
-            const char *init_cmd = "I0;";
-            DWORD bytes_written;
-            if (!WriteFile(hSerial, init_cmd, (DWORD)strlen(init_cmd), &bytes_written, NULL))
-            {
-                fs_log_output("[Trifecta-Interface] Failed to write to %s", port_name);
-                CloseHandle(hSerial);
-                continue;
-            }
-
-            Sleep(25); // 25 ms delay
-
-            char response[20] = {0};
-            DWORD bytes_read;
-            if (ReadFile(hSerial, response, sizeof(response) - 1, &bytes_read, NULL) && bytes_read > 0 && response[0] == 'I')
-            {
-                response[bytes_read] = '\0';
-                char *end_char = strchr(response, ';');
-                if (end_char)
-                {
-                    *end_char = '\0';
-                    fs_safe_strncpy(device_handle->device_descriptor.device_name, response + 1, sizeof(device_handle->device_descriptor.device_name) - 1);
-                    device_handle->device_descriptor.device_name[sizeof(device_handle->device_descriptor.device_name) - 1] = '\0';
-                    fs_set_serial_handle(device_handle, hSerial);
-                    return 0;
-                }
-            }
-
-            CloseHandle(hSerial);
-        }
-
-        fs_log_output("[Trifecta-Interface] No valid COM port found!");
-        return -2;
-    }
-    else
-    {
-        // Use specified COM port
-        TCHAR port_name[16];
-        snprintf(port_name, sizeof(port_name), "\\\\.\\COM%d", (int)device_handle->device_params.serial_port);
-
-        HANDLE hSerial = CreateFileA(
-            port_name,
-            GENERIC_READ | GENERIC_WRITE,
-            0,
-            NULL,
-            OPEN_EXISTING,
-            0,
-            NULL);
-
-        if (hSerial == INVALID_HANDLE_VALUE)
-        {
-            fs_log_output("[Trifecta-Interface] Failed to open serial port %s", port_name);
-            return -3;
-        }
-
-        if (configure_serial_port(hSerial) != 0)
-        {
-            CloseHandle(hSerial);
-            return -4;
-        }
-
-        fs_set_serial_handle(device_handle, hSerial);
+        fs_log_output("[Trifecta-Interface] Failed to open serial port %s", port_name);
+        return -3;
     }
 
+    if (configure_serial_port(hSerial) != 0)
+    {
+        CloseHandle(hSerial);
+        return -4;
+    }
+
+    fs_set_serial_handle(device_handle, hSerial);
+    
     return 0;
 }
 
