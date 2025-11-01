@@ -11,14 +11,25 @@ set(DriverTrifectaLinux_VERSION_MINOR 0)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
+# Option to build shared library
+option(SHAREDLIB "Build DriverTrifectaLinux as a shared library" OFF)
+
+# Set library type based on option
+set(LIB_TYPE STATIC)
+if(SHAREDLIB)
+    set(LIB_TYPE SHARED)
+endif()
+
 # Add the library
-add_library(DriverTrifectaLinux
+add_library(DriverTrifectaLinux ${LIB_TYPE}
     common/FS_Trifecta.c
     common/FS_Trifecta_Device.c
     common/FS_Trifecta_Device_Utils.c
     common/FS_Trifecta_Serial.c
     common/FS_Trifecta_Networked.c
     linux/FS_Trifecta_Interfaces.c
+    linux/FS_Trifecta_Interfaces_Serial.c
+    linux/FS_Trifecta_Interfaces_Networked.c
 )
 
 # Include directories
