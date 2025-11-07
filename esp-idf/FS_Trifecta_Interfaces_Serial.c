@@ -251,12 +251,13 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_UART)
     {
-        if (uart_driver_delete(device_handle->device_params.serial_port) != 0)
-        {
-            fs_log_output("[Trifecta] Warning: Failed to delete UART driver (serial port: %d)!", device_handle->device_params.serial_port);
-            device_handle->device_params.serial_port = -1;
-            return -1;
-        }
+        // Edit: On ESP32 platforms, the serial driver is externally managed, do not close manually.
+        // if (uart_driver_delete(device_handle->device_params.serial_port) != 0)
+        // {
+        //     fs_log_output("[Trifecta] Warning: Failed to delete UART driver (serial port: %d)!", device_handle->device_params.serial_port);
+        //     device_handle->device_params.serial_port = -1;
+        //     return -1;
+        // }
     }
     else if (device_handle->device_params.communication_mode == FS_COMMUNICATION_MODE_USB_CDC)
     {
