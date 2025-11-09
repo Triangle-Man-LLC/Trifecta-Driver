@@ -34,12 +34,6 @@ int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *th
         return -1;
     }
 
-    else if (thread_running_flag != NULL && *thread_running_flag == FS_RUN_STATUS_RUNNING)
-    {
-        fs_log_output("[Trifecta] Warning: Thread start aborted, thread was already running!\n");
-        return 0; // Thread already running
-    }
-
     TaskHandle_t task_handle = NULL;
     BaseType_t result;
 
