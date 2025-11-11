@@ -47,11 +47,6 @@
 #include "FS_Trifecta_Interfaces.h"
 
 #define ssize_t ptrdiff_t
-inline size_t strnlen(const char *s, size_t maxlen)
-{
-    const char *end = (const char *)memchr(s, '\0', maxlen);
-    return end ? (size_t)(end - s) : maxlen;
-}
 
 // Platform-specific: Functions for initializing communication drivers on target platform
 
@@ -82,7 +77,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     // On FreeRTOS/microcontroller systems, the serial port is usually a fixed number, so port scanning will not be done
     // Only check to ensure that the serial port was previously set up
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Serial port number cannot be less than zero!");
         return -1;
@@ -146,7 +141,8 @@ int fs_thread_start(void(thread_func)(void *), void *params, bool *thread_runnin
 /// @return Should always return 0...
 int fs_thread_exit()
 {
-    vTaskDelete(NULL);
+    osThreadId_t tid = osThreadGetId();
+    osThreadTerminate(tid);
     return 0;
 }
 
@@ -188,16 +184,16 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -210,7 +206,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
     }
 
     // TODO: Add support for USB-CDC/SPI/I2C
-    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->serial_port;
+    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->device_params.serial_port;
     HAL_StatusTypeDef status = HAL_UART_Transmit(huart, (uint8_t *)tx_buffer, length_bytes, timeout_micros / 1000);
 
     if (status != HAL_OK)
@@ -262,15 +258,15 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    if (device_handle->communication_mode != FS_COMMUNICATION_MODE_UART ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_USB_CDC ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_I2C ||
-        device_handle->communication_mode != FS_COMMUNICATION_MODE_SPI)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART ||
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC ||
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C ||
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -282,8 +278,8 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         return -1;
     }
 
-    // Assuming 'device_handle->serial_port' holds the UART handle (e.g., &huart1 for UART1)
-    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->serial_port;
+    // Assuming 'device_handle->device_params.serial_port' holds the UART handle (e.g., &huart1 for UART1)
+    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->device_params.serial_port;
 
     // Receive data over UART
     HAL_StatusTypeDef status = HAL_UART_Receive(huart, (uint8_t *)rx_buffer, length_bytes, timeout_micros / 1000);
@@ -330,24 +326,24 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    if (device_handle->serial_port < 0)
+    if (device_handle->device_params.serial_port < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
     }
 
-    // Assuming 'device_handle->serial_port' holds the UART handle (e.g., &huart1 for UART1)
-    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->serial_port;
+    // Assuming 'device_handle->device_params.serial_port' holds the UART handle (e.g., &huart1 for UART1)
+    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)device_handle->device_params.serial_port;
 
     // Deinitialize the UART
     if (HAL_UART_DeInit(huart) != HAL_OK)
     {
         fs_log_output("[Trifecta] Warning: Failed to deinitialize UART driver (serial port: %d)!", (int)huart->Instance);
-        device_handle->serial_port = -1;
+        device_handle->device_params.serial_port = -1;
         return -1;
     }
 
-    device_handle->serial_port = -1;
+    device_handle->device_params.serial_port = -1;
     return 0;
 }
 
@@ -359,24 +355,66 @@ int fs_log_output(const char *format, ...)
 {
     int chars_printed = 0;
 
-    if (fs_logging_level > 0)
+    if (fs_logging_level <= 0)
     {
-        va_list args;
-        va_start(args, format);
-
-        // Print formatted string
-        chars_printed = vprintf(format, args);
-
-        // Check if the last character is a newline
-        if (format[chars_printed - 1] != '\n')
-        {
-            printf("\n");
-            chars_printed++;
-        }
-
-        va_end(args);
+        return 0;
     }
 
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0) {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0) {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n') {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
+    return chars_printed;
+}
+
+int fs_log_critical(const char *format, ...)
+{
+    int chars_printed = 0;
+
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0) {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0) {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n') {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
     return chars_printed;
 }
 
