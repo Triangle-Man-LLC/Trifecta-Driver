@@ -364,6 +364,23 @@ int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descrip
   if (device_handle == NULL || desc == NULL)
   {
     return -1;
+  }  
+  char send_buf[FS_MAX_DATA_LENGTH] = {0};
+  snprintf(send_buf, sizeof(send_buf),
+           ";%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;",
+           CMD_IDENTIFY,
+           CMD_IDENTIFY_PARAM_DEVFWVERSION,
+           CMD_IDENTIFY_PARAM_DEVDESC,
+           CMD_IDENTIFY_PARAM_DEV_SN,
+           CMD_IDENTIFY_PARAM_TRANSMIT,
+           CMD_IDENTIFY_PARAM_SSID,
+           CMD_IDENTIFY_PARAM_SSID_AP,
+           CMD_IDENTIFY_PARAM_PASSWORD_AP,
+           CMD_IDENTIFY_PARAM_UART_BAUD_RATE);
+  ssize_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  if (fs_send_command(device_handle, send_buf, send_len) < 0)
+  {
+    return -1;
   }
   memcpy(desc, &device_handle->device_descriptor, sizeof(device_handle->device_descriptor));
   return 0;
