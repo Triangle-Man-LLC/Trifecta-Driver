@@ -31,6 +31,10 @@ foreach(TEST_FILE ${TEST_SOURCES})
 
     add_executable(${TEST_NAME} ${TEST_FILE} ${COMMON_SOURCES})
     target_link_libraries(${TEST_NAME} m)  # Link against libm
+    
+    # Enable AddressSanitizer
+    target_compile_options(${TEST_NAME} PRIVATE -fsanitize=address,undefined)
+    target_link_options(${TEST_NAME} PRIVATE -fsanitize=address,undefined)
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endforeach()
