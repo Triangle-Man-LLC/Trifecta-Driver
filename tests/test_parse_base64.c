@@ -11,28 +11,71 @@ int fs_logging_level = 1;
 /// @param format Format string.
 /// @param ... Additional arguments.
 /// @return Number of characters printed.
+
 int fs_log_output(const char *format, ...)
 {
     int chars_printed = 0;
 
-    if (fs_logging_level > 0)
+    if (fs_logging_level <= 0)
     {
-        va_list args;
-        va_start(args, format);
-
-        // Print formatted string
-        chars_printed = vprintf(format, args);
-
-        // Check if the last character is a newline
-        if (format[chars_printed - 1] != '\n')
-        {
-            printf("\n");
-            chars_printed++;
-        }
-
-        va_end(args);
+        return 0;
     }
 
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0) {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0) {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n') {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
+    return chars_printed;
+}
+
+int fs_log_critical(const char *format, ...)
+{
+    int chars_printed = 0;
+
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0) {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0) {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n') {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
     return chars_printed;
 }
 
