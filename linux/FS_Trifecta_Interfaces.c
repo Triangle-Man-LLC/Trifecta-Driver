@@ -137,24 +137,72 @@ int fs_log_output(const char *format, ...)
 {
     int chars_printed = 0;
 
-    if (fs_logging_level > 0)
+    if (fs_logging_level <= 0)
     {
-        va_list args;
-        va_start(args, format);
-
-        // Print formatted string
-        chars_printed = vprintf(format, args);
-
-        // Check if the last character is a newline
-        if (format[chars_printed - 1] != '\n')
-        {
-            printf("\n");
-            chars_printed++;
-        }
-
-        va_end(args);
+        return 0;
     }
 
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0)
+    {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0)
+        {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n')
+            {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
+    return chars_printed;
+}
+
+int fs_log_critical(const char *format, ...)
+{
+    int chars_printed = 0;
+
+    va_list args;
+    va_start(args, format);
+
+    // Print formatted string
+    chars_printed = vprintf(format, args);
+
+    // Flush stdout to ensure output is available
+    fflush(stdout);
+
+    // If last char wasn't newline, add one
+    if (chars_printed > 0)
+    {
+        // Use fputc instead of indexing format
+        if (ferror(stdout) == 0)
+        {
+            // Can't directly check last char printed, so safer approach:
+            // Always append newline unless format already ends with '\n'
+            size_t len = strlen(format);
+            if (len == 0 || format[len - 1] != '\n')
+            {
+                putchar('\n');
+                chars_printed++;
+            }
+        }
+    }
+
+    va_end(args);
     return chars_printed;
 }
 
@@ -165,6 +213,67 @@ int fs_toggle_logging(bool do_log)
 {
     fs_logging_level = do_log ? 1 : 0;
     return fs_logging_level;
+}
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <limits.h>
+
+/// @brief Redirect logs to the indicated path.
+/// Only some platforms support this. (E.g. a filesystem needed.)
+/// @param directory The path to store logs into.
+/// @return 0 on success, or a negative error code on failure.
+int fs_set_log_location(const char *directory)
+{
+    if (!directory)
+    {
+        return -EINVAL; // invalid argument
+    }
+
+    // Check that directory exists and is writable
+    struct stat st;
+    if (stat(directory, &st) != 0)
+    {
+        return -errno; // directory not found
+    }
+    if (!S_ISDIR(st.st_mode))
+    {
+        return -ENOTDIR; // not a directory
+    }
+    if (access(directory, W_OK) != 0)
+    {
+        return -EACCES; // not writable
+    }
+
+    // Construct log file path
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/fs_trifecta_log.txt", directory);
+
+    // Open log file for write (truncate existing)
+    FILE *logf = fopen(path, "w");
+    if (!logf)
+    {
+        return -errno;
+    }
+
+    // Redirect stdout and stderr
+    if (dup2(fileno(logf), STDOUT_FILENO) < 0)
+    {
+        fclose(logf);
+        return -errno;
+    }
+    if (dup2(fileno(logf), STDERR_FILENO) < 0)
+    {
+        fclose(logf);
+        return -errno;
+    }
+
+    // Do not fclose(logf) here, because stdout/stderr now share the fd.
+    return 0;
 }
 
 /// @brief Delay by at least this amount of time
