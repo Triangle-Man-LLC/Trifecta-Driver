@@ -55,6 +55,14 @@ typedef int fs_sock_t;
 typedef int fs_serial_handle_t;
 #endif
 
+#if defined(__linux__)
+typedef void *fs_thread_func_t;
+#define FS_THREAD_RETVAL NULL
+#else
+typedef void fs_thread_func_t;
+#define FS_THREAD_RETVAL
+#endif
+
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
@@ -122,12 +130,12 @@ extern "C"
 
     typedef struct fs_device_descriptor
     {
-        fs_device_id_t device_id;                   // Unique identifier for the device type
-        char device_name[32];  //
-        char device_fw[32];    //
-        char device_desc[64];  //
-        char device_sn[32];    //
-        char device_model[32]; //
+        fs_device_id_t device_id; // Unique identifier for the device type
+        char device_name[32];     //
+        char device_fw[32];       //
+        char device_desc[64];     //
+        char device_sn[32];       //
+        char device_model[32];    //
     } fs_device_descriptor_t;
 
     FS_RINGBUFFER_DECLARE(fs_packet_union_t, fs_packet_ringbuffer_t, FS_MAX_PACKET_QUEUE_LENGTH);
@@ -137,7 +145,7 @@ extern "C"
     /// @brief Device information container
     typedef struct fs_device_info
     {
-        fs_device_descriptor_t device_descriptor;   // Device name, etc.
+        fs_device_descriptor_t device_descriptor; // Device name, etc.
 
         fs_device_params_t device_params; // Parameters, such as serial baudrate, Wi-Fi SSID, etc.
         fs_driver_config_t driver_config; // Device driver configuration (each device has its own thread spawned unless interrupt mode is active)

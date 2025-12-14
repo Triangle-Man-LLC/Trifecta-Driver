@@ -59,7 +59,7 @@ extern "C"
     /// @param priority Priority of the thread.
     /// @param core_affinity Core affinity for the thread (-1 for no preference).
     /// @return 0 on success, or a negative error code on failure.
-    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity);
+    int fs_thread_start(fs_thread_func_t (thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity);
 
     /// @brief Exits the currently running thread.
     /// @param thread_handle Pointer to the thread handle.
@@ -138,6 +138,13 @@ extern "C"
     /// @param ... Additional arguments for the format string.
     /// @return 0 on success, or a negative error code on failure.
     int fs_log_output(const char *format, ...);
+
+    /// @brief Logs a formatted message to the output stream, 
+    /// even if logging is disabled.
+    /// @param format Format string for the log message.
+    /// @param ... Additional arguments for the format string.
+    /// @return 0 on success, or a negative error code on failure.
+    int fs_log_critical(const char *format, ...);
 
     /// @brief Enables or disables logging.
     /// @param do_log Set to true to enable logging, false to disable it.

@@ -15,13 +15,13 @@
 /// @brief Updater thread, there is one of these per device connected.
 /// @param params Passes the device handle to the thread.
 /// @return
-static void fs_serial_update_thread(void *params)
+static fs_thread_func_t fs_serial_update_thread(void *params)
 {
     if (params == NULL)
     {
         fs_log_output("[Trifecta-Serial] Error: Serial thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
-        return;
+        return FS_THREAD_RETVAL;
     }
 
     fs_device_info_t *active_device = (fs_device_info_t *)params;
@@ -59,7 +59,7 @@ static void fs_serial_update_thread(void *params)
     }
 
     fs_thread_exit(NULL);
-    return;
+    return FS_THREAD_RETVAL;
 }
 
 /// @brief Generic message send over serial.

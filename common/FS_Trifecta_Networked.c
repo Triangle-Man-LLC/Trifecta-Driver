@@ -44,13 +44,13 @@ static int fs_get_udp_port_for_device(const char *ip_addr)
 /// @brief Updater thread, there is one of these per device connected.
 /// @param params Passes the device handle to the thread.
 /// @return
-static void fs_tcp_update_thread(void *params)
+static fs_thread_func_t fs_tcp_update_thread(void *params)
 {
     if (params == NULL)
     {
         fs_log_output("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
-        return;
+        return FS_THREAD_RETVAL;
     }
 
     fs_device_info_t *active_device = (fs_device_info_t *)params;
@@ -90,19 +90,19 @@ static void fs_tcp_update_thread(void *params)
     }
 
     fs_thread_exit(NULL);
-    return;
+    return FS_THREAD_RETVAL;
 }
 
 /// @brief Updater thread, there is one of these per device connected.
 /// @param params Passes the device handle to the thread.
 /// @return
-static void fs_udp_update_thread(void *params)
+static fs_thread_func_t fs_udp_update_thread(void *params)
 {
     if (params == NULL)
     {
         fs_log_output("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
-        return;
+        return FS_THREAD_RETVAL;
     }
 
     fs_device_info_t *active_device = (fs_device_info_t *)params;
@@ -137,7 +137,7 @@ static void fs_udp_update_thread(void *params)
         fs_delay(delay_time_millis);
     }
     fs_thread_exit(NULL);
-    return;
+    return FS_THREAD_RETVAL;
 }
 
 /// @brief Generic message send over network (TCP).
@@ -242,7 +242,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
                                         task_stack_size, task_priority, core_affinity);
 
     thread_status += fs_thread_start(fs_udp_update_thread, (void *)device_handle, &device_handle->device_params.status,
-                                        task_stack_size, task_priority, core_affinity);
+                                     task_stack_size, task_priority, core_affinity);
 
     if (thread_status != 0)
     {
