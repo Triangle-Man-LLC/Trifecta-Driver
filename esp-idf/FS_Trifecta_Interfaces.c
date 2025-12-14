@@ -26,7 +26,7 @@ int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(fs_thread_func_t(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -37,15 +37,21 @@ int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *th
     TaskHandle_t task_handle = NULL;
     BaseType_t result;
 
-    // Create the FreeRTOS task
-    if (core_affinity < 0)
-    {
-        result = xTaskCreate(thread_func, "ThreadTask", stack_size, params, priority, &task_handle);
-    }
-    else
+// Create the FreeRTOS task
+#if CONFIG_FREERTOS_UNICORE
+    // Single-core ESP32: always use xTaskCreate()
+    result = xTaskCreate(thread_func, "ThreadTask", stack_size, params, priority, &task_handle);
+#else
+    // Dual-core ESP32: allow pinning if core_affinity is specified
+    if (core_affinity >= 0)
     {
         result = xTaskCreatePinnedToCore(thread_func, "ThreadTask", stack_size, params, priority, &task_handle, core_affinity);
     }
+    else
+    {
+        result = xTaskCreate(thread_func, "ThreadTask", stack_size, params, priority, &task_handle);
+    }
+#endif
 
     if (result != pdPASS)
     {
@@ -96,13 +102,16 @@ int fs_log_output(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -127,13 +136,16 @@ int fs_log_critical(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
