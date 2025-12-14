@@ -107,30 +107,20 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
-    // Open the specified serial port in non-blocking mode
-    char port_name[20];
-    snprintf(port_name, sizeof(port_name), "/dev/ttyACM%d", device_handle->device_params.serial_port);
-    int fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK);
-    if (fd == -1)
+    // If port is already provided, use it. Else, check if the address has been provided in the device address context
+    if (device_handle->device_params.serial_port <= 2)
     {
-        fs_log_output("[Trifecta] Failed to open serial port %s: %s", port_name, strerror(errno));
-        snprintf(port_name, sizeof(port_name), "/dev/ttyUSB%d", device_handle->device_params.serial_port);
-        fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK);
-        if (fd == -1)
-        {
-            fs_log_output("[Trifecta] Failed to open serial port %s: %s", port_name, strerror(errno));
-            return -1;
-        }
-    }
-    fs_log_output("[Trifecta] Successfully opened serial port %s", port_name);
-
-    // Configure the serial port
-    if (configure_serial_port(fd) != 0)
-    {
-        close(fd);
+        fs_log_critical("[Trifecta] Could not start serial driver: Invalid file descriptor: %d", device_handle->device_params.serial_port);
         return -1;
     }
-    device_handle->device_params.serial_port = fd;
+
+    // Configure the serial port
+    if (configure_serial_port(device_handle->device_params.serial_port) != 0)
+    {
+        fs_log_critical("[Trifecta] Could not start serial driver: Failed to configure port: %d (Errno: %d)", device_handle->device_params.serial_port, errno);
+        close(device_handle->device_params.serial_port);
+        return -1;
+    }
     return 0;
 }
 
