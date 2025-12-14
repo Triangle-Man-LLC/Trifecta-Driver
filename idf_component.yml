@@ -4,6 +4,8 @@ targets:
   - esp32
   - esp32s2
   - esp32s3
+  - esp32c3
+  - esp32c6
   - esp32p4
 description: ESP-IDF compatible driver for Trifecta IMU devices.
 url: https://github.com/Triangle-Man-LLC/Trifecta-Driver/tree/esp-idf
