@@ -443,9 +443,9 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
     case S_PACKET_TYPE_GNSS:
     case S_PACKET_TYPE_INS:
     {
-        acceleration_buffer->x = pkt->regular.ax;
-        acceleration_buffer->y = pkt->regular.ay;
-        acceleration_buffer->z = pkt->regular.az;
+        acceleration_buffer->x = pkt->regular.acc_x;
+        acceleration_buffer->y = pkt->regular.acc_y;
+        acceleration_buffer->z = pkt->regular.acc_z;
         break;
     }
     case C2_PACKET_TYPE_IMU:

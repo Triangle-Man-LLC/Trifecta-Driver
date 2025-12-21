@@ -161,7 +161,7 @@ extern "C"
     /// @param device_handle Device handle
     /// @param position_buffer Pointer to the position buffer.
     /// @return 0 on success.
-    FS_API int int fs_get_position(fs_device_info_t *device_handle, fs_vector3_d_t *position_buffer);
+    FS_API int fs_get_position(fs_device_info_t *device_handle, fs_vector3_d_t *position_buffer);
 
         /// @section Helper methods for extracting information from packets.
 
