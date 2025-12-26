@@ -277,25 +277,25 @@ int fs_device_parse_packet(fs_device_info_t *device_handle, const void *rx_buf, 
 }
 
 /// @brief Utility function to get Euler angles from quaternion
-/// @param estRoll Pointer to buffer for storing roll value
-/// @param estPitch Pointer to buffer for storing pitch value
-/// @param estYaw Pointer to buffer for storing yaw value
+/// @param x Pointer to buffer for storing roll value
+/// @param y Pointer to buffer for storing pitch value
+/// @param z Pointer to buffer for storing yaw value
 /// @param q0 Quaternion component
 /// @param q1 Quaternion component
 /// @param q2 Quaternion component
 /// @param q3 Quaternion component
 /// @param degrees Whether to return result in degrees or radians
-void fs_q_to_euler_angles(float *estRoll, float *estPitch, float *estYaw, float q0, float q1, float q2, float q3, bool degrees)
+void fs_q_to_euler_angles(float *x, float *y, float *z, float q0, float q1, float q2, float q3, bool degrees)
 {
-    *estRoll = atan2f(q0 * q1 + q2 * q3, 0.5f - q1 * q1 - q2 * q2);
-    *estPitch = asinf(-2.0f * (q1 * q3 - q0 * q2));
-    *estYaw = atan2f(q1 * q2 + q0 * q3, 0.5f - q2 * q2 - q3 * q3);
+    *x = atan2f(q0 * q1 + q2 * q3, 0.5f - q1 * q1 - q2 * q2);
+    *y = asinf(-2.0f * (q1 * q3 - q0 * q2));
+    *z = atan2f(q1 * q2 + q0 * q3, 0.5f - q2 * q2 - q3 * q3);
 
     if (degrees)
     {
-        *estRoll *= 180.0f / FS_PI;
-        *estPitch *= 180.0f / FS_PI;
-        *estYaw *= 180.0f / FS_PI;
+        *x *= 180.0f / FS_PI;
+        *y *= 180.0f / FS_PI;
+        *z *= 180.0f / FS_PI;
     }
 }
 
@@ -356,12 +356,44 @@ int fs_get_orientation(fs_device_info_t *device_handle, fs_quaternion_t *orienta
 
     if (!pkt)
         return -1;
-
-    orientation_buffer->w = pkt->composite.q0;
-    orientation_buffer->x = pkt->composite.q1;
-    orientation_buffer->y = pkt->composite.q2;
-    orientation_buffer->z = pkt->composite.q3;
-
+    switch (pkt->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_INS:
+    {
+        orientation_buffer->w = pkt->composite.q0;
+        orientation_buffer->x = pkt->composite.q1;
+        orientation_buffer->y = pkt->composite.q2;
+        orientation_buffer->z = pkt->composite.q3;
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_INS:
+    {
+        orientation_buffer->w = pkt->regular.q0;
+        orientation_buffer->x = pkt->regular.q1;
+        orientation_buffer->y = pkt->regular.q2;
+        orientation_buffer->z = pkt->regular.q3;
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_INS:
+    {
+        orientation_buffer->w = pkt->composite2.q0;
+        orientation_buffer->x = pkt->composite2.q1;
+        orientation_buffer->y = pkt->composite2.q2;
+        orientation_buffer->z = pkt->composite2.q3;
+        break;
+    }
+    default:
+        return -1;
+    }
     return 0;
 }
 
@@ -390,15 +422,50 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
     const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
+    switch (pkt->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_INS:
+    {
+        acceleration_buffer->x = (pkt->composite.ax0 + pkt->composite.ax1 + pkt->composite.ax2) / (3.0f * (float)INT16_MAX);
+        acceleration_buffer->y = (pkt->composite.ay0 + pkt->composite.ay1 + pkt->composite.ay2) / (3.0f * (float)INT16_MAX);
+        acceleration_buffer->z = (pkt->composite.az0 + pkt->composite.az1 + pkt->composite.az2) / (3.0f * (float)INT16_MAX);
 
-    acceleration_buffer->x = (pkt->composite.ax0 + pkt->composite.ax1 + pkt->composite.ax2) / (3.0f * (float)INT16_MAX);
-    acceleration_buffer->y = (pkt->composite.ay0 + pkt->composite.ay1 + pkt->composite.ay2) / (3.0f * (float)INT16_MAX);
-    acceleration_buffer->z = (pkt->composite.az0 + pkt->composite.az1 + pkt->composite.az2) / (3.0f * (float)INT16_MAX);
+        acceleration_buffer->x *= FS_ACCEL_SCALER_Gs;
+        acceleration_buffer->y *= FS_ACCEL_SCALER_Gs;
+        acceleration_buffer->z *= FS_ACCEL_SCALER_Gs;
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_INS:
+    {
+        acceleration_buffer->x = pkt->regular.acc_x;
+        acceleration_buffer->y = pkt->regular.acc_y;
+        acceleration_buffer->z = pkt->regular.acc_z;
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_INS:
+    {
+        acceleration_buffer->x = (pkt->composite2.ax0 + pkt->composite2.ax1 + pkt->composite2.ax2) / (3.0f * (float)INT16_MAX);
+        acceleration_buffer->y = (pkt->composite2.ay0 + pkt->composite2.ay1 + pkt->composite2.ay2) / (3.0f * (float)INT16_MAX);
+        acceleration_buffer->z = (pkt->composite2.az0 + pkt->composite2.az1 + pkt->composite2.az2) / (3.0f * (float)INT16_MAX);
 
-    acceleration_buffer->x *= FS_ACCEL_SCALER_Gs;
-    acceleration_buffer->y *= FS_ACCEL_SCALER_Gs;
-    acceleration_buffer->z *= FS_ACCEL_SCALER_Gs;
+        acceleration_buffer->x *= FS_ACCEL_SCALER_Gs;
+        acceleration_buffer->y *= FS_ACCEL_SCALER_Gs;
+        acceleration_buffer->z *= FS_ACCEL_SCALER_Gs;
 
+        break;
+    }
+    default:
+        return -1;
+    }
     return 0;
 }
 
@@ -410,13 +477,13 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
     const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
-
     switch (pkt->composite.type)
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_INS:
     case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_INS:
+    {
         angular_velocity_buffer->x = (pkt->composite.gx0 + pkt->composite.gx1 + pkt->composite.gx2) / (3.0f * (float)INT16_MAX);
         angular_velocity_buffer->y = (pkt->composite.gy0 + pkt->composite.gy1 + pkt->composite.gy2) / (3.0f * (float)INT16_MAX);
         angular_velocity_buffer->z = (pkt->composite.gz0 + pkt->composite.gz1 + pkt->composite.gz2) / (3.0f * (float)INT16_MAX);
@@ -424,10 +491,36 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
         angular_velocity_buffer->x *= FS_GYRO_SCALER_DPS;
         angular_velocity_buffer->y *= FS_GYRO_SCALER_DPS;
         angular_velocity_buffer->z *= FS_GYRO_SCALER_DPS;
-        return 0;
+        break;
     }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_INS:
+    {
+        angular_velocity_buffer->x = (pkt->regular.omega_x0);
+        angular_velocity_buffer->y = (pkt->regular.omega_y0);
+        angular_velocity_buffer->z = (pkt->regular.omega_z0);
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_INS:
+    {
+        angular_velocity_buffer->x = (pkt->composite2.gx0 + pkt->composite2.gx1 + pkt->composite2.gx2) / (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->y = (pkt->composite2.gy0 + pkt->composite2.gy1 + pkt->composite2.gy2) / (3.0f * (float)INT16_MAX);
+        angular_velocity_buffer->z = (pkt->composite2.gz0 + pkt->composite2.gz1 + pkt->composite2.gz2) / (3.0f * (float)INT16_MAX);
 
-    return -1;
+        angular_velocity_buffer->x *= FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->y *= FS_GYRO_SCALER_DPS;
+        angular_velocity_buffer->z *= FS_GYRO_SCALER_DPS;
+        break;
+    }
+    default:
+        return -1;
+    }
+    return 0;
 }
 
 int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buffer)
@@ -438,11 +531,33 @@ int fs_get_velocity(fs_device_info_t *device_handle, fs_vector3_t *velocity_buff
     const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
-
-    velocity_buffer->x = pkt->composite.vx;
-    velocity_buffer->y = pkt->composite.vy;
-    velocity_buffer->z = pkt->composite.vz;
-
+    switch (pkt->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    {
+        // Note: No velocity available from IMU
+        return -1;
+    }
+    case C_PACKET_TYPE_INS:
+    case S_PACKET_TYPE_INS:
+    case C2_PACKET_TYPE_INS:
+    case C_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_GNSS:
+    {
+        velocity_buffer->x = pkt->composite2.vx;
+        velocity_buffer->y = pkt->composite2.vy;
+        velocity_buffer->z = pkt->composite2.vz;
+        break;
+    }
+    default:
+        return -1;
+    }
     return 0;
 }
 
@@ -454,12 +569,39 @@ int fs_get_movement_state(fs_device_info_t *device_handle, fs_run_status_t *devi
     const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
-
-    *device_state_buffer = (pkt->composite.device_in_motion == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+    switch (pkt->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_INS:
+    {
+        *device_state_buffer = (pkt->composite.device_motion_status == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_INS:
+    {
+        *device_state_buffer = (pkt->regular.device_motion_status == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_INS:
+    {
+        *device_state_buffer = (pkt->composite2.device_motion_status == 1) ? FS_RUN_STATUS_IDLE : FS_RUN_STATUS_RUNNING;
+        break;
+    }
+    default:
+        return -1;
+    }
     return 0;
 }
 
-int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buffer)
+int fs_get_position(fs_device_info_t *device_handle, fs_vector3_d_t *position_buffer)
 {
     if (!device_handle || !position_buffer)
         return -1;
@@ -467,10 +609,32 @@ int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buff
     const fs_packet_union_t *pkt = &device_handle->last_received_packet;
     if (!pkt)
         return -1;
-
-    position_buffer->x = pkt->composite.rx;
-    position_buffer->y = pkt->composite.ry;
-    position_buffer->z = pkt->composite.rz;
-
+    switch (pkt->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    {
+        // Note: No position available from IMU
+        return -1;
+    }
+    case C_PACKET_TYPE_INS:
+    case S_PACKET_TYPE_INS:
+    case C2_PACKET_TYPE_INS:
+    case C_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_GNSS:
+    {
+        position_buffer->x = pkt->composite2.rx;
+        position_buffer->y = pkt->composite2.ry;
+        position_buffer->z = pkt->composite2.rz;
+        break;
+    }
+    default:
+        return -1;
+    }
     return 0;
 }

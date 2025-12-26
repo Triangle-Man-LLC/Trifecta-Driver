@@ -89,25 +89,57 @@ extern "C"
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet
     {
-        uint8_t type;
-        uint32_t time;
+        uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
+        uint32_t time; // Current time (in RTOS ticks)
 
-        float ax0, ay0, az0, gx0, gy0, gz0;
-        float ax1, ay1, az1, gx1, gy1, gz1;
-        float ax2, ay2, az2, gx2, gy2, gz2;
+        float ax0; // Unprocessed accelerometer value x
+        float ay0; // Unprocessed accelerometer value y
+        float az0; // Unprocessed accelerometer value z
+        float gx0; // Unprocessed gyroscope value x
+        float gy0; // Unprocessed gyroscope value y
+        float gz0; // Unprocessed gyroscope value z
 
-        float q0, q1, q2, q3;
+        float ax1; // Unprocessed accelerometer value x
+        float ay1; // Unprocessed accelerometer value y
+        float az1; // Unprocessed accelerometer value z
+        float gx1; // Unprocessed gyroscope value x
+        float gy1; // Unprocessed gyroscope value y
+        float gz1; // Unprocessed gyroscope value z
 
-        float ax, ay, az;
-        float vx, vy, vz;
-        float rx, ry, rz;
+        float ax2; // Unprocessed accelerometer value x
+        float ay2; // Unprocessed accelerometer value y
+        float az2; // Unprocessed accelerometer value z
+        float gx2; // Unprocessed gyroscope value x
+        float gy2; // Unprocessed gyroscope value y
+        float gz2; // Unprocessed gyroscope value z
 
-        int16_t reserved[3];
-        int8_t device_in_motion;
-        int8_t label_2;
-        int8_t temperature[3];
-        int8_t c;
-        int32_t d;
+        float q0; // Quaternion orientation
+        float q1;
+        float q2;
+        float q3;
+
+        float euler_x; // Euler angles [deg]
+        float euler_y;
+        float euler_z;
+
+        float acc_x; // Compensated acceleration [m s^-2]
+        float acc_y;
+        float acc_z;
+
+        float omega_x0; // Compensated angular velocity [deg/s]
+        float omega_y0;
+        float omega_z0;
+
+        int16_t reserved_1; // Reserved for future use
+        int16_t reserved_2; //
+        int16_t reserved_3; //
+
+        int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
+        int8_t label_2;              // Reserved for future use
+
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet fs_imu_composite_packet_t;
     _Static_assert(sizeof(fs_imu_composite_packet_t) == 145, "fs_imu_composite_packet_t size mismatch");
@@ -115,21 +147,40 @@ extern "C"
     FS_PACKED_BEGIN
     struct fs_imu_regular_packet
     {
-        uint8_t type;
-        uint32_t time;
+        uint8_t type;  // Packet type (see typedef packet_type_t)
+        uint32_t time; // Current time (in RTOS ticks = milliseconds)
 
-        float omega_x0, omega_y0, omega_z0;
-        float q0, q1, q2, q3;
-        float ax, ay, az;
-        float vx, vy, vz;
-        float rx, ry, rz;
+        float omega_x0; // Angular velocity x - deg/s
+        float omega_y0; // Angular velocity y - deg/s
+        float omega_z0; // Angular velocity z - deg/s
 
-        int16_t reserved[3];
-        int8_t device_in_motion;
-        int8_t label_2;
-        int8_t temperature[3];
-        int8_t c;
-        int32_t d;
+        float q0; // Quaternion for orientation of device
+        float q1;
+        float q2;
+        float q3;
+
+        float euler_x; // Euler angles [deg]
+        float euler_y;
+        float euler_z;
+
+        float acc_x; // Compensated acceleration [m s^-2]
+        float acc_y;
+        float acc_z;
+
+        float reserved_0_1; // Reserved for future use
+        float reserved_0_2; //
+        float reserved_0_3; //
+
+        int16_t reserved_1; // Reserved for future use
+        int16_t reserved_2; //
+        int16_t reserved_3; //
+
+        int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
+        int8_t label_2;              // Reserved for future use
+
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } FS_PACKED_END;
     typedef struct fs_imu_regular_packet fs_imu_regular_packet_t;
     _Static_assert(sizeof(fs_imu_regular_packet_t) == 85, "fs_imu_regular_packet_t size mismatch");
@@ -137,28 +188,68 @@ extern "C"
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet_2
     {
-        uint8_t type;
-        uint32_t time;
+        uint8_t type;  // Packet type (0 = telemetry only, 1 = orientation only, 2 = orientation and velocity, 3 = orientation and positioning, 4 = GPS)
+        uint32_t time; // Current time (in RTOS ticks)
 
-        float ax0, ay0, az0, gx0, gy0, gz0;
-        float ax1, ay1, az1, gx1, gy1, gz1;
-        float ax2, ay2, az2, gx2, gy2, gz2;
+        float ax0; // Unprocessed accelerometer value x
+        float ay0; // Unprocessed accelerometer value y
+        float az0; // Unprocessed accelerometer value z
+        float gx0; // Unprocessed gyroscope value x
+        float gy0; // Unprocessed gyroscope value y
+        float gz0; // Unprocessed gyroscope value z
 
-        float q0, q1, q2, q3;
-        float wx, wy, wz;
-        float ax, ay, az;
-        float vx, vy, vz;
-        float rx, ry, rz;
+        float ax1; // Unprocessed accelerometer value x
+        float ay1; // Unprocessed accelerometer value y
+        float az1; // Unprocessed accelerometer value z
+        float gx1; // Unprocessed gyroscope value x
+        float gy1; // Unprocessed gyroscope value y
+        float gz1; // Unprocessed gyroscope value z
 
-        int16_t reserved[3];
-        int8_t device_in_motion;
-        int8_t label_2;
-        int8_t temperature[3];
-        int8_t c;
-        int32_t d;
+        float ax2; // Unprocessed accelerometer value x
+        float ay2; // Unprocessed accelerometer value y
+        float az2; // Unprocessed accelerometer value z
+        float gx2; // Unprocessed gyroscope value x
+        float gy2; // Unprocessed gyroscope value y
+        float gz2; // Unprocessed gyroscope value z
+
+        float q0; // Quaternion for orientation of device
+        float q1;
+        float q2;
+        float q3;
+
+        float euler_x; // Euler angles [deg]
+        float euler_y;
+        float euler_z;
+
+        float omega_x0; // Compensated angular velocity [deg/s]
+        float omega_y0;
+        float omega_z0;
+
+        float acc_x; // Compensated acceleration [m s^-2]
+        float acc_y;
+        float acc_z;
+
+        float vx; // Velocity [m s^-1] ENU frame
+        float vy; //
+        float vz; //
+
+        double rx; // Position (deg latitude)
+        double ry; // Position (deg longitude)
+        double rz; // Height (m)
+
+        int16_t reserved_1; // Reserved for future use
+        int16_t reserved_2; //
+        int16_t reserved_3; //
+
+        int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
+        int8_t label_2;              // Reserved for future use
+
+        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;              // Reserved for future use
+        int32_t d;             // Reserved for future use
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_2 fs_imu_composite_packet_2_t;
-    _Static_assert(sizeof(fs_imu_composite_packet_2_t) == 157, "fs_imu_composite_packet_2_t size mismatch");
+    _Static_assert(sizeof(fs_imu_composite_packet_2_t) == 181, "fs_imu_composite_packet_2_t size mismatch");
 
     FS_PACKED_BEGIN
     union fs_packet_union
@@ -168,7 +259,7 @@ extern "C"
         fs_imu_composite_packet_2_t composite2;
     } FS_PACKED_END;
     typedef union fs_packet_union fs_packet_union_t;
-    _Static_assert(sizeof(fs_packet_union_t) == 157, "fs_packet_union_t size mismatch");
+    _Static_assert(sizeof(fs_packet_union_t) == 181, "fs_packet_union_t size mismatch");
 #ifdef __cplusplus
 }
 #endif

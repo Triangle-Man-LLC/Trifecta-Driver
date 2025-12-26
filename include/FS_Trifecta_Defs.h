@@ -66,6 +66,7 @@ typedef void fs_thread_func_t;
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
+#include "FS_Trifecta_Defs_Mutex.h"
 #include "FS_Trifecta_Defs_Initializers.h"
 
 #define FS_PI 3.14159265358979f
@@ -149,6 +150,8 @@ extern "C"
 
         fs_device_params_t device_params; // Parameters, such as serial baudrate, Wi-Fi SSID, etc.
         fs_driver_config_t driver_config; // Device driver configuration (each device has its own thread spawned unless interrupt mode is active)
+
+        fs_mutex_t lock; // Ensure atomic access to device hardware, the user should not use this as it is managed in backend.
 
         fs_packet_union_t last_received_packet; // The most recent packet from the device
 
