@@ -22,6 +22,10 @@ typedef struct
 
 static inline void fs_mutex_init(fs_mutex_t *mutex)
 {
+    if (mutex->handle)
+    {
+        return; // Prevent multiple initialization
+    }
 #if defined(ESP_PLATFORM)
     mutex->handle = xSemaphoreCreateMutex();
 #elif defined(_WIN32)
@@ -33,6 +37,10 @@ static inline void fs_mutex_init(fs_mutex_t *mutex)
 
 static inline void fs_mutex_lock(fs_mutex_t *mutex)
 {
+    if (!mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
 #if defined(ESP_PLATFORM)
     xSemaphoreTake(mutex->handle, portMAX_DELAY);
 #elif defined(_WIN32)
@@ -44,6 +52,10 @@ static inline void fs_mutex_lock(fs_mutex_t *mutex)
 
 static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 {
+    if (!mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
 #if defined(ESP_PLATFORM)
     xSemaphoreGive(mutex->handle);
 #elif defined(_WIN32)
@@ -55,6 +67,10 @@ static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 
 static inline void fs_mutex_destroy(fs_mutex_t *mutex)
 {
+    if (!mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
 #if defined(ESP_PLATFORM)
     vSemaphoreDelete(mutex->handle);
 #elif defined(_WIN32)
