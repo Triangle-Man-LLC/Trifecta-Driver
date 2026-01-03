@@ -66,9 +66,9 @@ extern "C"
         CMD_IDENTIFY_PARAM_TRANSMIT = 't',       // Respond with transmit mode (serial/UDP/etc.) "t-1;" to query, "t<COMMUNICATION_MODE_1 | 2 | ... |>;" to set
 
         CMD_REZERO_IMUS = 'Z',            // Re-calibrate the IMUs (should only do on a flat plane and stationary) "Z<NUM_CALIBRATION_POINTS>;"
-        CMD_TOGGLE_REZERO_AT_START = 'K', // Toggle re-zeroing IMU at device reboot - this rezero affects accelerometers "K<1 == DO NOT ELSE 0>;"
 
-        CMD_REZERO_INS = '0',  // Reset INS position to zero "00;"
+        CMD_SET_POSITION = '0',  // Reset INS position: "0<type>,<X>,<Y>,<Z>;" where <type> is a fs_gnss_position_format_t
+        CMD_SET_ORIENTATION_OFFSET = 'Q', // Sets the offset orientation: "Q0;" to clear, "Q1;" to use current orientation, else "Q<W>,<X>,<Y>,<Z>;"
         CMD_SET_YAW_DEG = 'y', // Set yaw angle to the given argument (degrees) "y<DEG>;"
 
         CMD_STREAM = 'A',             // Start or stop streaming data "A<0 == STOP, 1 == STREAM, 2 == ONE SHOT READ>;"

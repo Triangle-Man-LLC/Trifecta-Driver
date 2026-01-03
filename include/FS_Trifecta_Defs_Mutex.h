@@ -22,6 +22,10 @@ typedef struct
 
 static inline void fs_mutex_init(fs_mutex_t *mutex)
 {
+    if (!mutex)
+    {
+        return; // Prevent NULL dereference
+    }
 #if defined(ESP_PLATFORM)
     mutex->handle = xSemaphoreCreateMutex();
 #elif defined(_WIN32)
@@ -34,10 +38,22 @@ static inline void fs_mutex_init(fs_mutex_t *mutex)
 static inline void fs_mutex_lock(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
+    if (!mutex || !mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
     xSemaphoreTake(mutex->handle, portMAX_DELAY);
 #elif defined(_WIN32)
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     EnterCriticalSection(&mutex->handle);
 #else
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     pthread_mutex_lock(&mutex->handle);
 #endif
 }
@@ -45,10 +61,22 @@ static inline void fs_mutex_lock(fs_mutex_t *mutex)
 static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
+    if (!mutex || !mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
     xSemaphoreGive(mutex->handle);
 #elif defined(_WIN32)
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     LeaveCriticalSection(&mutex->handle);
 #else
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     pthread_mutex_unlock(&mutex->handle);
 #endif
 }
@@ -56,10 +84,22 @@ static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 static inline void fs_mutex_destroy(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
+    if (!mutex || !mutex->handle)
+    {
+        return; // Prevent NULL dereference
+    }
     vSemaphoreDelete(mutex->handle);
 #elif defined(_WIN32)
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     DeleteCriticalSection(&mutex->handle);
 #else
+    if (!mutex || !(&mutex->handle))
+    {
+        return; // Prevent NULL dereference
+    }
     pthread_mutex_destroy(&mutex->handle);
 #endif
 }
