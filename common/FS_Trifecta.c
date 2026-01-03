@@ -91,7 +91,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
     }
   }
 
-  fs_mutex_init(device_handle->lock);
+  fs_mutex_init(&device_handle->lock);
   device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_TCP_UDP;
 
   if (fs_network_start(device_ip_address, device_handle) != 0)
@@ -137,7 +137,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
     }
   }
 
-  fs_mutex_init(device_handle->lock);
+  fs_mutex_init(&device_handle->lock);
 
   device_handle->device_params.communication_mode = serial_mode;
   device_handle->device_params.serial_port = fd;
@@ -262,7 +262,7 @@ int fs_closedown(fs_device_info_t *device_handle)
     return -1;
     break;
   }
-  fs_mutex_destroy(device_handle->lock);
+  fs_mutex_destroy(&device_handle->lock);
   device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
   memset(device_handle, 0, sizeof(fs_device_info_t));
   fs_log_output("[Trifecta] Closedown of driver succeeded, all resources are now released.");
