@@ -15,9 +15,6 @@
 // Base64 character set
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-// 
-static char current_decode_buffer[FS_MAX_PACKET_LENGTH] = {0};
-
 /// @brief Internal function to enqueue a command into the command queue...
 /// @param str Command string
 /// @param len Command length
@@ -175,10 +172,17 @@ int fs_base64_encode(const void *data, size_t len, char *output_buffer, size_t b
     return 0;
 }
 
+// Base64 decode function
 int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size, size_t *decoded_length)
 {
+    if (buffer_size > FS_MAX_DATA_LENGTH)
+    {
+        fs_log_output("[Trifecta-Device-Utils] Base64 decode failed: Size of %d is greater than allowed %d!", buffer_size, FS_MAX_DATA_LENGTH);
+        return -1; // Prevent overflow
+    }
+
     unsigned char *output = (unsigned char *)output_buffer;
-    size_t input_length = fs_safe_strnlen(input, FS_MAX_DATA_LENGTH);
+    size_t input_length = buffer_size;
     size_t i, j;
     int padding = 0;
 
@@ -313,10 +317,10 @@ int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t 
             fs_log_output("[Trifecta-Device-Utils] Error: Packet length %ld is out of bounds! RX_len: %ld", packet_length, rx_len);
             return -1;
         }
-
+        
         uint32_t packet_time = ((fs_packet_union_t *)(buf + pos))->composite.time;
         fs_log_output("[Trifecta-Device-Utils] Packet type %hhu, len: %ld, timestamp: %lu", packet_type, packet_length, packet_time);
-
+        
         // Emplace the packet into the queue
         fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos));
         packet_count++;
@@ -338,32 +342,23 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
         return -1;
     }
 
+    fs_packet_union_t packet_union;
+    memset(&packet_union, 0, sizeof(fs_packet_union_t));
     size_t decoded_size = 0;
-    segment[length] = 0;
 
-    if (fs_base64_decode(segment, &current_decode_buffer, sizeof(current_decode_buffer), &decoded_size) != 0)
+    if (fs_base64_decode(segment, &packet_union, length, &decoded_size) != 0)
     {
         fs_log_output("[Trifecta-Device-Utils] Base64 decode failed!");
         return -1;
     }
 
-    int packet_length = obtain_packet_length(((fs_imu_composite_packet_t *)current_decode_buffer)->type);
-    if (packet_length <= 0)
-    {
-        fs_log_output("[Trifecta-Device-Utils] Rejected invalid packet type: %d!",
-                      ((fs_imu_composite_packet_t *)current_decode_buffer)->type);
-        return -1;
-    }
-
-    if (fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)current_decode_buffer) != 0)
+    if (fs_enqueue_into_packet_queue(device_handle, &packet_union) != 0)
     {
         fs_log_output("[Trifecta-Device-Utils] Error: Could not place packet into packet queue!");
         return -1;
     }
 
-    fs_log_output("[Trifecta-Device-Utils] Scanned packet (B64)! Timestamp: %lu - Type: %d",
-                  ((fs_imu_composite_packet_t *)current_decode_buffer)->time, 
-                  ((fs_imu_composite_packet_t *)current_decode_buffer)->type);
+    fs_log_output("[Trifecta-Device-Utils] Scanned packet (B64)! Timestamp: %lu - Type: %d", packet_union.composite.time, packet_union.composite.type);
     return 0;
 }
 

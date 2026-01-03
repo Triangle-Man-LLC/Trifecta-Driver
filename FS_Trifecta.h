@@ -19,6 +19,7 @@ extern "C"
 {
 #endif
 
+
     /// @section Device handle allocation/deallocation
 
     /// @brief Allocate a new device handle for use externally.
@@ -31,6 +32,7 @@ extern "C"
     /// @param device The DYNAMICALLY ALLOCATED device handle
     /// @return None
     FS_API void fs_export_free_device(fs_device_info_t *device);
+
 
     /// @section Device initialization functions
 
@@ -65,6 +67,7 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_closedown(fs_device_info_t *device_handle);
 
+    
     /// @section Stream control
 
     /// @brief Request the device to asynchronously stream data. This data will arrive at the native speed (e.g. 200 Hz on Trifecta-K).
@@ -89,6 +92,7 @@ extern "C"
     /// @param device_handle Device handle
     /// @return 0 on success.
     FS_API int fs_reboot_device(fs_device_info_t *device_handle);
+
 
     /// @section Data export/viewing
 
@@ -161,42 +165,11 @@ extern "C"
     /// @param device_handle Device handle
     /// @param position_buffer Pointer to the position buffer.
     /// @return 0 on success.
-    FS_API int fs_get_position(fs_device_info_t *device_handle, fs_vector3_d_t *position_buffer);
-
-        /// @section Helper methods for extracting information from packets.
-
-    /// @brief Retrieve an euler angles from a packet (given that packets by default report quaternions)
-    /// @param packet The packet.
-    /// @param euler_angles_out Output buffer for Euler angles (deg).
-    /// @return 0 on success.
-    FS_API int fs_euler_angles_from_packet(const fs_packet_union_t *packet, fs_vector3_t *euler_angles_out);
-
-    /// @brief Retrieve the latitude, longitude, and height from the packet.
-    /// @param packet The packet.
-    /// @param lat_long_height Output buffer for a fs_vector3_d_t containing .x == LATITUDE, .y == LONGITUDE, .z == HEIGHT (m)
-    /// @return 0 on success.
-    FS_API int fs_lat_long_from_packet(const fs_packet_union_t *packet, fs_vector3_d_t *lat_long_height);
-
-    /// @brief Retrieve the angular velocity (deg/s) from the packet.
-    /// @param packet The packet.
-    /// @param angular_velocity Output buffer for the angular velocity, in deg/s, with axes in the sensor body frame.
-    /// @return 0 on success.
-    FS_API int fs_angular_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_t *angular_velocity);
-
-    /// @brief Retrieve the acceleration (m/s^2) from the packet.
-    /// @param packet The packet.
-    /// @param angular_velocity Output buffer for the acceleration (m/s^2), with axes in the sensor body frame.
-    /// @return 0 on success.
-    FS_API int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *acceleration);
-
-    /// @brief Retrieve velocity (m/s) from the packet. This is only applicable to Trifecta-M devices.
-    /// @param packet The packet.
-    /// @param velocity Output buffer for the velocity (m/s).
-    /// @return 0 on success.
-    FS_API int fs_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_t *velocity);
+    FS_API int fs_get_position(fs_device_info_t *device_handle, fs_vector3_t *position_buffer);
+    
 
     /// @section Device configuration methods
-
+    
     /// @brief Manually set the AHRS yaw angle to a known value. Non-volatile.
     /// NOTE: However, this procedure is usually performed automatically when connected with a compatible GNSS.
     /// @param device_handle Device handle
@@ -205,16 +178,16 @@ extern "C"
     FS_API int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg);
 
     /// @brief Manually set the INS position, this is typically used to update the device position from a
-    /// GNSS system.
+    /// GNSS system. 
     /// @param device_handle Device handle
     /// @param position The position to set to (for now, this function only re-sets position to zero).
     /// @return 0 on success.
     FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position);
 
     /// @brief Sets the device name. Note that changes are applied on restart.
-    /// @param device_handle
-    /// @param name
-    /// @return 0 on success.
+    /// @param device_handle 
+    /// @param name 
+    /// @return 
     FS_API int fs_set_device_name(fs_device_info_t *device_handle, const char name[32]);
 
     /// @brief Set all enabled communication modes of the device. Note that changes are applied on restart.
@@ -224,11 +197,11 @@ extern "C"
     FS_API int fs_set_communication_mode(fs_device_info_t *device_handle, int modes);
 
     /// @brief Set the network SSID/PW of the device. Note that changes are applied on restart.
-    /// @param device_handle
-    /// @param ssid
-    /// @param pw
+    /// @param device_handle 
+    /// @param ssid 
+    /// @param pw 
     /// @param access_point TRUE to set for AP mode, FALSE to set for STA mode.
-    /// @return 0 on success.
+    /// @return 0 on success. 
     FS_API int fs_set_network_parameters(fs_device_info_t *device_handle, const char ssid[32], const char pw[64], bool access_point);
 
     /// @brief Device UDP port is typically controlled in the backend, but can be changed if necessary. Non-volatile.
@@ -238,20 +211,20 @@ extern "C"
     FS_API int fs_set_network_udp_port(fs_device_info_t *device_handle, int port);
 
     /// @brief Set baudrate of UART interface. Non-volatile, so it must be applied after every restart.
-    /// @param device_handle
+    /// @param device_handle 
     /// @param baudrate Allowed range: 921,600 - 3,000,000. Exceeding these limits may cause lag or instability.
-    /// @return 0 on success.
+    /// @return 0 on success. 
     FS_API int fs_set_serial_uart_baudrate(fs_device_info_t *device_handle, int baudrate);
 
-    /// @brief
-    /// @param device_handle
-    /// @param device_config_info
-    /// @return 0 on success.
+    /// @brief 
+    /// @param device_handle 
+    /// @param device_config_info 
+    /// @return 0 on success. 
     FS_API int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_params_t *device_params_info);
 
-    /// @brief
-    /// @param device_handle
-    /// @param desc
+    /// @brief 
+    /// @param device_handle 
+    /// @param desc 
     /// @return 0 on success.
     FS_API int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descriptor_t *desc);
 
@@ -265,7 +238,7 @@ extern "C"
     FS_API int fs_enable_logging_at_path(const char *path, bool do_enable);
 
     /// @brief Danger! Factory reset clears all user configurations. Use only when needed.
-    /// @param device_handle
+    /// @param device_handle 
     /// @return 0 on success.
     FS_API int fs_factory_reset(fs_device_info_t *device_handle);
 

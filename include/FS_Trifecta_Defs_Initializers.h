@@ -91,7 +91,6 @@
         .device_descriptor = FS_DEVICE_DESCRIPTOR_BLANK,                                                   \
         .device_params = FS_DEVICE_PARAMS_BLANK,                                                           \
         .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                                         \
-        .lock = NULL,                                                                                      \
         .last_received_packet = {0},                                                                       \
         .data_buffer = (fs_bytes_ringbuffer_t){                                                            \
             .buffer = {0},                                                                                 \

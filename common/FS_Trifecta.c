@@ -24,7 +24,6 @@
 static inline int fs_send_command(fs_device_info_t *device_handle, void *payload, size_t length)
 {
   int result = -1;
-
   switch (device_handle->device_params.communication_mode)
   {
   case FS_COMMUNICATION_MODE_UART:
@@ -39,9 +38,8 @@ static inline int fs_send_command(fs_device_info_t *device_handle, void *payload
     break;
   default:
     fs_log_output("[Trifecta] Error: Unsupported communication mode!");
-    result = -1;
+    return -1;
   }
-
   return result;
 }
 
@@ -91,7 +89,6 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
     }
   }
 
-  fs_mutex_init(&device_handle->lock);
   device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_TCP_UDP;
 
   if (fs_network_start(device_ip_address, device_handle) != 0)
@@ -136,8 +133,6 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
       return -12;
     }
   }
-
-  fs_mutex_init(&device_handle->lock);
 
   device_handle->device_params.communication_mode = serial_mode;
   device_handle->device_params.serial_port = fd;
@@ -262,7 +257,6 @@ int fs_closedown(fs_device_info_t *device_handle)
     return -1;
     break;
   }
-  fs_mutex_destroy(&device_handle->lock);
   device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
   memset(device_handle, 0, sizeof(fs_device_info_t));
   fs_log_output("[Trifecta] Closedown of driver succeeded, all resources are now released.");
@@ -277,14 +271,13 @@ int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg)
   return fs_send_command(device_handle, send_buf, send_len);
 }
 
-int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_d_t *position)
+int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position)
 {
-  char send_buf[FS_MAX_CMD_LENGTH];
-  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d,%.10f,%.10f,%.3f;",
-           CMD_SET_POSITION, FS_GNSS_PF_WGS84,
-           position->x, position->y, position->z);
-  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
-  return fs_send_command(device_handle, send_buf, send_len);
+  // char send_buf[FS_MAX_CMD_LENGTH];
+  // snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
+  // size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  // return fs_send_command(device_handle, send_buf, send_len);
+  return -1; // Not yet supported
 }
 
 int fs_set_device_name(fs_device_info_t *device_handle, const char name[32])
@@ -371,7 +364,7 @@ int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descrip
   if (device_handle == NULL || desc == NULL)
   {
     return -1;
-  }
+  }  
   char send_buf[FS_MAX_DATA_LENGTH] = {0};
   snprintf(send_buf, sizeof(send_buf),
            ";%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;%c-1;",
