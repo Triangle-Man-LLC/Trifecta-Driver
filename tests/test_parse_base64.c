@@ -31,13 +31,16 @@ int fs_log_output(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -62,13 +65,16 @@ int fs_log_critical(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -85,14 +91,16 @@ int main()
 
 #define NUM_SAMPLES 256
     fs_imu_composite_packet_t packets[NUM_SAMPLES] = {{0}};
-    // Populate all packets with monotonically increasing values...
+    fs_imu_regular_packet_t regular_packets[NUM_SAMPLES] = {{0}};
+    fs_imu_composite_packet_2_t composite2_packets[NUM_SAMPLES] = {{0}};
 
+    // Populate all packets with monotonically increasing values...
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
         fs_imu_composite_packet_t *p = &packets[i];
 
-        p->type = i % 5;   // Cycle through packet types 0–4
-        p->time = i * 100; // Simulated RTOS tick time
+        p->type = C_PACKET_TYPE_INS;
+        p->time = i * 100;
 
         float base = (float)i;
 
@@ -118,48 +126,172 @@ int main()
         p->gy2 = base + 2.5f;
         p->gz2 = base + 2.6f;
 
-        // Orientation quaternion
+        // Quaternion
         p->q0 = 0.1f * i;
         p->q1 = 0.2f * i;
         p->q2 = 0.3f * i;
         p->q3 = 0.4f * i;
 
-        // Absolute acceleration
-        p->ax = base + 3.1f;
-        p->ay = base + 3.2f;
-        p->az = base + 3.3f;
+        // Euler angles
+        p->euler_x = base + 3.1f;
+        p->euler_y = base + 3.2f;
+        p->euler_z = base + 3.3f;
 
-        // Velocity
-        p->vx = base + 4.1f;
-        p->vy = base + 4.2f;
-        p->vz = base + 4.3f;
+        // Compensated acceleration
+        p->acc_x = base + 4.1f;
+        p->acc_y = base + 4.2f;
+        p->acc_z = base + 4.3f;
 
-        // Position
-        p->rx = base + 5.1f;
-        p->ry = base + 5.2f;
-        p->rz = base + 5.3f;
+        // Compensated angular velocity
+        p->omega_x0 = base + 5.1f;
+        p->omega_y0 = base + 5.2f;
+        p->omega_z0 = base + 5.3f;
 
-        // Reserved
-        p->reserved[0] = 0;
-        p->reserved[1] = 0;
-        p->reserved[2] = 0;
+        // Reserved (new location)
+        p->reserved_1 = 0;
+        p->reserved_2 = 0;
+        p->reserved_3 = 0;
 
         // Motion status
-        p->device_in_motion = (i % 2) + 1; // Alternate between 1 and 2
+        p->device_motion_status = (i % 2) + 1;
         p->label_2 = 0;
 
         // Temperatures
-        p->temperature[0] = 25 + i % 3;
-        p->temperature[1] = 26 + i % 3;
-        p->temperature[2] = 27 + i % 3;
+        p->temperature[0] = 25 + (i % 3);
+        p->temperature[1] = 26 + (i % 3);
+        p->temperature[2] = 27 + (i % 3);
 
-        // Reserved
         p->c = 0;
         p->d = i;
     }
 
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        float base = (float)i;
+
+        // -----------------------------
+        // Populate fs_imu_regular_packet
+        // -----------------------------
+        fs_imu_regular_packet_t *r = &regular_packets[i];
+
+        r->type = S_PACKET_TYPE_INS; // Arbitrary type for testing
+        r->time = i * 50;
+
+        r->omega_x0 = base + 0.11f;
+        r->omega_y0 = base + 0.22f;
+        r->omega_z0 = base + 0.33f;
+
+        r->q0 = 0.01f * i;
+        r->q1 = 0.02f * i;
+        r->q2 = 0.03f * i;
+        r->q3 = 0.04f * i;
+
+        r->euler_x = base + 1.1f;
+        r->euler_y = base + 1.2f;
+        r->euler_z = base + 1.3f;
+
+        r->acc_x = base + 2.1f;
+        r->acc_y = base + 2.2f;
+        r->acc_z = base + 2.3f;
+
+        r->reserved_0_1 = 0;
+        r->reserved_0_2 = 0;
+        r->reserved_0_3 = 0;
+
+        r->reserved_1 = 0;
+        r->reserved_2 = 0;
+        r->reserved_3 = 0;
+
+        r->device_motion_status = (i % 3);
+        r->label_2 = 0;
+
+        r->temperature[0] = 20 + (i % 3);
+        r->temperature[1] = 21 + (i % 3);
+        r->temperature[2] = 22 + (i % 3);
+
+        r->c = 0;
+        r->d = i;
+
+        // -------------------------------------
+        // Populate fs_imu_composite_packet_2
+        // -------------------------------------
+        fs_imu_composite_packet_2_t *c2 = &composite2_packets[i];
+
+        c2->type = C2_PACKET_TYPE_INS;
+        c2->time = i * 75;
+
+        // Raw IMU values
+        c2->ax0 = base + 0.1f;
+        c2->ay0 = base + 0.2f;
+        c2->az0 = base + 0.3f;
+        c2->gx0 = base + 0.4f;
+        c2->gy0 = base + 0.5f;
+        c2->gz0 = base + 0.6f;
+
+        c2->ax1 = base + 1.1f;
+        c2->ay1 = base + 1.2f;
+        c2->az1 = base + 1.3f;
+        c2->gx1 = base + 1.4f;
+        c2->gy1 = base + 1.5f;
+        c2->gz1 = base + 1.6f;
+
+        c2->ax2 = base + 2.1f;
+        c2->ay2 = base + 2.2f;
+        c2->az2 = base + 2.3f;
+        c2->gx2 = base + 2.4f;
+        c2->gy2 = base + 2.5f;
+        c2->gz2 = base + 2.6f;
+
+        // Orientation
+        c2->q0 = 0.1f * i;
+        c2->q1 = 0.2f * i;
+        c2->q2 = 0.3f * i;
+        c2->q3 = 0.4f * i;
+
+        // Euler
+        c2->euler_x = base + 3.1f;
+        c2->euler_y = base + 3.2f;
+        c2->euler_z = base + 3.3f;
+
+        // Compensated gyro
+        c2->omega_x0 = base + 4.1f;
+        c2->omega_y0 = base + 4.2f;
+        c2->omega_z0 = base + 4.3f;
+
+        // Compensated accel
+        c2->acc_x = base + 5.1f;
+        c2->acc_y = base + 5.2f;
+        c2->acc_z = base + 5.3f;
+
+        // Velocity
+        c2->vx = base + 6.1f;
+        c2->vy = base + 6.2f;
+        c2->vz = base + 6.3f;
+
+        // Position (double)
+        c2->rx = base + 7.1;
+        c2->ry = base + 7.2;
+        c2->rz = base + 7.3;
+
+        c2->reserved_1 = 0;
+        c2->reserved_2 = 0;
+        c2->reserved_3 = 0;
+
+        c2->device_motion_status = (i % 3);
+        c2->label_2 = 0;
+
+        c2->temperature[0] = 30 + (i % 3);
+        c2->temperature[1] = 31 + (i % 3);
+        c2->temperature[2] = 32 + (i % 3);
+
+        c2->c = 0;
+        c2->d = i;
+    }
+
     // Change the packets into BaseNUM_SAMPLES-encoded strings delimited by :%s!
     char formatted_packets[NUM_SAMPLES][FS_MAX_DATA_LENGTH] = {{0}};
+    char formatted_regular[NUM_SAMPLES][FS_MAX_DATA_LENGTH] = {{0}};
+    char formatted_composite2[NUM_SAMPLES][FS_MAX_DATA_LENGTH] = {{0}};
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
         char base64_buffer[FS_MAX_DATA_LENGTH] = {0};
@@ -167,19 +299,21 @@ int main()
         // Encode the raw packet into BaseNUM_SAMPLES
         int encoded_len = fs_base64_encode(&packets[i], sizeof(packets[i]),
                                            base64_buffer, sizeof(base64_buffer));
-        if (encoded_len < 0)
-        {
-            printf("Encoding failed for packet %d\n", i);
-            continue;
-        }
-
         // Format with delimiter :%s!
         int written = snprintf(formatted_packets[i], FS_MAX_DATA_LENGTH, ":%s!", base64_buffer);
-        if (written < 0 || written >= FS_MAX_DATA_LENGTH)
-        {
-            printf("Formatting failed or overflow for packet %d\n", i);
-            continue;
-        }
+    }
+
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        char buf[FS_MAX_DATA_LENGTH] = {0};
+
+        int len = fs_base64_encode(&regular_packets[i], sizeof(regular_packets[i]),
+                                   buf, sizeof(buf));
+        snprintf(formatted_regular[i], FS_MAX_DATA_LENGTH, ":%s!", buf);
+
+        len = fs_base64_encode(&composite2_packets[i], sizeof(composite2_packets[i]),
+                               buf, sizeof(buf));
+        snprintf(formatted_composite2[i], FS_MAX_DATA_LENGTH, ":%s!", buf);
     }
 
     for (int i = 0; i < NUM_SAMPLES; i++)
@@ -231,6 +365,54 @@ int main()
     else
     {
         printf("Device name mismatch: got '%s'\n", device.device_descriptor.device_name);
+    }
+
+    // -----------------------------
+    // Validate fs_imu_regular_packet
+    // -----------------------------
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        const char *encoded = formatted_regular[i];
+        ssize_t len = strnlen(encoded, FS_MAX_PACKET_LENGTH);
+
+        if (fs_device_parse_packet(&device, encoded, len, FS_COMMUNICATION_MODE_UART) < 0)
+        {
+            printf("Regular packet parse failed %d\n", i);
+            continue;
+        }
+
+        fs_packet_union_t parsed = {{0}};
+        fs_get_raw_packet(&device, &parsed);
+
+        if (memcmp(&parsed.regular, &regular_packets[i], sizeof(fs_imu_regular_packet_t)) != 0)
+        {
+            printf("Mismatch in regular packet %d\n", i);
+            assert(0);
+        }
+    }
+
+    // -------------------------------------
+    // Validate fs_imu_composite_packet_2
+    // -------------------------------------
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        const char *encoded = formatted_composite2[i];
+        ssize_t len = strnlen(encoded, FS_MAX_PACKET_LENGTH);
+
+        if (fs_device_parse_packet(&device, encoded, len, FS_COMMUNICATION_MODE_UART) < 0)
+        {
+            printf("Composite2 packet parse failed %d\n", i);
+            continue;
+        }
+
+        fs_packet_union_t parsed = {{0}};
+        fs_get_raw_packet(&device, &parsed);
+
+        if (memcmp(&parsed.composite2, &composite2_packets[i], sizeof(fs_imu_composite_packet_2_t)) != 0)
+        {
+            printf("Mismatch in composite2 packet %d\n", i);
+            assert(0);
+        }
     }
 
     return 0;

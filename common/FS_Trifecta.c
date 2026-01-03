@@ -277,13 +277,14 @@ int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg)
   return fs_send_command(device_handle, send_buf, send_len);
 }
 
-int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position)
+int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_d_t *position)
 {
-  // char send_buf[FS_MAX_CMD_LENGTH];
-  // snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.8f;", CMD_SET_YAW_DEG, heading_deg);
-  // size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
-  // return fs_send_command(device_handle, send_buf, send_len);
-  return -1; // Not yet supported
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%d,%.10f,%.10f,%.3f;",
+           CMD_SET_POSITION, FS_GNSS_PF_WGS84,
+           position->x, position->y, position->z);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
 }
 
 int fs_set_device_name(fs_device_info_t *device_handle, const char name[32])

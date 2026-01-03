@@ -65,6 +65,14 @@ extern "C"
         int32_t z;
     } fs_vector3_i32_t;
 
+    typedef enum fs_gnss_position_format
+    {
+        FS_GNSS_PF_UNKNOWN = 0,
+        FS_GNSS_PF_ECEF = 1,  // ECEF
+        FS_GNSS_PF_WGS84 = 2, // Lat/long coordinate system
+        FS_GNSS_PF_FIXED = 3, // Fixed point 32-bit
+    } fs_gnss_position_format_t;
+
     /// @brief Type of packet indication
     typedef enum fs_packet_type
     {
@@ -86,6 +94,7 @@ extern "C"
         C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
         C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
     } fs_packet_type_t;
+    
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet
     {
