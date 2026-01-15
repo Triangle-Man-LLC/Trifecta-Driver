@@ -132,10 +132,10 @@ int main()
         p->q2 = 0.3f * i;
         p->q3 = 0.4f * i;
 
-        // Euler angles
-        p->euler_x = base + 3.1f;
-        p->euler_y = base + 3.2f;
-        p->euler_z = base + 3.3f;
+        // Magnetometer
+        p->mag_x = base + 3.1f;
+        p->mag_y = base + 3.2f;
+        p->mag_z = base + 3.3f;
 
         // Compensated acceleration
         p->acc_x = base + 4.1f;
@@ -147,10 +147,10 @@ int main()
         p->omega_y0 = base + 5.2f;
         p->omega_z0 = base + 5.3f;
 
-        // Reserved (new location)
-        p->reserved_1 = 0;
-        p->reserved_2 = 0;
-        p->reserved_3 = 0;
+        // Magnetometer (only available in MARG packet type)
+        p->mag_x = 0;
+        p->mag_y = 0;
+        p->mag_z = 0;
 
         // Motion status
         p->device_motion_status = (i % 2) + 1;
@@ -162,7 +162,7 @@ int main()
         p->temperature[2] = 27 + (i % 3);
 
         p->c = 0;
-        p->d = i;
+        p->barometric_pressure = i;
     }
 
     for (int i = 0; i < NUM_SAMPLES; i++)
@@ -186,9 +186,9 @@ int main()
         r->q2 = 0.03f * i;
         r->q3 = 0.04f * i;
 
-        r->euler_x = base + 1.1f;
-        r->euler_y = base + 1.2f;
-        r->euler_z = base + 1.3f;
+        r->mag_x = base + 1.1f;
+        r->mag_y = base + 1.2f;
+        r->mag_z = base + 1.3f;
 
         r->acc_x = base + 2.1f;
         r->acc_y = base + 2.2f;
@@ -198,9 +198,9 @@ int main()
         r->reserved_0_2 = 0;
         r->reserved_0_3 = 0;
 
-        r->reserved_1 = 0;
-        r->reserved_2 = 0;
-        r->reserved_3 = 0;
+        r->mag_x = 0;
+        r->mag_y = 0;
+        r->mag_z = 0;
 
         r->device_motion_status = (i % 3);
         r->label_2 = 0;
@@ -210,7 +210,7 @@ int main()
         r->temperature[2] = 22 + (i % 3);
 
         r->c = 0;
-        r->d = i;
+        r->barometric_pressure = i;
 
         // -------------------------------------
         // Populate fs_imu_composite_packet_2
@@ -248,10 +248,10 @@ int main()
         c2->q2 = 0.3f * i;
         c2->q3 = 0.4f * i;
 
-        // Euler
-        c2->euler_x = base + 3.1f;
-        c2->euler_y = base + 3.2f;
-        c2->euler_z = base + 3.3f;
+        // Magnetometer
+        c2->mag_x = base + 3.1f;
+        c2->mag_y = base + 3.2f;
+        c2->mag_z = base + 3.3f;
 
         // Compensated gyro
         c2->omega_x0 = base + 4.1f;
@@ -273,9 +273,9 @@ int main()
         c2->ry = base + 7.2;
         c2->rz = base + 7.3;
 
-        c2->reserved_1 = 0;
-        c2->reserved_2 = 0;
-        c2->reserved_3 = 0;
+        c2->mag_x = 0;
+        c2->mag_y = 0;
+        c2->mag_z = 0;
 
         c2->device_motion_status = (i % 3);
         c2->label_2 = 0;
@@ -285,7 +285,7 @@ int main()
         c2->temperature[2] = 32 + (i % 3);
 
         c2->c = 0;
-        c2->d = i;
+        c2->barometric_pressure = i;
     }
 
     // Change the packets into BaseNUM_SAMPLES-encoded strings delimited by :%s!
@@ -311,7 +311,7 @@ int main()
                                    buf, sizeof(buf));
         snprintf(formatted_regular[i], FS_MAX_DATA_LENGTH, ":%s!", buf);
 
-        len = fs_base64_encode(&composite2_packets[i], sizeof(composite2_packets[i]),
+        int len2 = fs_base64_encode(&composite2_packets[i], sizeof(composite2_packets[i]),
                                buf, sizeof(buf));
         snprintf(formatted_composite2[i], FS_MAX_DATA_LENGTH, ":%s!", buf);
     }

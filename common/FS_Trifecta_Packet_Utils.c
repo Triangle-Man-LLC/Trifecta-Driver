@@ -24,7 +24,7 @@ int fs_euler_angles_from_packet(const fs_packet_union_t *packet, fs_vector3_t *e
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
         fs_q_to_euler_angles(&(euler_angles_out->x), &(euler_angles_out->y), &(euler_angles_out->z),
@@ -33,7 +33,7 @@ int fs_euler_angles_from_packet(const fs_packet_union_t *packet, fs_vector3_t *e
     }
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
         fs_q_to_euler_angles(&(euler_angles_out->x), &(euler_angles_out->y), &(euler_angles_out->z),
@@ -42,7 +42,7 @@ int fs_euler_angles_from_packet(const fs_packet_union_t *packet, fs_vector3_t *e
     }
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
         fs_q_to_euler_angles(&(euler_angles_out->x), &(euler_angles_out->y), &(euler_angles_out->z),
@@ -67,26 +67,26 @@ int fs_lat_long_from_packet(const fs_packet_union_t *packet, fs_vector3_d_t *lat
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-
-        break;
+        return -1; // IMU-only packets do not contain GNSS information.
     }
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-
-        break;
+        return -1; // IMU-only packets do not contain GNSS information.
     }
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-
+        lat_long_height->x = packet->composite2.rx; // Latitude [deg]
+        lat_long_height->y = packet->composite2.ry; // Longitude [deg]
+        lat_long_height->z = packet->composite2.rz; // Height [m]
         break;
     }
     default:
@@ -107,26 +107,32 @@ int fs_angular_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-        
+        angular_velocity->x = packet->composite.omega_x0;
+        angular_velocity->y = packet->composite.omega_y0;
+        angular_velocity->z = packet->composite.omega_z0;
         break;
     }
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-
+        angular_velocity->x = packet->regular.omega_x0;
+        angular_velocity->y = packet->regular.omega_y0;
+        angular_velocity->z = packet->regular.omega_z0;
         break;
     }
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-
+        angular_velocity->x = packet->composite2.omega_x0;
+        angular_velocity->y = packet->composite2.omega_y0;
+        angular_velocity->z = packet->composite2.omega_z0;
         break;
     }
     default:
@@ -147,26 +153,78 @@ int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *a
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-
+        acceleration->x = packet->composite.acc_x;
+        acceleration->y = packet->composite.acc_y;
+        acceleration->z = packet->composite.acc_z;
         break;
     }
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-
+        acceleration->x = packet->regular.acc_x;
+        acceleration->y = packet->regular.acc_y;
+        acceleration->z = packet->regular.acc_z;
         break;
     }
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
+        acceleration->x = packet->composite.acc_x;
+        acceleration->y = packet->composite.acc_y;
+        acceleration->z = packet->composite.acc_z;
+        break;
+    }
+    default:
+        return -1;
+    }
+    return 0;
+}
 
+/// @brief Retrieve the angular velocity (deg/s) from the packet.
+/// @param packet The packet.
+/// @param angular_velocity Output buffer for the angular velocity, in deg/s, with axes in the sensor body frame.
+/// @return 0 on success.
+int fs_magnetic_field_from_packet(const fs_packet_union_t *packet, fs_vector3_t *mag_values)
+{
+    if (!packet || !mag_values)
+        return -1;
+    switch (packet->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_RESERVED:
+    case C_PACKET_TYPE_INS:
+    {
+        mag_values->x = packet->composite.mag_x;
+        mag_values->y = packet->composite.mag_y;
+        mag_values->z = packet->composite.mag_z;
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_RESERVED:
+    case S_PACKET_TYPE_INS:
+    {
+        mag_values->x = packet->regular.mag_x;
+        mag_values->y = packet->regular.mag_y;
+        mag_values->z = packet->regular.mag_z;
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_RESERVED:
+    case C2_PACKET_TYPE_INS:
+    {
+        mag_values->x = packet->composite2.mag_x;
+        mag_values->y = packet->composite2.mag_y;
+        mag_values->z = packet->composite2.mag_z;
         break;
     }
     default:
@@ -187,26 +245,26 @@ int fs_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_t *veloc
     {
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-
-        break;
+        return -1; // IMU-only packets do not contain velocity vector information.
     }
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-
-        break;
+        return -1; // IMU-only packets do not contain velocity vector information.
     }
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-
+        velocity->x = packet->composite2.vx;
+        velocity->y = packet->composite2.vy;
+        velocity->z = packet->composite2.vz;
         break;
     }
     default:

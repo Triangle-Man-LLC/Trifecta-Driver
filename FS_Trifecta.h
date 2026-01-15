@@ -145,6 +145,12 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angular_velocity_buffer);
 
+    /// @brief Retrieve the latest device magnetometer values.
+    /// @param device_handle Device handle
+    /// @param angular_velocity_buffer Pointer to the magnetometer values buffer. Will be NaN if no magnetometer supported.
+    /// @return 0 on success.
+    FS_API int fs_get_magnetic_field(fs_device_info_t *device_handle, fs_vector3_t *mag_buffer);
+
     /// @brief Retrieve the latest measured device velocity.
     /// @param device_handle Device handle
     /// @param velocity_buffer Pointer to the velocity buffer.
@@ -190,6 +196,12 @@ extern "C"
     /// @param angular_velocity Output buffer for the acceleration (m/s^2), with axes in the sensor body frame.
     /// @return 0 on success.
     FS_API int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *acceleration);
+
+    /// @brief Retrieves the magnetometer values from the packet. Note that only devices with an actual magnetometer can do this.
+    /// @param packet The packet.
+    /// @param mag_values Buffer to store the values. If no magnetometer on board, will be all NaN.
+    /// @return 0 on success.
+    FS_API int fs_magnetic_field_from_packet(const fs_packet_union_t *packet, fs_vector3_t *mag_values);
 
     /// @brief Retrieve velocity (m/s) from the packet. This is only applicable to Trifecta-M devices.
     /// @param packet The packet.
@@ -239,7 +251,7 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_set_network_udp_port(fs_device_info_t *device_handle, int port);
 
-    /// @brief Set baudrate of UART interface. Non-volatile, so it must be applied after every restart.
+    /// @brief Set baudrate of UART interface.
     /// @param device_handle
     /// @param baudrate Allowed range: 921,600 - 3,000,000. Exceeding these limits may cause lag or instability.
     /// @return 0 on success.

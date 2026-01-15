@@ -244,19 +244,19 @@ int obtain_packet_length(int packet_type)
     case C_PACKET_TYPE_IMU:
     case C_PACKET_TYPE_AHRS:
     case C_PACKET_TYPE_INS:
-    case C_PACKET_TYPE_GNSS:
+    case C_PACKET_TYPE_RESERVED:
         packet_length = sizeof(fs_imu_composite_packet_t);
         break;
     case S_PACKET_TYPE_IMU:
     case S_PACKET_TYPE_AHRS:
     case S_PACKET_TYPE_INS:
-    case S_PACKET_TYPE_GNSS:
+    case S_PACKET_TYPE_RESERVED:
         packet_length = sizeof(fs_imu_regular_packet_t);
         break;
     case C2_PACKET_TYPE_IMU:
     case C2_PACKET_TYPE_AHRS:
     case C2_PACKET_TYPE_INS:
-    case C2_PACKET_TYPE_GNSS:
+    case C2_PACKET_TYPE_RESERVED:
         packet_length = sizeof(fs_imu_composite_packet_2_t);
         break;
     default:
