@@ -171,7 +171,7 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_get_position(fs_device_info_t *device_handle, fs_vector3_d_t *position_buffer);
 
-        /// @section Helper methods for extracting information from packets.
+    /// @section Helper methods for extracting information from packets.
 
     /// @brief Retrieve an euler angles from a packet (given that packets by default report quaternions)
     /// @param packet The packet.
@@ -191,17 +191,37 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_angular_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_t *angular_velocity);
 
+    /// @brief Retrieve the raw angular velocity (deg/s) from the packet.
+    /// Preferred to use fs_angular_velocity_from_packet() for most use cases, as that one is typically a cleaner signal.
+    /// @param packet
+    /// @param angular_velocity
+    /// @return 0 on success.
+    FS_API int fs_angular_velocity_raw_from_packet(const fs_packet_union_t *packet, fs_vector3_t *angular_velocity);
+
     /// @brief Retrieve the acceleration (m/s^2) from the packet.
     /// @param packet The packet.
     /// @param angular_velocity Output buffer for the acceleration (m/s^2), with axes in the sensor body frame.
     /// @return 0 on success.
     FS_API int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *acceleration);
 
-    /// @brief Retrieves the magnetometer values from the packet. Note that only devices with an actual magnetometer can do this.
+    /// @brief Retrieve the raw acceleration (m/s^2) from the packet.
+    /// Preferred to use fs_angular_velocity_from_packet() for most use cases, as that one is typically a cleaner signal.
+    /// @param packet
+    /// @param acceleration
+    /// @return 0 on success.
+    FS_API int fs_acceleration_raw_from_packet(const fs_packet_union_t *packet, fs_vector3_t *acceleration);
+
+    /// @brief Retrieves the magnetometer values (mG) from the packet. Note that only devices with an actual magnetometer can do this.
     /// @param packet The packet.
     /// @param mag_values Buffer to store the values. If no magnetometer on board, will be all NaN.
     /// @return 0 on success.
     FS_API int fs_magnetic_field_from_packet(const fs_packet_union_t *packet, fs_vector3_t *mag_values);
+
+    /// @brief Retrieve the barometric pressure (Pa) from the packet.
+    /// @param packet The packet.
+    /// @param pres_value Output buffer for the pressure, in Pa.
+    /// @return 0 on success.
+    FS_API int fs_barometric_pressure_from_packet(const fs_packet_union_t *packet, float *pres_value);
 
     /// @brief Retrieve velocity (m/s) from the packet. This is only applicable to Trifecta-M devices.
     /// @param packet The packet.
@@ -269,15 +289,13 @@ extern "C"
     /// @return 0 on success.
     FS_API int fs_get_device_descriptors(fs_device_info_t *device_handle, fs_device_descriptor_t *desc);
 
-
     /// @section Utilities
 
     /// @brief Quaternion to euler angle conversion
-    /// @param euler_angles 
-    /// @param quaternion 
-    /// @return 
+    /// @param euler_angles
+    /// @param quaternion
+    /// @return
     FS_API int fs_eulers_from_quaternion(fs_vector3_t *euler_angles, const fs_quaternion_t *quaternion);
-
 
     /// @section Debug utilities - This should typically not be used at all.
 

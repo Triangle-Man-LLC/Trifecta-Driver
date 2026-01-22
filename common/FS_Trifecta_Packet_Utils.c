@@ -141,6 +141,48 @@ int fs_angular_velocity_from_packet(const fs_packet_union_t *packet, fs_vector3_
     return 0;
 }
 
+int fs_angular_velocity_raw_from_packet(const fs_packet_union_t *packet, fs_vector3_t *angular_velocity)
+{
+    if (!packet || !angular_velocity)
+        return -1;
+    switch (packet->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_RESERVED:
+    case C_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->composite.gx0 + packet->composite.gx1 + packet->composite.gx2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->composite.gy0 + packet->composite.gy1 + packet->composite.gy2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->composite.gz0 + packet->composite.gz1 + packet->composite.gz2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_RESERVED:
+    case S_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->regular.gx0 + packet->regular.gx1 + packet->regular.gx2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->regular.gy0 + packet->regular.gy1 + packet->regular.gy2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->regular.gz0 + packet->regular.gz1 + packet->regular.gz2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_RESERVED:
+    case C2_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->composite2.gx0 + packet->composite2.gx1 + packet->composite2.gx2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->composite2.gy0 + packet->composite2.gy1 + packet->composite2.gy2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->composite2.gz0 + packet->composite2.gz1 + packet->composite2.gz2) * FS_GYRO_SCALER_DPS / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    default:
+        return -1;
+    }
+    return 0;
+}
+
 /// @brief Retrieve the acceleration (m/s^2) from the packet.
 /// @param packet The packet.
 /// @param angular_velocity Output buffer for the acceleration (m/s^2), with axes in the sensor body frame.
@@ -156,9 +198,9 @@ int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *a
     case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-        acceleration->x = packet->composite.acc_x;
-        acceleration->y = packet->composite.acc_y;
-        acceleration->z = packet->composite.acc_z;
+        acceleration->x = packet->composite.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->y = packet->composite.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->z = packet->composite.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
         break;
     }
     case S_PACKET_TYPE_IMU:
@@ -166,9 +208,10 @@ int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *a
     case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-        acceleration->x = packet->regular.acc_x;
-        acceleration->y = packet->regular.acc_y;
-        acceleration->z = packet->regular.acc_z;
+        acceleration->x = packet->regular.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->y = packet->regular.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->z = packet->regular.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+
         break;
     }
     case C2_PACKET_TYPE_IMU:
@@ -176,9 +219,9 @@ int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *a
     case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-        acceleration->x = packet->composite.acc_x;
-        acceleration->y = packet->composite.acc_y;
-        acceleration->z = packet->composite.acc_z;
+        acceleration->x = packet->composite.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->y = packet->composite.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration->z = packet->composite.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
         break;
     }
     default:
@@ -187,9 +230,51 @@ int fs_acceleration_from_packet(const fs_packet_union_t *packet, fs_vector3_t *a
     return 0;
 }
 
-/// @brief Retrieve the angular velocity (deg/s) from the packet.
+int fs_acceleration_raw_from_packet(const fs_packet_union_t *packet, fs_vector3_t *acceleration)
+{
+    if (!packet || !angular_velocity)
+        return -1;
+    switch (packet->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_RESERVED:
+    case C_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->composite.ax0 + packet->composite.ax1 + packet->composite.ax2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->composite.ay0 + packet->composite.ay1 + packet->composite.ay2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->composite.az0 + packet->composite.az1 + packet->composite.az2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_RESERVED:
+    case S_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->regular.ax0 + packet->regular.ax1 + packet->regular.ax2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->regular.ay0 + packet->regular.ay1 + packet->regular.ay2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->regular.az0 + packet->regular.az1 + packet->regular.az2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_RESERVED:
+    case C2_PACKET_TYPE_INS:
+    {
+        angular_velocity->x = (packet->composite2.ax0 + packet->composite2.ax1 + packet->composite2.ax2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->y = (packet->composite2.ay0 + packet->composite2.ay1 + packet->composite2.ay2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        angular_velocity->z = (packet->composite2.az0 + packet->composite2.az1 + packet->composite2.az2) * FS_ACCEL_SCALER_Gs / (3.0f * (float)INT16_MAX);
+        break;
+    }
+    default:
+        return -1;
+    }
+    return 0;
+}
+
+/// @brief Retrieve the magnetic field (mG) from the packet.
 /// @param packet The packet.
-/// @param angular_velocity Output buffer for the angular velocity, in deg/s, with axes in the sensor body frame.
+/// @param mag_values Output buffer for the magnetic field (mG) with axes in the sensor body frame.
 /// @return 0 on success.
 int fs_magnetic_field_from_packet(const fs_packet_union_t *packet, fs_vector3_t *mag_values)
 {
@@ -225,6 +310,46 @@ int fs_magnetic_field_from_packet(const fs_packet_union_t *packet, fs_vector3_t 
         mag_values->x = packet->composite2.mag_x;
         mag_values->y = packet->composite2.mag_y;
         mag_values->z = packet->composite2.mag_z;
+        break;
+    }
+    default:
+        return -1;
+    }
+    return 0;
+}
+
+/// @brief Retrieve the barometric pressure (Pa) from the packet.
+/// @param packet The packet.
+/// @param pres_value Output buffer for the pressure, in Pa.
+/// @return 0 on success.
+int fs_barometric_pressure_from_packet(const fs_packet_union_t *packet, float *pres_value)
+{
+    if (!packet || !pres_value)
+        return -1;
+    switch (packet->composite.type)
+    {
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_RESERVED:
+    case C_PACKET_TYPE_INS:
+    {
+        *pres_value = packet->composite.barometric_pressure;
+        break;
+    }
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_RESERVED:
+    case S_PACKET_TYPE_INS:
+    {
+        *pres_value = packet->regular.barometric_pressure;
+        break;
+    }
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_RESERVED:
+    case C2_PACKET_TYPE_INS:
+    {
+        *pres_value = packet->composite2.barometric_pressure;
         break;
     }
     default:

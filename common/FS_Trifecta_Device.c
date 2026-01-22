@@ -454,9 +454,9 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
     case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-        acceleration_buffer->x = pkt->composite.acc_x;
-        acceleration_buffer->y = pkt->composite.acc_y;
-        acceleration_buffer->z = pkt->composite.acc_z;
+        acceleration_buffer->x = pkt->composite.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->y = pkt->composite.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->z = pkt->composite.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
         break;
     }
     case S_PACKET_TYPE_IMU:
@@ -464,9 +464,9 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
     case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-        acceleration_buffer->x = pkt->regular.acc_x;
-        acceleration_buffer->y = pkt->regular.acc_y;
-        acceleration_buffer->z = pkt->regular.acc_z;
+        acceleration_buffer->x = pkt->regular.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->y = pkt->regular.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->z = pkt->regular.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
         break;
     }
     case C2_PACKET_TYPE_IMU:
@@ -474,9 +474,9 @@ int fs_get_acceleration(fs_device_info_t *device_handle, fs_vector3_t *accelerat
     case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-        acceleration_buffer->x = pkt->composite2.acc_x;
-        acceleration_buffer->y = pkt->composite2.acc_y;
-        acceleration_buffer->z = pkt->composite2.acc_z;
+        acceleration_buffer->x = pkt->composite2.acc_x * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->y = pkt->composite2.acc_y * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
+        acceleration_buffer->z = pkt->composite2.acc_z * FS_ACCEL_SCALER_Gs / ((float)INT16_MAX);
         break;
     }
     default:
@@ -500,9 +500,9 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
     case C_PACKET_TYPE_RESERVED:
     case C_PACKET_TYPE_INS:
     {
-        angular_velocity_buffer->x = pkt->composite.omega_x0;
-        angular_velocity_buffer->y = pkt->composite.omega_y0;
-        angular_velocity_buffer->z = pkt->composite.omega_z0;
+        angular_velocity_buffer->x = pkt->composite.omega_x0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->y = pkt->composite.omega_y0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->z = pkt->composite.omega_z0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
         break;
     }
     case S_PACKET_TYPE_IMU:
@@ -510,9 +510,9 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
     case S_PACKET_TYPE_RESERVED:
     case S_PACKET_TYPE_INS:
     {
-        angular_velocity_buffer->x = (pkt->regular.omega_x0);
-        angular_velocity_buffer->y = (pkt->regular.omega_y0);
-        angular_velocity_buffer->z = (pkt->regular.omega_z0);
+        angular_velocity_buffer->x = (pkt->regular.omega_x0) * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->y = (pkt->regular.omega_y0) * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->z = (pkt->regular.omega_z0) * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
         break;
     }
     case C2_PACKET_TYPE_IMU:
@@ -520,9 +520,9 @@ int fs_get_angular_velocity(fs_device_info_t *device_handle, fs_vector3_t *angul
     case C2_PACKET_TYPE_RESERVED:
     case C2_PACKET_TYPE_INS:
     {
-        angular_velocity_buffer->x = pkt->composite2.omega_x0;
-        angular_velocity_buffer->y = pkt->composite2.omega_y0;
-        angular_velocity_buffer->z = pkt->composite2.omega_z0;
+        angular_velocity_buffer->x = pkt->composite2.omega_x0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->y = pkt->composite2.omega_y0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
+        angular_velocity_buffer->z = pkt->composite2.omega_z0 * FS_GYRO_SCALER_DPS / ((float)INT16_MAX);
         break;
     }
     default:
