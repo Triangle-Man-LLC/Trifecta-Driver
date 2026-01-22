@@ -6,6 +6,12 @@ public class Trifecta_Device {
     private final long devPtr;
     private final SerialBackend serial;
 
+    public FSPacketUnion currentPacket; // Public-facing packet
+
+    private long currentPacketRaw; // Opaque pointer to raw packet (must be processed by JNI backend)
+
+    // TODO: Concurrent queues for enqueuing packets
+
     public Trifecta_Device(SerialPort port) {
         this.devPtr = fs_export_allocate_device();
         this.serial = new SerialBackend(devPtr, port);
