@@ -58,9 +58,9 @@ static fs_bytes_ringbuffer_t data_buffers[FS_MAX_NUMBER_DEVICES] = {0};
 
 JNIEXPORT void JNICALL
 Java_com_trifecta_SerialBridge_nativeOnBytesReceived(JNIEnv *env,
-                                                           jclass clazz,
-                                                           jlong devPtr,
-                                                           jbyteArray data)
+                                                     jclass clazz,
+                                                     jlong devPtr,
+                                                     jbyteArray data)
 {
     if (devPtr == 0)
         return;
@@ -86,9 +86,9 @@ Java_com_trifecta_SerialBridge_nativeOnBytesReceived(JNIEnv *env,
 
 JNIEXPORT void JNICALL
 Java_com_trifecta_SerialBridge_nativeRegister(JNIEnv *env,
-                                                    jclass clazz,
-                                                    jlong devPtr,
-                                                    jobject serialObj)
+                                              jclass clazz,
+                                              jlong devPtr,
+                                              jobject serialObj)
 {
     fs_device_info_t *device = (fs_device_info_t *)devPtr;
 
@@ -159,7 +159,12 @@ int fs_platform_supported_serial_interrupts()
 /// @param device_handle
 /// @param status_flag
 /// @return 0 on success, -1 on fail (e.g. not supported on platform)
-int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle)
+{
+    return -1;
+}
+
+int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle)
 {
     return -1;
 }
@@ -252,7 +257,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle,
             break;
 
         // Avoid busy-waiting
-        fs_delay(1);
+        // fs_delay(1);
     }
 
     return received;
@@ -268,4 +273,9 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
     device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
     fs_release_serial_port_for_device(device_handle);
     return 0;
+}
+
+int fs_attempt_reconnect_serial(fs_device_info_t *device_handle)
+{
+
 }

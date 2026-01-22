@@ -1,5 +1,5 @@
-
 package com.trifecta;
+
 
 // Constants
 
@@ -24,8 +24,6 @@ public enum FSDeviceId {
 
     // Trifecta-K (IMU - Generic)
     FS_DEVICE_ID_TK(1),
-
-    // Trifecta-K0/K1/K2
     FS_DEVICE_ID_TK0(10),
     FS_DEVICE_ID_TK1(11),
     FS_DEVICE_ID_TK2(12),

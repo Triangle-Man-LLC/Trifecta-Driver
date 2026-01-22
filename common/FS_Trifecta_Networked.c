@@ -387,3 +387,26 @@ int fs_network_set_host_udp_port(fs_device_info_t *device_handle, int udp_port)
     const int receive_timeout_micros = 10000;
     return (fs_transmit_networked_tcp(device_handle, send_buf, send_len, receive_timeout_micros) > 0) ? 0 : -1;
 }
+
+
+/// @brief Attempts to reconnect the network connection for the specified device.
+/// @param device_handle Pointer to the device information structure.
+/// @return 0 on success, or a negative error code on failure.
+int fs_attempt_reconnect_network_tcp(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+        return -1;
+
+    return fs_init_network_tcp_driver(device_handle);
+}
+
+/// @brief Attempts to reconnect the network connection for the specified device.
+/// @param device_handle Pointer to the device information structure.
+/// @return 0 on success, or a negative error code on failure.
+int fs_attempt_reconnect_network_udp(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+        return -1;
+
+    return fs_init_network_udp_driver(device_handle);
+}
