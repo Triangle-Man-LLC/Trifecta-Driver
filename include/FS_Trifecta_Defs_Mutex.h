@@ -38,19 +38,19 @@ static inline void fs_mutex_init(fs_mutex_t *mutex)
 static inline void fs_mutex_lock(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
-    if (!mutex || !mutex->handle)
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     xSemaphoreTake(mutex->handle, portMAX_DELAY);
 #elif defined(_WIN32)
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     EnterCriticalSection(&mutex->handle);
 #else
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
@@ -61,19 +61,19 @@ static inline void fs_mutex_lock(fs_mutex_t *mutex)
 static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
-    if (!mutex || !mutex->handle)
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     xSemaphoreGive(mutex->handle);
 #elif defined(_WIN32)
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     LeaveCriticalSection(&mutex->handle);
 #else
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
@@ -84,19 +84,19 @@ static inline void fs_mutex_unlock(fs_mutex_t *mutex)
 static inline void fs_mutex_destroy(fs_mutex_t *mutex)
 {
 #if defined(ESP_PLATFORM)
-    if (!mutex || !mutex->handle)
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     vSemaphoreDelete(mutex->handle);
 #elif defined(_WIN32)
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }
     DeleteCriticalSection(&mutex->handle);
 #else
-    if (!mutex || !(&mutex->handle))
+    if (!mutex)
     {
         return; // Prevent NULL dereference
     }

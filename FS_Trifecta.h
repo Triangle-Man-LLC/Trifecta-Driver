@@ -243,7 +243,7 @@ extern "C"
     /// @param device_handle Device handle
     /// @param position The position to set to (for now, this function only re-sets position to zero).
     /// @return 0 on success.
-    FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_t *position);
+    FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_d_t *position);
 
     /// @brief Sets the device name. Note that changes are applied on restart.
     /// @param device_handle
