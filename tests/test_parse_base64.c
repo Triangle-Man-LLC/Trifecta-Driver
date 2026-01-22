@@ -146,12 +146,7 @@ int main()
         p->omega_x0 = base + 5.1f;
         p->omega_y0 = base + 5.2f;
         p->omega_z0 = base + 5.3f;
-
-        // Magnetometer (only available in MARG packet type)
-        p->mag_x = 0;
-        p->mag_y = 0;
-        p->mag_z = 0;
-
+        
         // Motion status
         p->device_motion_status = (i % 2) + 1;
         p->label_2 = 0;
@@ -197,10 +192,6 @@ int main()
         r->reserved_0_1 = 0;
         r->reserved_0_2 = 0;
         r->reserved_0_3 = 0;
-
-        r->mag_x = 0;
-        r->mag_y = 0;
-        r->mag_z = 0;
 
         r->device_motion_status = (i % 3);
         r->label_2 = 0;
@@ -272,10 +263,6 @@ int main()
         c2->rx = base + 7.1;
         c2->ry = base + 7.2;
         c2->rz = base + 7.3;
-
-        c2->mag_x = 0;
-        c2->mag_y = 0;
-        c2->mag_z = 0;
 
         c2->device_motion_status = (i % 3);
         c2->label_2 = 0;
