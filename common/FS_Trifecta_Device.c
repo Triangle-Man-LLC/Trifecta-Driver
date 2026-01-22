@@ -117,10 +117,12 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
             fs_log_output("[Trifecta-Device] AP Password updated.");
             break;
         case CMD_IDENTIFY_PARAM_TRANSMIT:
+        {
             int mode = atoi(params);
             device_handle->device_params.all_enabled_interfaces = (fs_communication_mode_t)mode;
             fs_log_output("[Trifecta-Device] Comm mode set to: %d", mode);
             break;
+        }
         case CMD_IDENTIFY_PARAM_DEV_SN:
             fs_safe_strncpy(device_handle->device_descriptor.device_sn, params, sizeof(device_handle->device_descriptor.device_sn) - 1);
             device_handle->device_descriptor.device_sn[sizeof(device_handle->device_descriptor.device_sn) - 1] = '\0';
