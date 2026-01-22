@@ -129,9 +129,9 @@ int main()
         c->q2 = 0.3f * i;
         c->q3 = 0.4f * i;
 
-        c->euler_x = base + 3.1f;
-        c->euler_y = base + 3.2f;
-        c->euler_z = base + 3.3f;
+        c->mag_x = base + 3.1f;
+        c->mag_y = base + 3.2f;
+        c->mag_z = base + 3.3f;
 
         c->acc_x = base + 4.1f;
         c->acc_y = base + 4.2f;
@@ -141,10 +141,6 @@ int main()
         c->omega_y0 = base + 5.2f;
         c->omega_z0 = base + 5.3f;
 
-        c->reserved_1 = 0;
-        c->reserved_2 = 0;
-        c->reserved_3 = 0;
-
         c->device_motion_status = (i % 2) + 1;
         c->label_2 = 0;
 
@@ -153,7 +149,7 @@ int main()
         c->temperature[2] = 27 + (i % 3);
 
         c->c = 0;
-        c->d = i;
+        c->barometric_pressure = i;
 
         // Regular packet (85 bytes)
         fs_imu_regular_packet_t *r = &packets[i].regular;
@@ -170,9 +166,9 @@ int main()
         r->q2 = 0.03f * i;
         r->q3 = 0.04f * i;
 
-        r->euler_x = base + 1.1f;
-        r->euler_y = base + 1.2f;
-        r->euler_z = base + 1.3f;
+        r->mag_x = base + 1.1f;
+        r->mag_y = base + 1.2f;
+        r->mag_z = base + 1.3f;
 
         r->acc_x = base + 2.1f;
         r->acc_y = base + 2.2f;
@@ -182,10 +178,6 @@ int main()
         r->reserved_0_2 = 0;
         r->reserved_0_3 = 0;
 
-        r->reserved_1 = 0;
-        r->reserved_2 = 0;
-        r->reserved_3 = 0;
-
         r->device_motion_status = (i % 3);
         r->label_2 = 0;
 
@@ -194,7 +186,7 @@ int main()
         r->temperature[2] = 22 + (i % 3);
 
         r->c = 0;
-        r->d = i;
+        r->barometric_pressure = i;
 
         // Composite2 packet (181 bytes)
         fs_imu_composite_packet_2_t *c2 = &packets[i].composite2;
@@ -228,9 +220,9 @@ int main()
         c2->q2 = 0.3f * i;
         c2->q3 = 0.4f * i;
 
-        c2->euler_x = base + 3.1f;
-        c2->euler_y = base + 3.2f;
-        c2->euler_z = base + 3.3f;
+        c2->mag_x = base + 3.1f;
+        c2->mag_y = base + 3.2f;
+        c2->mag_z = base + 3.3f;
 
         c2->omega_x0 = base + 4.1f;
         c2->omega_y0 = base + 4.2f;
@@ -248,10 +240,6 @@ int main()
         c2->ry = base + 7.2;
         c2->rz = base + 7.3;
 
-        c2->reserved_1 = 0;
-        c2->reserved_2 = 0;
-        c2->reserved_3 = 0;
-
         c2->device_motion_status = (i % 3);
         c2->label_2 = 0;
 
@@ -260,7 +248,7 @@ int main()
         c2->temperature[2] = 32 + (i % 3);
 
         c2->c = 0;
-        c2->d = i;
+        c2->barometric_pressure = i;
     }
 
     // Validate all 3 packet types
@@ -290,7 +278,7 @@ int main()
         case C_PACKET_TYPE_IMU:
         case C_PACKET_TYPE_AHRS:
         case C_PACKET_TYPE_INS:
-        case C_PACKET_TYPE_GNSS:
+        case C_PACKET_TYPE_RESERVED:
             if (memcmp(&parsed.composite,
                        &packets[i].composite,
                        sizeof(fs_imu_composite_packet_t)) != 0)
@@ -303,7 +291,7 @@ int main()
         case S_PACKET_TYPE_IMU:
         case S_PACKET_TYPE_AHRS:
         case S_PACKET_TYPE_INS:
-        case S_PACKET_TYPE_GNSS:
+        case S_PACKET_TYPE_RESERVED:
             if (memcmp(&parsed.regular,
                        &packets[i].regular,
                        sizeof(fs_imu_regular_packet_t)) != 0)
@@ -316,7 +304,7 @@ int main()
         case C2_PACKET_TYPE_IMU:
         case C2_PACKET_TYPE_AHRS:
         case C2_PACKET_TYPE_INS:
-        case C2_PACKET_TYPE_GNSS:
+        case C2_PACKET_TYPE_RESERVED:
             if (memcmp(&parsed.composite2,
                        &packets[i].composite2,
                        sizeof(fs_imu_composite_packet_2_t)) != 0)

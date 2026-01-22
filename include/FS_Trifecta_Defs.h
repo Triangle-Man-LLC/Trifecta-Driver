@@ -88,10 +88,18 @@ extern "C"
     typedef enum fs_device_id
     {
         FS_DEVICE_ID_UNKNOWN = 0,
-        FS_DEVICE_ID_TK = 1,  // Trifecta-K (IMU)
+        FS_DEVICE_ID_TK = 1,  // Trifecta-K (IMU - Generic)
+        FS_DEVICE_ID_TK0 = 10,  // Trifecta-K0 (IMU - Compact version)
+        FS_DEVICE_ID_TK1 = 11,  // Trifecta-K1 (IMU - Standard performance)
+        FS_DEVICE_ID_TK2 = 12,  // Trifecta-K2 (IMU - High performance)
         FS_DEVICE_ID_TM = 2,  // Trifecta-M (GNSS/INS)
-        FS_DEVICE_ID_STV = 2, // Super Trifecta
-    } fs_device_id_t;
+        FS_DEVICE_ID_TM0 = 20,  // Trifecta-M0 (Single antenna RTK GNSS/INS)
+        FS_DEVICE_ID_TM1 = 21,  // Trifecta-M1 (Dual antenna RTK GNSS/INS)
+        FS_DEVICE_ID_TM2 = 22,  // Trifecta-M2 (Survey-grade dual antenna RTK GNSS/INS)
+        FS_DEVICE_ID_STV = 3, // Super Trifecta 1 
+        FS_DEVICE_ID_STV1 = 31, // Super Trifecta 1 
+        FS_DEVICE_ID_STV2 = 32, // Super Trifecta 2 
+    } fs_device_id_t; 
 
     typedef enum fs_run_status
     {

@@ -76,25 +76,31 @@ extern "C"
     /// @brief Type of packet indication
     typedef enum fs_packet_type
     {
-        // The following are verbose packets - fs_imu_composite_packet
-        C_PACKET_TYPE_IMU = 0,  // IMU - raw acceleration and gyroscope measurements
-        C_PACKET_TYPE_AHRS = 1, // AHRS - IMU + orientation (uncorrected)
-        C_PACKET_TYPE_INS = 2,  // INS - corrected AHRS + position/velocity estimation
-        C_PACKET_TYPE_GNSS = 3, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
+        // Standard packet format, used by Trifecta-K1 and K2.
+        C_PACKET_TYPE_IMU = 0,      // IMU - raw acceleration and gyroscope measurements
+        C_PACKET_TYPE_AHRS = 1,     // AHRS - IMU + orientation
+        C_PACKET_TYPE_INS = 2,      // INS - GNSS/INS packets
+        C_PACKET_TYPE_RESERVED = 3, //
 
-        // The following are simplified packets - imu_packet_t
-        S_PACKET_TYPE_IMU = 4,  // IMU - raw acceleration and gyroscope measurements
-        S_PACKET_TYPE_AHRS = 5, // AHRS - IMU + orientation (uncorrected)
-        S_PACKET_TYPE_INS = 6,  // INS - corrected AHRS + position/velocity estimation
-        S_PACKET_TYPE_GNSS = 7, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
+        // Simplified packet format, used by Trifecta-K0.
+        S_PACKET_TYPE_IMU = 4,      // IMU - raw acceleration and gyroscope measurements
+        S_PACKET_TYPE_AHRS = 5,     // AHRS - IMU + orientation
+        S_PACKET_TYPE_INS = 6,      // INS - GNSS/INS packets
+        S_PACKET_TYPE_RESERVED = 7, //
 
-        // The following are the new verbose packets - imu_composite_packet_2_t
-        C2_PACKET_TYPE_IMU = 8,   // IMU - raw acceleration and gyroscope measurements
-        C2_PACKET_TYPE_AHRS = 9,  // AHRS - IMU + orientation (uncorrected)
-        C2_PACKET_TYPE_INS = 10,  // INS - corrected AHRS + position/velocity estimation
-        C2_PACKET_TYPE_GNSS = 11, // GNSS - GPS and INS closed-loop - this one may need to be NMEA strings
+        // Verbose packet formats, used by Trifecta-M.
+        C2_PACKET_TYPE_IMU = 8,       // IMU - raw acceleration and gyroscope measurements
+        C2_PACKET_TYPE_AHRS = 9,      // AHRS - IMU + orientation
+        C2_PACKET_TYPE_INS = 10,      // INS - GNSS/INS packets
+        C2_PACKET_TYPE_RESERVED = 11, //
+
+        // High-rate packet, comprised of raw data suitable for high-rate controls.
+        HR_PACKET_TYPE_IMU = 21,      // IMU - raw acceleration and gyroscope measurements
+        HR_PACKET_TYPE_RESERVED_1 = 22, //
+        HR_PACKET_TYPE_RESERVED_2 = 23, //
+        HR_PACKET_TYPE_RESERVED_3 = 24, //
     } fs_packet_type_t;
-    
+
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet
     {
@@ -127,9 +133,9 @@ extern "C"
         float q2;
         float q3;
 
-        float euler_x; // Euler angles [deg]
-        float euler_y;
-        float euler_z;
+        float mag_x; // Magnetometer [mG]
+        float mag_y;
+        float mag_z;
 
         float acc_x; // Compensated acceleration [m s^-2]
         float acc_y;
@@ -139,16 +145,16 @@ extern "C"
         float omega_y0;
         float omega_z0;
 
-        int16_t reserved_1; // Reserved for future use
-        int16_t reserved_2; //
-        int16_t reserved_3; //
+        int16_t reserved_x; // Reserved
+        int16_t reserved_y; //
+        int16_t reserved_z; //
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
         int8_t label_2;              // Reserved for future use
 
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
+        int8_t temperature[3];     // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;                  // Reserved for future use
+        float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet fs_imu_composite_packet_t;
     _Static_assert(sizeof(fs_imu_composite_packet_t) == 145, "fs_imu_composite_packet_t size mismatch");
@@ -168,9 +174,9 @@ extern "C"
         float q2;
         float q3;
 
-        float euler_x; // Euler angles [deg]
-        float euler_y;
-        float euler_z;
+        float mag_x; // Magnetometer [mG]
+        float mag_y;
+        float mag_z;
 
         float acc_x; // Compensated acceleration [m s^-2]
         float acc_y;
@@ -180,16 +186,16 @@ extern "C"
         float reserved_0_2; //
         float reserved_0_3; //
 
-        int16_t reserved_1; // Reserved for future use
-        int16_t reserved_2; //
-        int16_t reserved_3; //
+        int16_t reserved_x; // Reserved
+        int16_t reserved_y; //
+        int16_t reserved_z; //
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
         int8_t label_2;              // Reserved for future use
 
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
+        int8_t temperature[3];     // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;                  // Reserved for future use
+        float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_regular_packet fs_imu_regular_packet_t;
     _Static_assert(sizeof(fs_imu_regular_packet_t) == 85, "fs_imu_regular_packet_t size mismatch");
@@ -226,9 +232,9 @@ extern "C"
         float q2;
         float q3;
 
-        float euler_x; // Euler angles [deg]
-        float euler_y;
-        float euler_z;
+        float mag_x; // Magnetometer [mG]
+        float mag_y;
+        float mag_z;
 
         float omega_x0; // Compensated angular velocity [deg/s]
         float omega_y0;
@@ -246,16 +252,16 @@ extern "C"
         double ry; // Position (deg longitude)
         double rz; // Height (m)
 
-        int16_t reserved_1; // Reserved for future use
-        int16_t reserved_2; //
-        int16_t reserved_3; //
+        int16_t reserved_x; // Reserved
+        int16_t reserved_y; //
+        int16_t reserved_z; //
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
         int8_t label_2;              // Reserved for future use
 
-        int8_t temperature[3]; // Temperature of the IMUs, rounded to nearest int [deg C]
-        int8_t c;              // Reserved for future use
-        int32_t d;             // Reserved for future use
+        int8_t temperature[3];     // Temperature of the IMUs, rounded to nearest int [deg C]
+        int8_t c;                  // Reserved for future use
+        float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_2 fs_imu_composite_packet_2_t;
     _Static_assert(sizeof(fs_imu_composite_packet_2_t) == 181, "fs_imu_composite_packet_2_t size mismatch");
