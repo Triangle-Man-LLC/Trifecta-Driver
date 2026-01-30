@@ -8,10 +8,10 @@ jobs:
   trifecta-driver-cppcheck:
     runs-on: [self-hosted, ESP-IDF]
     steps:
-      - name: Install Cppcheck
-        run: |
-          sudo apt-get update
-          sudo apt install -y cppcheck
+      # - name: Install Cppcheck
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt install -y cppcheck
 
       - name: Checkout code
         uses: actions/checkout@v3
