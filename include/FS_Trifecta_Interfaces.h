@@ -50,6 +50,12 @@ extern "C"
     /// @return 0 on success, -1 on fail (e.g. not supported on platform)
     int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag);
 
+    /// @brief Wait for the next serial interrupt on the device handle.
+    /// This will yield the task until the interrupt has occurred.
+    /// @param device_handle 
+    /// @return 0 on success, -1 on fail (e.g. not supported on platform)
+    int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle);
+
     /// @brief Starts a new thread for executing a specific function.
     /// @param thread_func Pointer to the thread's main function.
     /// @param params Parameters to be passed to the thread function.
