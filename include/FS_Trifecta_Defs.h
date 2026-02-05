@@ -110,7 +110,7 @@ extern "C"
 
     typedef struct fs_driver_config
     {
-        bool use_serial_interrupt_mode;    // If TRUE, and the platform supports it, then use serial interrupt mode intead
+        bool use_serial_interrupt_mode;    // If TRUE, and the platform supports it, then use serial interrupt mode instead of polling
         int background_task_priority;      // Priority of the background task for obtaining updates from the device (leave as -1 if no preference)
         int background_task_core_affinity; // Core to pin the background task to (leave as -1 if no preference)
         int read_timeout_micros;           // How long to wait (microseconds) to read data
