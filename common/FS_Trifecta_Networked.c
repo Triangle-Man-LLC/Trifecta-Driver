@@ -48,7 +48,7 @@ static fs_thread_func_t fs_tcp_update_thread(void *params)
 {
     if (params == NULL)
     {
-        fs_log_output("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
+        fs_log_critical("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
         return FS_THREAD_RETVAL;
     }
@@ -100,7 +100,7 @@ static fs_thread_func_t fs_udp_update_thread(void *params)
 {
     if (params == NULL)
     {
-        fs_log_output("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
+        fs_log_critical("[Trifecta-Network] Error: Network thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
         return FS_THREAD_RETVAL;
     }
@@ -166,7 +166,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     // Initialize TCP
     if (fs_init_network_tcp_driver(device_handle) != 0)
     {
-        fs_log_output("[Trifecta-Network] Error: Could not start TCP driver!");
+        fs_log_critical("[Trifecta-Network] Error: Could not start TCP driver!");
         device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         fs_shutdown_network_tcp_driver(device_handle);
         return -1;
@@ -190,7 +190,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
         if (status <= 0)
         {
-            fs_log_output("[Trifecta-Network] Error: Could not transmit identification command!");
+            fs_log_critical("[Trifecta-Network] Error: Could not transmit identification command!");
             continue;
         }
 
@@ -208,7 +208,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
 
     if (fs_safe_strnlen(device_handle->device_descriptor.device_name, sizeof(device_handle->device_descriptor.device_name)) == 0)
     {
-        fs_log_output("[Trifecta-Network] Error: Device was not detected!");
+        fs_log_critical("[Trifecta-Network] Error: Device was not detected!");
         fs_shutdown_network_udp_driver(device_handle);
         fs_shutdown_network_tcp_driver(device_handle);
         return -3;
@@ -220,7 +220,7 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     if (fs_network_set_host_udp_port(device_handle, device_handle->device_params.udp_port) != 0 ||
         fs_init_network_udp_driver(device_handle) != 0)
     {
-        fs_log_output("[Trifecta-Network] Error: Could not start UDP driver!");
+        fs_log_critical("[Trifecta-Network] Error: Could not start UDP driver!");
         device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
         fs_shutdown_network_udp_driver(device_handle);
         fs_shutdown_network_tcp_driver(device_handle);
@@ -239,14 +239,16 @@ int fs_network_start(const char *ip_addr, fs_device_info_t *device_handle)
     const int task_stack_size = device_handle->driver_config.task_stack_size_bytes;
 
     int thread_status = fs_thread_start(fs_tcp_update_thread, (void *)device_handle, &device_handle->device_params.status,
+                                        &device_handle->background_task_handle,
                                         task_stack_size, task_priority, core_affinity);
 
     thread_status += fs_thread_start(fs_udp_update_thread, (void *)device_handle, &device_handle->device_params.status,
+                                     &device_handle->background_task_handle,
                                      task_stack_size, task_priority, core_affinity);
 
     if (thread_status != 0)
     {
-        fs_log_output("[Trifecta-Network] Error: Could not start network thread!");
+        fs_log_critical("[Trifecta-Network] Error: Could not start network thread!");
         fs_shutdown_network_udp_driver(device_handle);
         fs_shutdown_network_tcp_driver(device_handle);
         return -4;

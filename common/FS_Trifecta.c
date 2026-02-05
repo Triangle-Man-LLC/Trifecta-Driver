@@ -38,7 +38,7 @@ static inline int fs_send_command(fs_device_info_t *device_handle, void *payload
     result = fs_network_send_message(device_handle, payload, length);
     break;
   default:
-    fs_log_output("[Trifecta] Error: Unsupported communication mode!");
+    fs_log_critical("[Trifecta-Network] Error: Unsupported communication mode!");
     result = -1;
   }
 
@@ -77,7 +77,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 {
   if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
   {
-    fs_log_output("[Trifecta] Error: Driver already running with active device! Shut that one down before continuing.\n");
+    fs_log_critical("[Trifecta-Network] Error: Driver already running with active device! Shut that one down before continuing.\n");
     return -1;
   }
 
@@ -86,7 +86,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
     fs_driver_config_t dconfig = FS_DRIVER_CONFIG_DEFAULT;
     if (fs_set_driver_parameters(device_handle, &dconfig) != 0)
     {
-      fs_log_output("[Trifecta] Error: Failed to set the driver configuration!\n");
+      fs_log_critical("[Trifecta-Network] Error: Failed to set the driver configuration!\n");
       return -1;
     }
   }
@@ -96,7 +96,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
 
   if (fs_network_start(device_ip_address, device_handle) != 0)
   {
-    fs_log_output("[Trifecta] Error: Could not start networked device!\n");
+    fs_log_critical("[Trifecta-Network] Error: Could not start networked device!\n");
     device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
     return -1;
   }
@@ -114,7 +114,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
   }
   else
   {
-    fs_log_output("[Trifecta] Error: Network device initialization failed!\n");
+    fs_log_critical("[Trifecta-Network] Error: Network device initialization failed!\n");
     return -1;
   }
 }
@@ -123,7 +123,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
 {
   if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
   {
-    fs_log_output("[Trifecta] Error: Driver already running with active device! Shut that one down before continuing.\n");
+    fs_log_critical("[Trifecta-Network] Error: Driver already running with active device! Shut that one down before continuing.\n");
     return -11;
   }
 
@@ -132,7 +132,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
     fs_driver_config_t dconfig = FS_DRIVER_CONFIG_DEFAULT;
     if (fs_set_driver_parameters(device_handle, &dconfig) != 0)
     {
-      fs_log_output("[Trifecta] Error: Failed to set the driver configuration!\n");
+      fs_log_critical("[Trifecta-Network] Error: Failed to set the driver configuration!\n");
       return -12;
     }
   }
@@ -145,7 +145,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
   int sstart_status = fs_serial_start(device_handle);
   if (sstart_status != 0)
   {
-    fs_log_output("[Trifecta] Error: Failed to start the serial driver!\n");
+    fs_log_critical("[Trifecta-Network] Error: Failed to start the serial driver!\n");
     device_handle->device_params.communication_mode = FS_COMMUNICATION_MODE_UNINITIALIZED;
     return sstart_status;
   }
@@ -182,7 +182,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
   }
   else
   {
-    fs_log_output("[Trifecta] Error: Serial device initialization failed!\n");
+    fs_log_critical("[Trifecta-Network] Error: Serial device initialization failed!\n");
     return -1;
   }
 }

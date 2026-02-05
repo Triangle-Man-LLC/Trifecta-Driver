@@ -21,48 +21,7 @@
 #include <string.h>
 #include <math.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-
-#ifdef FS_DRIVER_EXPORTS
-#define FS_API __declspec(dllexport)
-#else
-#define FS_API __declspec(dllimport)
-#endif
-#ifdef FS_DRIVER_EXPORTS
-#define FS_API __declspec(dllexport)
-#else
-#define FS_API __declspec(dllimport)
-#endif
-
-#elif defined(__GNUC__)
-#define FS_API __attribute__((visibility("default")))
-#define FS_API __attribute__((visibility("default")))
-
-#else
-#define FS_API
-#define FS_API
-#endif
-
-#ifdef _WIN32
-typedef intptr_t fs_sock_t;
-typedef intptr_t fs_serial_handle_t;
-#else
-typedef int fs_sock_t;
-typedef int fs_serial_handle_t;
-#endif
-
-#if defined(__linux__)
-typedef void *fs_thread_func_t;
-#define FS_THREAD_RETVAL NULL
-#else
-typedef void fs_thread_func_t;
-#define FS_THREAD_RETVAL
-#endif
-
+#include "FS_Trifecta_Defs_Platform_Types.h"
 #include "FS_Trifecta_Defs_Packets.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
@@ -88,18 +47,18 @@ extern "C"
     typedef enum fs_device_id
     {
         FS_DEVICE_ID_UNKNOWN = 0,
-        FS_DEVICE_ID_TK = 1,  // Trifecta-K (IMU - Generic)
+        FS_DEVICE_ID_TK = 1,    // Trifecta-K (IMU - Unspecified)
         FS_DEVICE_ID_TK0 = 10,  // Trifecta-K0 (IMU - Compact version)
         FS_DEVICE_ID_TK1 = 11,  // Trifecta-K1 (IMU - Standard performance)
         FS_DEVICE_ID_TK2 = 12,  // Trifecta-K2 (IMU - High performance)
-        FS_DEVICE_ID_TM = 2,  // Trifecta-M (GNSS/INS)
-        FS_DEVICE_ID_TM0 = 20,  // Trifecta-M0 (Single antenna RTK GNSS/INS)
-        FS_DEVICE_ID_TM1 = 21,  // Trifecta-M1 (Dual antenna RTK GNSS/INS)
-        FS_DEVICE_ID_TM2 = 22,  // Trifecta-M2 (Survey-grade dual antenna RTK GNSS/INS)
-        FS_DEVICE_ID_STV = 3, // Super Trifecta 1 
-        FS_DEVICE_ID_STV1 = 31, // Super Trifecta 1 
-        FS_DEVICE_ID_STV2 = 32, // Super Trifecta 2 
-    } fs_device_id_t; 
+        FS_DEVICE_ID_TM = 2,    // Trifecta-M (GNSS/INS - Unspecified)
+        FS_DEVICE_ID_TM0 = 20,  // Trifecta-M0 (RTK GNSS/INS - Single Antenna)
+        FS_DEVICE_ID_TM1 = 21,  // Trifecta-M1 (RTK GNSS/INS - Dual antenna)
+        FS_DEVICE_ID_TM2 = 22,  // Trifecta-M2 (RTK GNSS/INS - Dual antenna)
+        FS_DEVICE_ID_STV = 3,   // Super Trifecta (Unspecified)
+        FS_DEVICE_ID_STV1 = 31, // Super Trifecta 1
+        FS_DEVICE_ID_STV2 = 32, // Super Trifecta 2
+    } fs_device_id_t;
 
     typedef enum fs_run_status
     {
@@ -110,7 +69,8 @@ extern "C"
 
     typedef struct fs_driver_config
     {
-        bool use_serial_interrupt_mode;    // If TRUE, and the platform supports it, then use serial interrupt mode intead
+        bool use_serial_interrupt_mode;    // If TRUE, and the platform supports it, then use serial interrupt mode instead of polling
+        int serial_data_ready_gpio;        // If the serial interrupt mode is enabled, this is the GPIO corresponding to data ready pin.
         int background_task_priority;      // Priority of the background task for obtaining updates from the device (leave as -1 if no preference)
         int background_task_core_affinity; // Core to pin the background task to (leave as -1 if no preference)
         int read_timeout_micros;           // How long to wait (microseconds) to read data
@@ -134,7 +94,7 @@ extern "C"
         fs_serial_handle_t serial_port;
         int32_t baudrate;
         int32_t ping;                 // Time since last received communication from device
-        uint64_t hp_timestamp_micros; // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
+        uint64_t hp_timestamp; // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
     } fs_device_params_t;
 
     typedef struct fs_device_descriptor
@@ -156,14 +116,15 @@ extern "C"
     {
         fs_device_descriptor_t device_descriptor; // Device name, etc.
 
-        fs_device_params_t device_params; // Parameters, such as serial baudrate, Wi-Fi SSID, etc.
+        fs_device_params_t device_params; // Do not modify this, it is managed in backend.
         fs_driver_config_t driver_config; // Device driver configuration (each device has its own thread spawned unless interrupt mode is active)
 
-        fs_mutex_t lock; // Ensure atomic access to device hardware, the user should not use this as it is managed in backend.
+        fs_mutex_t lock;                    // Do not modify this, it is managed in backend.
+        fs_thread_t background_task_handle; // Do not modify this, it is managed in backend.
 
-        fs_packet_union_t last_received_packet; // The most recent packet from the device
+        fs_packet_union_t last_received_packet; // The most recent packet from the device (read-only)
 
-        fs_bytes_ringbuffer_t data_buffer;       // Received data of the device, used primarily for serial reads
+        fs_bytes_ringbuffer_t data_buffer;       // Do not modify this, it is managed in backend.
         fs_packet_ringbuffer_t packet_buf_queue; // Packet queue buffer for the device (read-only)
         fs_command_ringbuffer_t command_queue;   // Command buffer for the device (read-only)
     } fs_device_info_t;
