@@ -19,7 +19,7 @@ static fs_thread_func_t fs_serial_update_thread(void *params)
 {
     if (params == NULL)
     {
-        fs_log_output("[Trifecta-Serial] Error: Serial thread params point to an invalid instance of fs_device_info_t!");
+        fs_log_critical("[Trifecta-Serial] Error: Serial thread params point to an invalid instance of fs_device_info_t!");
         fs_thread_exit(NULL);
         return FS_THREAD_RETVAL;
     }
@@ -55,7 +55,14 @@ static fs_thread_func_t fs_serial_update_thread(void *params)
         {
             active_device->device_params.ping = 0;
         }
-        fs_delay(delay_time_millis);
+        if (fs_platform_supported_serial_interrupts() && active_device->driver_config.use_serial_interrupt_mode)
+        {
+            fs_wait_until_next_serial_interrupt(active_device);
+        }
+        else
+        {
+            fs_delay(delay_time_millis);
+        }
     }
 
     fs_thread_exit(NULL);
@@ -83,7 +90,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
     int status = fs_init_serial_driver(device_handle);
     if (status != 0)
     {
-        fs_log_output("[Trifecta-Serial] Error: Could not start serial driver!\n");
+        fs_log_critical("[Trifecta-Serial] Error: Could not start serial driver!\n");
         return status;
     }
 
@@ -110,7 +117,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
         fs_delay(receive_timeout_micros / 1000);
         if (status != 0)
         {
-            fs_log_output("[Trifecta-Serial] Error: Could not transmit identification command!");
+            fs_log_critical("[Trifecta-Serial] Error: Could not transmit identification command!");
             return -9;
         }
 
@@ -138,22 +145,37 @@ int fs_serial_start(fs_device_info_t *device_handle)
         if (!interrupts_supported || !device_handle->driver_config.use_serial_interrupt_mode)
         {
             // Start the serial update thread if serial interrupts are not enabled
-            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, &device_handle->device_params.status, task_stack_size, task_priority, core_affinity);
+            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, 
+            &device_handle->device_params.status, &device_handle->background_task_handle,
+            task_stack_size, task_priority, core_affinity);
             if (status != 0)
             {
-                fs_log_output("[Trifecta-Serial] Error: Could not start serial thread!");
+                fs_log_critical("[Trifecta-Serial] Error: Could not start serial thread!");
                 return -5;
             }
         }
         else
         {
-            // Not yet supported
-            status = fs_init_serial_interrupts(device_handle, &device_handle->device_params.status);
+            // Initialize the serial interrupt mode.
+            status = fs_init_serial_interrupts(device_handle);
+            if (status != 0)
+            {
+                fs_log_critical("[Trifecta-Serial] Error: Could not enable the serial interrupts!");
+                return -5;
+            }
+            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, 
+            &device_handle->device_params.status, &device_handle->background_task_handle,
+            task_stack_size, task_priority, core_affinity);
+            if (status != 0)
+            {
+                fs_log_critical("[Trifecta-Serial] Error: Could not start serial thread!");
+                return -5;
+            }
         }
         return 0;
     }
     // If no connection was made, log an error
-    fs_log_output("[Trifecta-Serial] Error: Device was not detected!");
+    fs_log_critical("[Trifecta-Serial] Error: Device was not detected!");
     fs_serial_exit(device_handle);
     return -6;
 }

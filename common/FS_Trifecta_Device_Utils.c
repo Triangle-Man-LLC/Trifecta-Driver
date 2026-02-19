@@ -15,7 +15,7 @@
 // Base64 character set
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-// 
+//
 static char current_decode_buffer[FS_MAX_PACKET_LENGTH] = {0};
 
 /// @brief Internal function to enqueue a command into the command queue...
@@ -53,7 +53,7 @@ int fs_segment_commands(fs_device_info_t *device_handle, const void *cmd_buf, si
     {
         char inByte = input[i];
 
-        if (inByte == FS_SERIAL_COMMAND_TERMINATOR)
+        if (inByte == CMD_TERMINATOR)
         {
             cmd.payload[input_pos] = '\0';
             if (fs_enqueue_into_command_queue(device_handle, &cmd) != 0)
@@ -233,6 +233,53 @@ int fs_base64_decode(const char *input, void *output_buffer, size_t buffer_size,
     return 0;
 }
 
+/// @brief Computes a CRC16 from the given data.
+/// @param data
+/// @param length
+/// @return CRC16
+static uint16_t compute_crc16(const uint8_t *data, size_t length)
+{
+    uint16_t crc = 0xFFFF;
+    for (uint8_t i = 0; i < length; i++)
+    {
+        crc ^= (uint16_t)data[i] << 8;
+        for (uint8_t b = 0; b < 8; b++)
+        {
+            if (crc & 0x8000)
+            {
+                crc = (crc << 1) ^ 0x1021;
+            }
+            else
+            {
+                crc <<= 1;
+            }
+        }
+    }
+    return crc;
+}
+
+/// @brief Validates the CRC16 of the given frame.
+/// @param frame
+/// @param total_length
+/// @return
+static bool validate_crc16(const uint8_t *frame, size_t total_length)
+{
+    if (total_length < 4)
+    {
+        return false;
+        // too small to contain LEN + CRC
+    }
+    uint8_t payload_len = frame[1];
+    uint8_t expected_total = 1 + 1 + payload_len + 2;
+    if (expected_total != total_length)
+    {
+        return false; // malformed frame
+    }
+    uint16_t received_crc = (uint16_t)frame[total_length - 2] | ((uint16_t)frame[total_length - 1] << 8);
+    uint16_t computed_crc = compute_crc16(&frame[2], payload_len);
+    return (received_crc == computed_crc);
+}
+
 /// @brief
 /// @param packet_type The packet type indication
 /// @return
@@ -259,8 +306,25 @@ int obtain_packet_length(int packet_type)
     case C2_PACKET_TYPE_RESERVED:
         packet_length = sizeof(fs_imu_composite_packet_2_t);
         break;
+    case C64_PACKET_TYPE_IMU:
+    case C64_PACKET_TYPE_AHRS:
+    case C64_PACKET_TYPE_INS:
+    case C64_PACKET_TYPE_RESERVED:
+        packet_length = sizeof(fs_imu_composite_packet_64_t);
+        break;
+    case S64_PACKET_TYPE_IMU:
+    case S64_PACKET_TYPE_AHRS:
+    case S64_PACKET_TYPE_INS:
+    case S64_PACKET_TYPE_RESERVED:
+        packet_length = sizeof(fs_imu_regular_packet_64_t);
+        break;
+    case C642_PACKET_TYPE_IMU:
+    case C642_PACKET_TYPE_AHRS:
+    case C642_PACKET_TYPE_INS:
+    case C642_PACKET_TYPE_RESERVED:
+        packet_length = sizeof(fs_imu_composite_packet_64_2_t);
+        break;
     default:
-        // Assume that data is string
         return 0;
     }
 
@@ -362,7 +426,7 @@ int base64_to_packet(fs_device_info_t *device_handle, char *segment, size_t leng
     }
 
     fs_log_output("[Trifecta-Device-Utils] Scanned packet (B64)! Timestamp: %lu - Type: %d",
-                  ((fs_imu_composite_packet_t *)current_decode_buffer)->time, 
+                  ((fs_imu_composite_packet_t *)current_decode_buffer)->time,
                   ((fs_imu_composite_packet_t *)current_decode_buffer)->type);
     return 0;
 }
@@ -379,15 +443,15 @@ fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
 
     for (size_t i = 0; i < len; i++)
     {
-        if (buffer[i] == FS_SERIAL_PACKET_HEADER_B64)
+        if (buffer[i] == PACKET_HEADER)
         {
             b64_candidate = (int)i;
         }
-        else if (buffer[i] == FS_SERIAL_PACKET_HEADER_BIN)
+        else if (buffer[i] == PACKET_HEADER_V2)
         {
             bin_candidate = (int)i;
         }
-        else if (buffer[i] == FS_SERIAL_PACKET_FOOTER)
+        else if (buffer[i] == PACKET_FOOTER)
         {
             if (result.exclam_index == -1)
                 result.exclam_index = (int)i;
@@ -398,7 +462,7 @@ fs_delimiter_indices_t fs_scan_delimiters(const uint8_t *buffer, size_t len)
             if (result.binary_index == -1 && bin_candidate != -1)
                 result.binary_index = bin_candidate;
         }
-        else if (buffer[i] == FS_SERIAL_COMMAND_TERMINATOR && result.semicolon_index == -1)
+        else if (buffer[i] == CMD_TERMINATOR && result.semicolon_index == -1)
         {
             result.semicolon_index = (int)i;
         }

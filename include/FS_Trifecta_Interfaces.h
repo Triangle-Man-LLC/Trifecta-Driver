@@ -45,21 +45,27 @@ extern "C"
 
     /// @brief Start serial in interrupt mode on platforms that support it.
     /// This enables more precise and low latency serial reads than polling.
+    /// It works by using the DRDY notification of the GPIO.
     /// @param device_handle
-    /// @param status_flag
     /// @return 0 on success, -1 on fail (e.g. not supported on platform)
-    int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag);
+    int fs_init_serial_interrupts(fs_device_info_t *device_handle);
 
-    /// @brief Starts a new thread for executing a specific function.
-    /// @param thread_func Pointer to the thread's main function.
-    /// @param params Parameters to be passed to the thread function.
-    /// @param run_status_flag Pointer to a flag indicating the thread's run status.
-    /// @param thread_handle Pointer to store the thread handle.
-    /// @param stack_size Stack size for the thread (bytes).
-    /// @param priority Priority of the thread.
-    /// @param core_affinity Core affinity for the thread (-1 for no preference).
-    /// @return 0 on success, or a negative error code on failure.
-    int fs_thread_start(fs_thread_func_t (thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity);
+    /// @brief Wait for the next serial interrupt on the device handle.
+    /// This will yield the task until the interrupt has occurred.
+    /// @param device_handle
+    /// @return 0 on success, -1 on fail (e.g. not supported on platform)
+    int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle);
+
+    /// @brief Platform-specific start thread given a function handle.
+    /// @param thread_func Pointer to the thread function handle.
+    /// @param params Parameters to pass to the thread function.
+    /// @param thread_running_flag Pointer to the flag used to indicate thread status.
+    /// @param thread_handle_ptr Pointer to the task handle.
+    /// @param stack_size Size of the stack allocated for the thread.
+    /// @param priority Priority level of the thread.
+    /// @param core_affinity -1 for indifference, else preferred core number
+    /// @return Status of the thread creation (0 for success, -1 for failure).
+    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, fs_thread_t *thread_handle, size_t stack_size, int priority, int core_affinity);
 
     /// @brief Exits the currently running thread.
     /// @param thread_handle Pointer to the thread handle.
@@ -139,7 +145,7 @@ extern "C"
     /// @return 0 on success, or a negative error code on failure.
     int fs_log_output(const char *format, ...);
 
-    /// @brief Logs a formatted message to the output stream, 
+    /// @brief Logs a formatted message to the output stream,
     /// even if logging is disabled.
     /// @param format Format string for the log message.
     /// @param ... Additional arguments for the format string.
@@ -151,7 +157,7 @@ extern "C"
     /// @return 0 on success, or a negative error code on failure.
     int fs_toggle_logging(bool do_log);
 
-    /// @brief Redirect logs to the indicated path. 
+    /// @brief Redirect logs to the indicated path.
     /// Only some platforms support this. (E.g. a filesystem needed.)
     /// @param context The path to store logs into.
     /// @return 0 on success, or a negative error code on failure.
