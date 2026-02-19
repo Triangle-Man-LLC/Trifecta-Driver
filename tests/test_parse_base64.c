@@ -149,7 +149,7 @@ int main()
         
         // Motion status
         p->device_motion_status = (i % 2) + 1;
-        p->label_2 = 0;
+        p->diagnostic_flag = 0;
 
         // Temperatures
         p->temperature[0] = 25 + (i % 3);
@@ -194,7 +194,7 @@ int main()
         r->reserved_0_3 = 0;
 
         r->device_motion_status = (i % 3);
-        r->label_2 = 0;
+        r->diagnostic_flag = 0;
 
         r->temperature[0] = 20 + (i % 3);
         r->temperature[1] = 21 + (i % 3);
@@ -265,7 +265,7 @@ int main()
         c2->rz = base + 7.3;
 
         c2->device_motion_status = (i % 3);
-        c2->label_2 = 0;
+        c2->diagnostic_flag = 0;
 
         c2->temperature[0] = 30 + (i % 3);
         c2->temperature[1] = 31 + (i % 3);
