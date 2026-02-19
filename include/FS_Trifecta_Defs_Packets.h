@@ -125,6 +125,19 @@ extern "C"
         HR64_PACKET_TYPE_RESERVED_3 = 124, //
     } fs_packet_type_t;
 
+    /// @brief
+    typedef enum fs_device_diagnostic_flags
+    {
+        FS_DEVICE_DIAG_UTC_SYNCED = 0x01,
+        FS_DEVICE_DIAG_GNSS_AVAILABLE = 0x02,
+        FS_DEVICE_DIAG_PPS_LOCKED = 0x04,
+        FS_DEVICE_DIAG_IMU_HEALTHY = 0x08,
+        FS_DEVICE_DIAG_RESERVED_4 = 0x10,
+        FS_DEVICE_DIAG_RESERVED_5 = 0x20,
+        FS_DEVICE_DIAG_RESERVED_6 = 0x40,
+        FS_DEVICE_DIAG_RESERVED_7 = 0x80,
+    } fs_device_diagnostic_flags_t;
+
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet
     {
@@ -172,9 +185,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     // 
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
@@ -211,9 +224,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     // 
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
@@ -275,9 +288,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     // 
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
@@ -331,9 +344,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     // 
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
@@ -370,9 +383,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     // 
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
@@ -434,9 +447,9 @@ extern "C"
         int16_t temperature[3]; // Temperature of the IMUs, scaled according to the RESCALE_TEMP_C_TO_INT16() macro
 
         int8_t device_motion_status; // == 1 if stationary, 2 if in motion, 0 if no status
-        int8_t label_2;              // Reserved for future use
+        uint8_t diagnostic_flag;     // Bitflag of fs_device_diagnostic_flags_t showing the status
 
-        int8_t reserved[3];     //
+        int8_t reserved[3];        //
         int8_t c;                  // Reserved for future use
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
