@@ -72,6 +72,11 @@ int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *
     return -1;
 }
 
+int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle)
+{
+    return -1; // Not supported on Windows
+}
+
 /// @brief Start the network TCP driver.
 /// @param device_handle Pointer to the device information structure
 /// @return 0 on success, -1 on failure
@@ -301,7 +306,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
     }
 
     fs_set_serial_handle(device_handle, hSerial);
-    
+
     return 0;
 }
 
@@ -323,6 +328,8 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 
     *thread_running_flag = FS_RUN_STATUS_RUNNING;
 
+    stack_size = 0; // Override to use default stack size on Windows
+
     HANDLE thread_handle = (HANDLE)_beginthreadex(
         NULL, // Security attributes
         (unsigned)stack_size,
@@ -339,24 +346,24 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
         return -1;
     }
 
-    // Set thread priority
-    if (priority >= 0)
-    {
-        if (!SetThreadPriority(thread_handle, priority))
-        {
-            fs_log_output("[Trifecta-Interface] Warning: Failed to set thread priority: %lu\n", GetLastError());
-        }
-    }
+    // Set thread priority - EDIT: Disabled on Windows
+    // if (priority >= 0)
+    // {
+    //     if (!SetThreadPriority(thread_handle, priority))
+    //     {
+    //         fs_log_output("[Trifecta-Interface] Warning: Failed to set thread priority: %lu\n", GetLastError());
+    //     }
+    // }
 
-    // Set core affinity
-    if (core_affinity >= 0)
-    {
-        DWORD_PTR affinity_mask = 1ULL << core_affinity;
-        if (SetThreadAffinityMask(thread_handle, affinity_mask) == 0)
-        {
-            fs_log_output("[Trifecta-Interface] Warning: Failed to set thread affinity: %lu\n", GetLastError());
-        }
-    }
+    // Set core affinity - EDIT: Disabled on Windows
+    // if (core_affinity >= 0)
+    // {
+    //     DWORD_PTR affinity_mask = 1ULL << core_affinity;
+    //     if (SetThreadAffinityMask(thread_handle, affinity_mask) == 0)
+    //     {
+    //         fs_log_output("[Trifecta-Interface] Warning: Failed to set thread affinity: %lu\n", GetLastError());
+    //     }
+    // }
 
     CloseHandle(thread_handle); // Detach thread
 
@@ -850,13 +857,16 @@ int fs_log_output(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -881,13 +891,16 @@ int fs_log_critical(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
