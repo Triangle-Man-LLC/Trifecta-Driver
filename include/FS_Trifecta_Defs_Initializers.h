@@ -72,10 +72,11 @@
         .udp_port = 0,                                             \
         .tcp_sock = -1,                                            \
         .udp_sock = -1,                                            \
+        .serial_path = {0},                                        \
         .serial_port = -1,                                         \
         .baudrate = 0,                                             \
         .ping = 0,                                                 \
-        .hp_timestamp = 0,                                  \
+        .hp_timestamp = 0,                                         \
     })
 
 #define FS_DEVICE_DESCRIPTOR_BLANK                               \
@@ -92,7 +93,7 @@
         .device_params = FS_DEVICE_PARAMS_BLANK,                                                           \
         .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                                         \
         .lock = {0},                                                                                       \
-        .background_task_handle = NULL,                                                                    \
+        .background_task_handle = 0,                                                                    \
         .last_received_packet = {0},                                                                       \
         .data_buffer = (fs_bytes_ringbuffer_t){                                                            \
             .buffer = {0},                                                                                 \
