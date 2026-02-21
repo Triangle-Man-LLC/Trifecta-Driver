@@ -16,6 +16,8 @@ add_library(DriverTrifectaWindows SHARED
     common/FS_Trifecta_Serial.c
     common/FS_Trifecta_Networked.c
     windows/FS_Trifecta_Interfaces.c
+    windows/FS_Trifecta_Interfaces_Serial.c
+    windows/FS_Trifecta_Interfaces_Networked.c
 )
 
 # Include directories

@@ -97,7 +97,7 @@ static fs_thread_func_t fs_tcp_update_thread(void *params)
         }
         else if (last_received_tcp < 0)
         {
-            active_device->device_params.status = FS_RUN_STATUS_ERROR;
+            // active_device->device_params.status = FS_RUN_STATUS_ERROR;
         }
         else
         {
