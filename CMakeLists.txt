@@ -8,7 +8,7 @@ set(DriverTrifectaLinux_VERSION_MAJOR 1)
 set(DriverTrifectaLinux_VERSION_MINOR 0)
 
 # Specify the C standard
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Option to build shared library

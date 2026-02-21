@@ -38,7 +38,7 @@
 
 #include "FS_Trifecta_Interfaces.h"
 
-int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
+int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
 
 /// @brief Platform-specific start thread given a function handle.
 /// @param thread_func Pointer to the thread function handle.
@@ -48,7 +48,7 @@ int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, fs_thread_t *thread_handle, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -113,6 +113,12 @@ int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_ru
         fs_log_output("[Trifecta] Error: Thread creation failed: errno %d!\n", errno);
         *thread_running_flag = FS_RUN_STATUS_ERROR;
         return -1;
+    }
+
+    // Populate the thread handle
+    if (thread_handle != NULL)
+    {
+        thread_handle->handle = thread;
     }
 
     fs_log_output("[Trifecta] Thread created successfully.\n");
