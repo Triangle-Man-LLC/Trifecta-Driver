@@ -29,7 +29,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/select.h>
+#include <sys/poll.h>
 #include <sys/ioctl.h>
 
 #include <fcntl.h>
@@ -75,12 +75,12 @@ static inline int configure_serial_port(int fd)
     // No software flow control
     options.c_iflag &= ~(IXON | IXOFF | IXANY);
 
-    // output mode to
-    // newtio.c_oflag = 0;
-    options.c_oflag |= OPOST;
+    // No output post-processing (for supporting binary transmissions)
+    options.c_oflag &= ~OPOST;
 
     /* set input mode (non-canonical, no echo,...) */
-    options.c_lflag = 0;
+    // options.c_lflag = 0;
+    options.c_iflag &= ~(ICRNL | INLCR | IGNCR);
 
     options.c_cc[VTIME] = 10; /* inter-character timer 1 sec */
     options.c_cc[VMIN] = 0;   /* blocking read disabled  */
@@ -103,14 +103,35 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Device handle is NULL!");
+        fs_log_critical("[Trifecta] Could not start serial driver: Device handle is NULL!");
         return -1;
     }
 
-    // If port is already provided, use it. Else, check if the address has been provided in the device address context
-    if (device_handle->device_params.serial_port <= 2)
+    if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
     {
-        fs_log_critical("[Trifecta] Could not start serial driver: Invalid file descriptor: %d", device_handle->device_params.serial_port);
+        fs_log_critical("[Trifecta] Could not start serial driver: Device is already initialized!");
+        return -1;
+    }
+
+    size_t expected_path_len = fs_safe_strnlen((const char *)device_handle->device_params.serial_port,
+                                               sizeof(device_handle->device_params.serial_path));
+    if (expected_path_len == 0 || expected_path_len >= sizeof(device_handle->device_params.serial_path))
+    {
+        fs_log_critical("[Trifecta] Path length invalid: %d (must be within range (0, 127]!", expected_path_len);
+        return -1;
+    }
+
+    fs_safe_strncpy(device_handle->device_params.serial_path,
+                    (const char *)device_handle->device_params.serial_port,
+                    sizeof(device_handle->device_params.serial_path));
+
+    // Linux-specific: Store the serial path, and then also the file descriptor as well.
+    device_handle->device_params.serial_port = open(device_handle->device_params.serial_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
+
+    if (device_handle->device_params.serial_port < 2)
+    {
+        fs_log_critical("[Trifecta] Could not start serial driver: open() returned an invalid FD (%d)", device_handle->device_params.serial_port);
+        device_handle->device_params.serial_port = -1;
         return -1;
     }
 
@@ -158,7 +179,10 @@ int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle)
 /// @param length_bytes The size of the tx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes written
-ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_transmit_serial(fs_device_info_t *device_handle,
+                           void *tx_buffer,
+                           size_t length_bytes,
+                           int timeout_micros)
 {
     if (device_handle == NULL)
     {
@@ -166,13 +190,15 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
         fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
-    if (device_handle->device_params.serial_port < 0)
+    int fd = device_handle->device_params.serial_port;
+    if (fd < 0)
     {
         fs_log_output("[Trifecta] Error: Invalid serial port!");
         return -1;
@@ -184,36 +210,44 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         return -1;
     }
 
-    // Set up the timeout using select
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
+    // Convert microseconds → milliseconds for poll()
+    int timeout_ms = timeout_micros / 1000;
+    if (timeout_ms == 0 && timeout_micros > 0)
+        timeout_ms = 1; // ensure nonzero wait if user requested >0us
 
-    fd_set write_fds;
-    FD_ZERO(&write_fds);
-    FD_SET(device_handle->device_params.serial_port, &write_fds);
+    struct pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = POLLOUT;
 
-    int select_result = select(device_handle->device_params.serial_port + 1, NULL, &write_fds, NULL, &timeout);
-    if (select_result == -1)
+    int ret = poll(&pfd, 1, timeout_ms);
+
+    if (ret < 0)
     {
-        fs_log_output("[Trifecta] Error: select() failed! Error: %s", strerror(errno));
+        fs_log_output("[Trifecta] Error: poll() failed! Error: %s", strerror(errno));
         return -1;
     }
-    else if (select_result == 0)
+    else if (ret == 0)
     {
         fs_log_output("[Trifecta] Error: Write timeout reached!");
         return -1;
     }
 
-    ssize_t actual_len = write(device_handle->device_params.serial_port, tx_buffer, length_bytes);
+    // Detect device removal or fatal errors
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
+    {
+        fs_log_output("[Trifecta] Error: Serial port error during poll()! revents=0x%x", pfd.revents);
+        return -1;
+    }
+
+    // Ready to write
+    ssize_t actual_len = write(fd, tx_buffer, length_bytes);
     if (actual_len == -1)
     {
         fs_log_output("[Trifecta] Error: Writing data over serial failed! Error: %s", strerror(errno));
         return -1;
     }
 
-    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld", device_handle->device_params.serial_port, (long)actual_len);
-
+    fs_log_output("[Trifecta] Serial transmit to port %d - Length %ld", fd, (long)actual_len);
     return actual_len;
 }
 
@@ -223,82 +257,73 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
 /// @param length_bytes The max size of the rx_buffer
 /// @param timeout_micros The max amount of time to wait (microseconds)
 /// @return -1 if failed, else number of bytes received
-ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size_t length_bytes, int timeout_micros)
+ssize_t fs_receive_serial(fs_device_info_t *device_handle,
+                          void *rx_buffer,
+                          size_t length_bytes,
+                          int timeout_micros)
 {
-    if (device_handle == NULL)
+    if (!device_handle)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_critical("[Trifecta] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected FS_COMMUNICATION_MODE_SERIAL.");
+        fs_log_critical("[Trifecta] Error: Invalid communication mode!");
         return -1;
     }
 
-    if (device_handle->device_params.serial_port < 0)
+    int fd = device_handle->device_params.serial_port;
+    if (fd <= 2)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial port!");
+        fs_log_critical("[Trifecta] Error: Invalid serial port: %d!", fd);
         return -1;
     }
 
-    if (rx_buffer == NULL)
+    if (!rx_buffer)
     {
-        fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
+        fs_log_critical("[Trifecta] Error: Receive buffer is NULL!");
         return -1;
     }
 
-    // Set up the timeout using select
-    struct timeval timeout;
-    timeout.tv_sec = timeout_micros / 1000000;
-    timeout.tv_usec = timeout_micros % 1000000;
+    // Convert microseconds → milliseconds for poll()
+    int timeout_ms = timeout_micros / 1000;
+    if (timeout_ms == 0 && timeout_micros > 0)
+        timeout_ms = 1; // ensure nonzero timeout if user requested >0us
 
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(device_handle->device_params.serial_port, &read_fds);
+    struct pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = POLLIN;
 
-    int select_result = select(device_handle->device_params.serial_port + 1, &read_fds, NULL, NULL, &timeout);
-    if (select_result == -1)
+    int ret = poll(&pfd, 1, timeout_ms);
+
+    if (ret < 0)
     {
-        fs_log_output("[Trifecta] Error: select() failed! Error: %s", strerror(errno));
+        fs_log_output("[Trifecta] Error: poll() failed: %s", strerror(errno));
         return -1;
     }
-    else if (select_result == 0)
+    else if (ret == 0)
     {
-        fs_log_output("[Trifecta] Error: Read timeout reached!");
-        return -1;
+        // Timeout is normal, return 0 bytes
+        return 0;
     }
 
-    // Check how much data is available
-    int buffer_data_len = 0;
-    if (ioctl(device_handle->device_params.serial_port, FIONREAD, &buffer_data_len) < 0)
+    // Data is ready
+    if (pfd.revents & POLLIN)
     {
-        fs_log_output("[Trifecta] Error: Could not get buffered data length! Error: %s", strerror(errno));
-        return -1;
+        ssize_t rx_len = read(fd, rx_buffer, length_bytes);
+        if (rx_len < 0)
+        {
+            fs_log_output("[Trifecta] Error: read() failed: %s", strerror(errno));
+            return -1;
+        }
+        return rx_len;
     }
 
-    if (buffer_data_len > length_bytes)
-    {
-        fs_log_output("[Trifecta] Error: Data of length %d would overflow buffer size %ld!", buffer_data_len, length_bytes);
-        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
-        return -1;
-    }
-
-    ssize_t rx_len = read(device_handle->device_params.serial_port, rx_buffer, buffer_data_len);
-    if (rx_len < 0)
-    {
-        fs_log_output("[Trifecta] Error: Reading data over serial failed! Error: %s", strerror(errno));
-        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
-        return -1;
-    }
-    else if (rx_len > 0)
-    {
-        fs_log_output("[Trifecta] Read data from port %d - length %zd!", device_handle->device_params.serial_port, rx_len);
-        tcflush(device_handle->device_params.serial_port, TCIFLUSH); // Flush the input buffer
-    }
-
-    return rx_len;
+    // No readable event despite poll() > 0
+    return 0;
 }
 
 /// @brief Shutdown the serial driver.
@@ -319,5 +344,37 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
         return -1;
     }
     device_handle->device_params.serial_port = -1;
+    return 0;
+}
+
+/// @brief Attempts to reconnect the serial communication for the specified device.
+/// @param device_handle Pointer to the device information structure.
+/// @return 0 on success, or a negative error code on failure.
+int fs_attempt_reconnect_serial(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+    {
+        return -1;
+    }
+
+    if (device_handle->device_params.serial_port > 2)
+        close(device_handle->device_params.serial_port);
+
+    device_handle->device_params.serial_port = open(device_handle->device_params.serial_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
+
+    if (device_handle->device_params.serial_port <= 2)
+    {
+        fs_log_critical("[Trifecta] Could not start serial driver: open() returned an invalid FD (%d)", device_handle->device_params.serial_port);
+        device_handle->device_params.serial_port = -1;
+        return -1;
+    }
+
+    // Configure the serial port
+    if (configure_serial_port(device_handle->device_params.serial_port) != 0)
+    {
+        fs_log_critical("[Trifecta] Could not start serial driver: Failed to configure port: %d (Errno: %d)", device_handle->device_params.serial_port, errno);
+        close(device_handle->device_params.serial_port);
+        return -1;
+    }
     return 0;
 }

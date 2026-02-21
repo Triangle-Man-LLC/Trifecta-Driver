@@ -49,6 +49,13 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
         return -1;
     }
 
+    // Close existing socket if it's already open
+    if (device_handle->device_params.tcp_sock >= 0)
+    {
+        close(device_handle->device_params.tcp_sock);
+        device_handle->device_params.tcp_sock = -1;
+    }
+
     // Convert IP address string to binary form
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -249,7 +256,6 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     return written;
 }
 
-
 /// @brief Receive data over a networked TCP connection
 /// @param device_handle Pointer to the device information structure
 /// @param rx_buffer Pointer to the receive data buffer
@@ -394,4 +400,26 @@ int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
     }
     device_handle->device_params.udp_sock = -1;
     return 0;
+}
+
+/// @brief Attempts to reconnect the network connection for the specified device.
+/// @param device_handle Pointer to the device information structure.
+/// @return 0 on success, or a negative error code on failure.
+int fs_attempt_reconnect_network_tcp(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+        return -1;
+
+    return fs_init_network_tcp_driver(device_handle);
+}
+
+/// @brief Attempts to reconnect the network connection for the specified device.
+/// @param device_handle Pointer to the device information structure.
+/// @return 0 on success, or a negative error code on failure.
+int fs_attempt_reconnect_network_udp(fs_device_info_t *device_handle)
+{
+    if (!device_handle)
+        return -1;
+
+    return fs_init_network_udp_driver(device_handle);
 }
