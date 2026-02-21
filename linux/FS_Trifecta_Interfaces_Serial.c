@@ -138,7 +138,16 @@ int fs_platform_supported_serial_interrupts()
 /// @param device_handle
 /// @param status_flag
 /// @return 0 on success, -1 on fail (e.g. not supported on platform)
-int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle)
+{
+    return -1; // Not supported!
+}
+
+/// @brief Wait for the next serial interrupt on the device handle.
+/// This will yield the task until the interrupt has occurred.
+/// @param device_handle
+/// @return 0 on success, -1 on fail (e.g. not supported on platform)
+int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle)
 {
     return -1; // Not supported!
 }
