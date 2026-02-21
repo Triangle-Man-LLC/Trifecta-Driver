@@ -72,7 +72,7 @@ typedef struct fs_thread
 #elif defined(_WIN32)
     HANDLE handle;
 #else
-    pthread_t *handle;
+    pthread_t handle;
 #endif
 } fs_thread_t;
 

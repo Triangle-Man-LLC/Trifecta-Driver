@@ -65,7 +65,7 @@ extern "C"
     /// @param priority Priority level of the thread.
     /// @param core_affinity -1 for indifference, else preferred core number
     /// @return Status of the thread creation (0 for success, -1 for failure).
-    int fs_thread_start(void(thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, fs_thread_t *thread_handle, size_t stack_size, int priority, int core_affinity);
+    int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, fs_thread_t *thread_handle, size_t stack_size, int priority, int core_affinity);
 
     /// @brief Exits the currently running thread.
     /// @param thread_handle Pointer to the thread handle.
