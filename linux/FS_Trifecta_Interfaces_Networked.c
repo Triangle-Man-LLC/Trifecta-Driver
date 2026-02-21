@@ -256,6 +256,7 @@ ssize_t fs_transmit_networked_udp(fs_device_info_t *device_handle, void *tx_buff
     return written;
 }
 
+
 /// @brief Receive data over a networked TCP connection
 /// @param device_handle Pointer to the device information structure
 /// @param rx_buffer Pointer to the receive data buffer

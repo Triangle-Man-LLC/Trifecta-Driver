@@ -38,7 +38,7 @@
 
 #include "FS_Trifecta_Interfaces.h"
 
-int fs_logging_level = 1; // Logging level - 0 = OFF, 1 = ON
+int fs_logging_level = 0; // Logging level - 0 = OFF, 1 = ON
 
 /// @brief Platform-specific start thread given a function handle.
 /// @param thread_func Pointer to the thread function handle.
