@@ -119,7 +119,7 @@ int fs_initialize_networked(fs_device_info_t *device_handle, const char *device_
   }
 }
 
-int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd, fs_communication_mode_t serial_mode)
+int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t context, fs_communication_mode_t serial_mode)
 {
   if (device_handle->device_params.status == FS_RUN_STATUS_RUNNING)
   {
@@ -140,7 +140,7 @@ int fs_initialize_serial(fs_device_info_t *device_handle, fs_serial_handle_t fd,
   fs_mutex_init(&device_handle->lock);
 
   device_handle->device_params.communication_mode = serial_mode;
-  device_handle->device_params.serial_port = fd;
+  device_handle->device_params.serial_port = context;
 
   int sstart_status = fs_serial_start(device_handle);
   if (sstart_status != 0)

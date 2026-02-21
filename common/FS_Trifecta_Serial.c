@@ -35,21 +35,40 @@ static fs_thread_func_t fs_serial_update_thread(void *params)
                   active_device->device_descriptor.device_name, active_device->device_params.status, delay_time_millis, receive_timeout_micros);
 
     ssize_t last_received_serial = 0;
-    while (active_device->device_params.status == FS_RUN_STATUS_RUNNING)
+    while (active_device->device_params.status != FS_RUN_STATUS_IDLE)
     {
+        if (active_device->device_params.status == FS_RUN_STATUS_ERROR)
+        {
+            if (fs_attempt_reconnect_serial(active_device) == 0)
+            {
+                // Connection re-established!
+                active_device->device_params.status = FS_RUN_STATUS_RUNNING;
+            }
+            else
+            {
+                // Wait half a second and try again...
+                fs_delay(500);
+                continue;
+            }
+        }
         last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         while (last_received_serial > 0)
         {
-            fs_log_output("[Trifecta-Serial] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
+            // fs_log_output("[Trifecta-Serial] SERIAL:RX LEN %d, DATA: %s", last_received_serial, rx_buffer);
             if (fs_device_parse_packet(active_device, rx_buffer, last_received_serial, active_device->device_params.communication_mode) < 0)
             {
                 fs_log_output("[Trifecta-Serial] WARN: Could not parse data! Is there corruption?");
             }
             last_received_serial = fs_receive_serial(active_device, rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         }
-        if (last_received_serial <= 0)
+        if (last_received_serial == 0)
         {
             active_device->device_params.ping += delay_time_millis;
+        }
+        else if (last_received_serial < 0)
+        {
+            // Error occurred during read! Mark so we can attempt reconnection next turn.
+            active_device->device_params.status = FS_RUN_STATUS_ERROR;
         }
         else
         {
@@ -145,9 +164,9 @@ int fs_serial_start(fs_device_info_t *device_handle)
         if (!interrupts_supported || !device_handle->driver_config.use_serial_interrupt_mode)
         {
             // Start the serial update thread if serial interrupts are not enabled
-            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, 
-            &device_handle->device_params.status, &device_handle->background_task_handle,
-            task_stack_size, task_priority, core_affinity);
+            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle,
+                                     &device_handle->device_params.status, &device_handle->background_task_handle,
+                                     task_stack_size, task_priority, core_affinity);
             if (status != 0)
             {
                 fs_log_critical("[Trifecta-Serial] Error: Could not start serial thread!");
@@ -163,9 +182,9 @@ int fs_serial_start(fs_device_info_t *device_handle)
                 fs_log_critical("[Trifecta-Serial] Error: Could not enable the serial interrupts!");
                 return -5;
             }
-            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle, 
-            &device_handle->device_params.status, &device_handle->background_task_handle,
-            task_stack_size, task_priority, core_affinity);
+            status = fs_thread_start(fs_serial_update_thread, (void *)device_handle,
+                                     &device_handle->device_params.status, &device_handle->background_task_handle,
+                                     task_stack_size, task_priority, core_affinity);
             if (status != 0)
             {
                 fs_log_critical("[Trifecta-Serial] Error: Could not start serial thread!");

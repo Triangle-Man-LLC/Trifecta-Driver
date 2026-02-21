@@ -38,13 +38,8 @@ typedef SSIZE_T ssize_t;
 #define FS_API
 #endif
 
-#ifdef _WIN32
 typedef intptr_t fs_sock_t;
 typedef intptr_t fs_serial_handle_t;
-#else
-typedef int fs_sock_t;
-typedef int fs_serial_handle_t;
-#endif
 
 #if defined(__linux__)
 typedef void *fs_thread_func_t;

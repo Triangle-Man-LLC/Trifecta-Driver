@@ -139,6 +139,21 @@ extern "C"
     /// @return 0 on success, or a negative error code on failure.
     int fs_shutdown_serial_driver(fs_device_info_t *device_handle);
 
+    /// @brief Attempts to reconnect the TCP connection for the specified device.
+    /// @param device_handle Pointer to the device information structure.
+    /// @return 0 on success, or a negative error code on failure.
+    int fs_attempt_reconnect_network_tcp(fs_device_info_t *device_handle);
+
+    /// @brief Attempts to reconnect the UDP connection for the specified device.
+    /// @param device_handle Pointer to the device information structure.
+    /// @return 0 on success, or a negative error code on failure.
+    int fs_attempt_reconnect_network_udp(fs_device_info_t *device_handle);
+
+    /// @brief Attempts to reconnect the serial communication for the specified device.
+    /// @param device_handle Pointer to the device information structure.
+    /// @return 0 on success, or a negative error code on failure.
+    int fs_attempt_reconnect_serial(fs_device_info_t *device_handle);
+
     /// @brief Logs a formatted message to the output stream.
     /// @param format Format string for the log message.
     /// @param ... Additional arguments for the format string.

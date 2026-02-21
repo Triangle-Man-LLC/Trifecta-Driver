@@ -66,8 +66,21 @@ static fs_thread_func_t fs_tcp_update_thread(void *params)
 
     ssize_t last_received_tcp = 0;
 
-    while (active_device->device_params.status == FS_RUN_STATUS_RUNNING)
+    while (active_device->device_params.status != FS_RUN_STATUS_IDLE)
     {
+        if (active_device->device_params.status == FS_RUN_STATUS_ERROR)
+        {
+            if ((fs_attempt_reconnect_network_tcp(active_device) == 0) &&
+                (fs_attempt_reconnect_network_udp(active_device) == 0))
+            {
+                active_device->device_params.status = FS_RUN_STATUS_RUNNING;
+            }
+            else
+            {
+                fs_delay(500);
+                continue;
+            }
+        }
         last_received_tcp = fs_receive_networked_tcp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         // fs_log_output("[Trifecta-Network] TCP:RX %d", last_received_tcp);
         if (last_received_tcp > 0)
@@ -78,9 +91,13 @@ static fs_thread_func_t fs_tcp_update_thread(void *params)
                 fs_log_output("[Trifecta-Network] Could not parse TCP data! Is there interference?");
             }
         }
-        if (last_received_tcp <= 0)
+        if (last_received_tcp == 0)
         {
             active_device->device_params.ping += delay_time_millis;
+        }
+        else if (last_received_tcp < 0)
+        {
+            // active_device->device_params.status = FS_RUN_STATUS_ERROR;
         }
         else
         {
@@ -118,7 +135,7 @@ static fs_thread_func_t fs_udp_update_thread(void *params)
 
     ssize_t last_received_udp = 0;
 
-    while (active_device->device_params.status == FS_RUN_STATUS_RUNNING)
+    while (active_device->device_params.status != FS_RUN_STATUS_IDLE)
     {
         last_received_udp = fs_receive_networked_udp(active_device, &rx_buffer, FS_MAX_DATA_LENGTH, receive_timeout_micros);
         // fs_log_output("[Trifecta-Network] UDP:RX %d", last_received_udp);

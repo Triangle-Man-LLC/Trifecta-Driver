@@ -91,8 +91,9 @@ extern "C"
         int udp_port;
         fs_sock_t tcp_sock;
         fs_sock_t udp_sock;
-        fs_serial_handle_t serial_port;
-        int32_t baudrate;
+        char serial_path[128]; // E.g. "COM<X>" on Windows and "/dev/ttyACM*" on Linux. Not used on most embedded platforms.
+        fs_serial_handle_t serial_port; // Opaque handle on Windows and Linux, user interacts with it usually only on embedded platforms.
+        int32_t baudrate; 
         int32_t ping;                 // Time since last received communication from device
         uint64_t hp_timestamp; // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
     } fs_device_params_t;
