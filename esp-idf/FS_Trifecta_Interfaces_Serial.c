@@ -13,9 +13,17 @@
 
 #define CDC_AVAILABLE (CONFIG_USB_ENABLED)
 
+#include "esp_err.h"
+
+#include "esp_timer.h"
+
 #include "driver/uart.h"
+#include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "driver/spi_master.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "FS_Trifecta_Interfaces.h"
 
@@ -70,7 +78,7 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 #if (CDC_AVAILABLE)
         // Exclude device from interrupt-based handling mode
 #else
-        fs_log_output("[Trifecta] CDC ACM host init failed! Features not enabled on device!");
+        fs_log_critical("[Trifecta] Error: CDC ACM host init failed! Features not enabled on device!");
         return -1;
 #endif
     }
@@ -89,10 +97,34 @@ int fs_init_serial_driver(fs_device_info_t *device_handle)
 /// This enables more precise and low latency serial reads than polling.
 /// @param device_handle
 /// @param status_flag
-/// @return 0 on success, -1 on fail (e.g. not supported on platform)
+/// @return Bitflag indicating which communication modes support serial interrupt.
 int fs_platform_supported_serial_interrupts()
 {
-    return FS_COMMUNICATION_MODE_UNINITIALIZED; // TODO:
+    return (FS_COMMUNICATION_MODE_UART | FS_COMMUNICATION_MODE_I2C);
+}
+
+/// @brief (Internal use only) The interrupt routine for the serial data ready signal.
+/// @param args Device handle (managed internally).
+/// @return
+IRAM_ATTR static void fs_serial_data_ready_isr(void *args)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    fs_device_info_t *device_handle = (fs_device_info_t *)args;
+    if (!device_handle)
+        return;
+
+    int io_level = gpio_get_level(device_handle->driver_config.serial_data_ready_gpio);
+    if (io_level)
+    {
+        // Synchronize to our timebase using IMU DRDY rising edge (sample time)
+        device_handle->device_params.hp_timestamp = esp_timer_get_time();
+    }
+    else
+    {
+        // On falling edge, we are then able to trigger the read - data transmission starts as soon as IO falls low.
+        vTaskNotifyGiveFromISR(device_handle->background_task_handle.handle, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
 }
 
 /// @brief Start serial in interrupt mode on platforms that support it.
@@ -100,9 +132,49 @@ int fs_platform_supported_serial_interrupts()
 /// @param device_handle
 /// @param status_flag
 /// @return 0 on success, -1 on fail (e.g. not supported on platform)
-int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle)
 {
-    return -1; // TODO:
+    int status = 0;
+    int serial_gpio = device_handle->driver_config.serial_data_ready_gpio;
+
+    // Set GPIO of serial_gpio to accept DRDY input
+    status = gpio_install_isr_service(0);
+    if (status == ESP_ERR_INVALID_STATE)
+    {
+        fs_log_output("[Trifecta] Warning: Interrupt service was already installed! Status code: %s", esp_err_to_name(status));
+    }
+    else if (status != ESP_OK)
+    {
+        fs_log_critical("[Trifecta] Error: Could not install interrupt service! Status code: %s", esp_err_to_name(status));
+        return -1; //
+    }
+
+    status = gpio_isr_handler_add(serial_gpio, fs_serial_data_ready_isr, device_handle);
+    if (status != ESP_OK)
+    {
+        fs_log_critical("[Trifecta] Error: Could not enable interrupt for device: %s! The GPIO requested: %d, the status code: %s",
+                        device_handle->device_descriptor.device_name, serial_gpio, esp_err_to_name(status));
+        return -2; //
+    }
+    // By this point, the serial interrupts should have been initialized successfully.
+    return status;
+}
+
+/// @brief Wait for the next serial interrupt on the device handle.
+/// This will yield the task until the interrupt has occurred.
+/// @param device_handle
+/// @return 0 on success, -1 on fail (e.g. not supported on platform)
+int fs_wait_until_next_serial_interrupt(fs_device_info_t *device_handle)
+{
+    if (!device_handle || device_handle->background_task_handle.handle == NULL)
+        return -1;
+
+    const int timeout_ms = device_handle->driver_config.task_wait_ms;
+
+    // Wait indefinitely for the next interrupt notification
+    uint32_t result = ulTaskNotifyTake(pdTRUE, timeout_ms);
+
+    return (result > 0) ? 0 : -1;
 }
 
 /// @brief Transmit data over serial communication
@@ -115,25 +187,25 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_critical("[Trifecta] Error: Device handle is NULL!");
         return -1;
     }
 
     if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
+        fs_log_critical("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
     if (device_handle->device_params.serial_port < 0)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial port!");
+        fs_log_critical("[Trifecta] Error: Invalid serial port!");
         return -1;
     }
 
     if (tx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Transmit buffer is NULL!");
+        fs_log_critical("[Trifecta] Error: Transmit buffer is NULL!");
         return -1;
     }
 
@@ -143,7 +215,7 @@ ssize_t fs_transmit_serial(fs_device_info_t *device_handle, void *tx_buffer, siz
         actual_len = uart_write_bytes(device_handle->device_params.serial_port, (char *)tx_buffer, length_bytes);
         if (actual_len != length_bytes)
         {
-            fs_log_output("[Trifecta] Error: Writing data over serial failed! Expected length: %ld, actual: %ld", length_bytes, actual_len);
+            fs_log_critical("[Trifecta] Error: Writing data over serial failed! Expected length: %ld, actual: %ld", length_bytes, actual_len);
             return -1;
         }
     }
@@ -175,25 +247,28 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
 {
     if (device_handle == NULL)
     {
-        fs_log_output("[Trifecta] Error: Device handle is NULL!");
+        fs_log_critical("[Trifecta] Error: Device handle is NULL!");
         return -1;
     }
 
-    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C && device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
+    if (device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_UART &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_USB_CDC &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_I2C &&
+        device_handle->device_params.communication_mode != FS_COMMUNICATION_MODE_SPI)
     {
-        fs_log_output("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
+        fs_log_critical("[Trifecta] Error: Invalid communication mode! Expected COMMUNICATION_MODE_SERIAL.");
         return -1;
     }
 
     if (device_handle->device_params.serial_port < 0)
     {
-        fs_log_output("[Trifecta] Error: Invalid serial port!");
+        fs_log_critical("[Trifecta] Error: Invalid serial port!");
         return -1;
     }
 
     if (rx_buffer == NULL)
     {
-        fs_log_output("[Trifecta] Error: Receive buffer is NULL!");
+        fs_log_critical("[Trifecta] Error: Receive buffer is NULL!");
         return -1;
     }
     // Clear only the specified buffer size
@@ -202,7 +277,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
     size_t buffer_data_len = 0;
     if (uart_get_buffered_data_len(device_handle->device_params.serial_port, (size_t *)&buffer_data_len) != 0)
     {
-        fs_log_output("[Trifecta] Error: Could not get buffered data length!");
+        fs_log_critical("[Trifecta] Error: Could not get buffered data length!");
         return -1; // In this case, no data in buffer, so do nothing.
     }
 
@@ -223,7 +298,7 @@ ssize_t fs_receive_serial(fs_device_info_t *device_handle, void *rx_buffer, size
         }
         else if (rx_len < 0)
         {
-            fs_log_output("[Trifecta] Error: Reading data over serial failed!");
+            fs_log_critical("[Trifecta] Error: Reading data over serial failed!");
             uart_flush(device_handle->device_params.serial_port);
             return -1;
         }
