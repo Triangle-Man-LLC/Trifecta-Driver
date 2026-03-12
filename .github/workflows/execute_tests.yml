@@ -12,13 +12,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true 
 
-      # - name: Set up CMake
-      #   run: sudo apt-get update && sudo apt-get install -y cmake build-essential
-            
       - name: Build all tests
         run: |
           echo "Searching for all /tests/ folders..."
