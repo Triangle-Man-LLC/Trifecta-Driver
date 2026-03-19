@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
+
+if(DEFINED ENV{IDF_PATH})
+    message(STATUS "ESP-IDF detected via IDF_PATH = $ENV{IDF_PATH}")
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_espidf.cmake)
+    return()
+endif()
+
 project(DriverTrifecta LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-
-if (CMAKE_SYSTEM_NAME STREQUAL "ESP-IDF")
-    include(cmake/platform_espidf.cmake)
-    return()
-endif()
 
 set(TRIFECTA_COMMON_SRCS
     common/FS_Trifecta.c
@@ -26,16 +28,16 @@ target_include_directories(trifecta_core PUBLIC
 
 # Platform dispatcher
 if (WIN32)
-    include(cmake/platform_windows.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_windows.cmake)
 
 elseif (UNIX AND NOT APPLE AND NOT ANDROID)
-    include(cmake/platform_linux.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_linux.cmake)
 
 elseif (ANDROID)
-    include(cmake/platform_android.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_android.cmake)
 
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    include(cmake/platform_stm32.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_stm32.cmake)
 
 else()
     message(FATAL_ERROR "Unsupported platform")

@@ -62,7 +62,7 @@ int fs_init_network_tcp_driver(fs_device_info_t *device_handle)
 
     device_handle->device_params.tcp_sock = sockfd;
     return 0;
-    
+
 #else
     fs_log_output("[Trifecta] Error: Could not use TCP functions, Wi-Fi must be enabled!");
     return -1;
@@ -423,4 +423,14 @@ int fs_shutdown_network_udp_driver(fs_device_info_t *device_handle)
     fs_log_output("[Trifecta] Error: Could not use UDP functions, Wi-Fi must be enabled!");
     return -1;
 #endif
+}
+
+int fs_attempt_reconnect_network_tcp(fs_device_info_t *device_handle)
+{
+    return -1; // Not yet implemented.
+}
+
+int fs_attempt_reconnect_network_udp(fs_device_info_t *device_handle)
+{
+    return -1; // Not yet implemented.
 }

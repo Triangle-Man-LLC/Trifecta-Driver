@@ -11,12 +11,12 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Explicitly list required common sources
 set(COMMON_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/FS_Trifecta_Device_Utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/FS_Trifecta_Device.c
+    ${CMAKE_SOURCE_DIR}/../common/FS_Trifecta_Device_Utils.c
+    ${CMAKE_SOURCE_DIR}/../common/FS_Trifecta_Device.c
 )
 
 # Include headers from ../include
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../)
+include_directories(${CMAKE_SOURCE_DIR}/../include ${CMAKE_SOURCE_DIR}/../)
 
 # Enable testing
 enable_testing()

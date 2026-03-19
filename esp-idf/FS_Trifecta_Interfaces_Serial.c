@@ -349,3 +349,8 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
     device_handle->device_params.serial_port = -1;
     return 0;
 }
+
+int fs_attempt_reconnect_serial(fs_device_info_t *device_handle)
+{
+    return 0; // On ESP-IDF, the serial port is usually fixed and does not require reconnection logic.
+}
