@@ -52,17 +52,17 @@ file(GLOB_RECURSE TRIFECTA_STM32_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/stm32/${STM32_SERIES}/*.c"
 )
 
-target_sources(trifecta_core PRIVATE ${TRIFECTA_STM32_SOURCES})
+target_sources(DriverTrifecta PRIVATE ${TRIFECTA_STM32_SOURCES})
 
 # Include dirs (HAL/CMSIS must be provided by parent project)
-target_include_directories(trifecta_core PUBLIC
+target_include_directories(DriverTrifecta PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/common
 )
 
 # Compile flags
-target_compile_options(trifecta_core PRIVATE
+target_compile_options(DriverTrifecta PRIVATE
     ${CPU_COMPILE_OPTIONS}
     -Wall
     -Wextra
@@ -73,7 +73,7 @@ target_compile_options(trifecta_core PRIVATE
 )
 
 # Linker flags
-target_link_options(trifecta_core PRIVATE
+target_link_options(DriverTrifecta PRIVATE
     ${CPU_COMPILE_OPTIONS}
     -Wl,--gc-sections
 )

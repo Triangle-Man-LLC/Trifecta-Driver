@@ -19,9 +19,9 @@ set(TRIFECTA_COMMON_SRCS
     common/FS_Trifecta_Networked.c
 )
 
-add_library(trifecta_core ${TRIFECTA_COMMON_SRCS})
+add_library(DriverTrifecta ${TRIFECTA_COMMON_SRCS})
 
-target_include_directories(trifecta_core PUBLIC
+target_include_directories(DriverTrifecta PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

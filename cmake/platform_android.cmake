@@ -89,15 +89,15 @@ endif()
 
 message(STATUS "Android single-ABI build")
 
-target_sources(trifecta_core PRIVATE
+target_sources(DriverTrifecta PRIVATE
     android/FS_Trifecta_Interfaces.c
     android/FS_Trifecta_Interfaces_Serial.c
     android/FS_Trifecta_Interfaces_Networked.c
     android/FS_Trifecta_JNI_Packet_Unpack.c
 )
 
-target_compile_definitions(trifecta_core PRIVATE PLATFORM_ANDROID)
-target_link_libraries(trifecta_core PRIVATE m)
+target_compile_definitions(DriverTrifecta PRIVATE PLATFORM_ANDROID)
+target_link_libraries(DriverTrifecta PRIVATE m)
 
 target_include_directories(DriverTrifectaAndroid PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -162,9 +162,9 @@ file(MAKE_DIRECTORY "${DRIVER_OUT_LIB_DIR}")
 set(DRIVER_OUT_SRC_DIR "${DRIVER_OUT_DIR}/src")
 file(MAKE_DIRECTORY "${DRIVER_OUT_SRC_DIR}")
 
-add_custom_command(TARGET trifecta_core POST_BUILD
+add_custom_command(TARGET DriverTrifecta POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-        "$<TARGET_FILE:trifecta_core>"
+        "$<TARGET_FILE:DriverTrifecta>"
         "${DRIVER_OUT_LIB_DIR}/libTrifectaDriverAndroid.so"
 )
 
