@@ -1,6 +1,10 @@
+# cmake/platform_android.cmake
+
+#
 #  Detect superbuild mode
 #  - If ANDROID_ABI is NOT set -> superbuild
 #  - If ANDROID_ABI IS set -> normal driver build
+#
 
 if(NOT ANDROID_ABI)
 
@@ -56,7 +60,7 @@ if(NOT ANDROID_ABI)
                 -DANDROID_NDK=${ANDROID_NDK}
             COMMAND ${CMAKE_COMMAND} --build ${BUILD_DIR} --config Release
             COMMAND ${CMAKE_COMMAND} -E copy
-                "${BUILD_DIR}/libDriverTrifectaAndroid.so"
+                "${BUILD_DIR}/Trifecta-Driver-Android/lib/${ABI}/libTrifectaDriverAndroid.so"
                 "${ABI_OUT_DIR}/libTrifectaDriverAndroid.so"
             COMMAND ${CMAKE_COMMAND} -E touch "${BUILD_DIR}/stamp"
             COMMENT "Building ABI ${ABI}"
@@ -82,13 +86,14 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 option(SHAREDLIB "Build DriverTrifectaAndroid as a shared library" OFF)
 
-set(LIB_TYPE STATIC)
-if(SHAREDLIB)
-    set(LIB_TYPE SHARED)
-endif()
+set(LIB_TYPE SHARED)
+# if(SHAREDLIB)
+#     set(LIB_TYPE SHARED)
+# endif()
 
 message(STATUS "Android single-ABI build")
 
+# Android-specific sources on the core driver target
 target_sources(DriverTrifecta PRIVATE
     android/FS_Trifecta_Interfaces.c
     android/FS_Trifecta_Interfaces_Serial.c
@@ -97,53 +102,22 @@ target_sources(DriverTrifecta PRIVATE
 )
 
 target_compile_definitions(DriverTrifecta PRIVATE PLATFORM_ANDROID)
+
+# Consistent keyword signature
 target_link_libraries(DriverTrifecta PRIVATE m)
 
-target_include_directories(DriverTrifectaAndroid PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+# Android includes are implementation detail, not INTERFACE
+target_include_directories(DriverTrifecta PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-target_link_libraries(DriverTrifectaAndroid m)
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake")
-
-file(WRITE "${CMAKE_BINARY_DIR}/cmake/DriverTrifectaAndroidConfig.cmake.in" "
-@PACKAGE_INIT@
-include(\"\${CMAKE_CURRENT_LIST_DIR}/DriverTrifectaAndroidTargets.cmake\")
-")
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/DriverTrifectaAndroidConfigVersion.cmake"
-    VERSION ${DriverTrifectaAndroid_VERSION_MAJOR}.${DriverTrifectaAndroid_VERSION_MINOR}
-    COMPATIBILITY AnyNewerVersion
+set_target_properties(DriverTrifecta PROPERTIES
+    OUTPUT_NAME "TrifectaDriverAndroid"
 )
 
-configure_package_config_file(
-    "${CMAKE_BINARY_DIR}/cmake/DriverTrifectaAndroidConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/DriverTrifectaAndroidConfig.cmake"
-    INSTALL_DESTINATION lib/cmake/DriverTrifectaAndroid
-)
-
-install(TARGETS DriverTrifectaAndroid
-        EXPORT DriverTrifectaAndroidTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
-
-install(EXPORT DriverTrifectaAndroidTargets
-        FILE DriverTrifectaAndroidTargets.cmake
-        DESTINATION lib/cmake/DriverTrifectaAndroid)
-
-install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/DriverTrifectaAndroidConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/DriverTrifectaAndroidConfigVersion.cmake"
-        DESTINATION lib/cmake/DriverTrifectaAndroid)
-
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
+# Put the .so directly in the build dir root so superbuild can find it
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 #
 # Packaging for Android driver distribution (single ABI)
@@ -179,4 +153,4 @@ add_custom_target(copy_java_single ALL
     COMMENT "Copying Java API files to Trifecta-Driver-Android/src/"
 )
 
-add_dependencies(copy_java_single DriverTrifectaAndroid)
+add_dependencies(copy_java_single DriverTrifecta)

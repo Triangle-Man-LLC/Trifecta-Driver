@@ -102,45 +102,61 @@ int fs_handle_received_commands(fs_device_info_t *device_handle, const void *cmd
         }
         break;
         case CMD_IDENTIFY_PARAM_SSID:
+        {
             fs_safe_strncpy(device_handle->device_params.ssid, params, sizeof(device_handle->device_params.ssid) - 1);
             device_handle->device_params.ssid[sizeof(device_handle->device_params.ssid) - 1] = '\0';
             fs_log_output("[Trifecta-Device] STA SSID set to: %s", device_handle->device_params.ssid);
             break;
+        }
         case CMD_IDENTIFY_PARAM_SSID_AP:
+        {
             fs_safe_strncpy(device_handle->device_params.ssid_ap, params, sizeof(device_handle->device_params.ssid_ap) - 1);
             device_handle->device_params.ssid_ap[sizeof(device_handle->device_params.ssid_ap) - 1] = '\0';
             fs_log_output("[Trifecta-Device] AP SSID set to: %s", device_handle->device_params.ssid_ap);
             break;
+        }
         case CMD_IDENTIFY_PARAM_PASSWORD_AP:
+        {
             fs_safe_strncpy(device_handle->device_params.pw_ap, params, sizeof(device_handle->device_params.pw_ap) - 1);
             device_handle->device_params.pw_ap[sizeof(device_handle->device_params.pw_ap) - 1] = '\0';
             fs_log_output("[Trifecta-Device] AP Password updated.");
             break;
+        }
         case CMD_IDENTIFY_PARAM_TRANSMIT:
+        {
             int mode = atoi(params);
             device_handle->device_params.all_enabled_interfaces = (fs_communication_mode_t)mode;
             fs_log_output("[Trifecta-Device] Comm mode set to: %d", mode);
             break;
+        }
         case CMD_IDENTIFY_PARAM_DEV_SN:
+        {
             fs_safe_strncpy(device_handle->device_descriptor.device_sn, params, sizeof(device_handle->device_descriptor.device_sn) - 1);
             device_handle->device_descriptor.device_sn[sizeof(device_handle->device_descriptor.device_sn) - 1] = '\0';
             fs_log_output("[Trifecta-Device] Serial Number set to: %s", device_handle->device_descriptor.device_sn);
             break;
+        }
         case CMD_IDENTIFY_PARAM_DEVMODEL:
+        {
             fs_safe_strncpy(device_handle->device_descriptor.device_model, params, sizeof(device_handle->device_descriptor.device_model) - 1);
             device_handle->device_descriptor.device_model[sizeof(device_handle->device_descriptor.device_model) - 1] = '\0';
             fs_log_output("[Trifecta-Device] Device Model set to: %s", device_handle->device_descriptor.device_model);
             break;
+        }
         case CMD_IDENTIFY_PARAM_DEVFWVERSION:
+        {
             fs_safe_strncpy(device_handle->device_descriptor.device_fw, params, sizeof(device_handle->device_descriptor.device_fw) - 1);
             device_handle->device_descriptor.device_fw[sizeof(device_handle->device_descriptor.device_fw) - 1] = '\0';
             fs_log_output("[Trifecta-Device] Firmware Version set to: %s", device_handle->device_descriptor.device_fw);
             break;
+        }
         case CMD_IDENTIFY_PARAM_DEVDESC:
+        {
             fs_safe_strncpy(device_handle->device_descriptor.device_desc, params, sizeof(device_handle->device_descriptor.device_desc) - 1);
             device_handle->device_descriptor.device_desc[sizeof(device_handle->device_descriptor.device_desc) - 1] = '\0';
             fs_log_output("[Trifecta-Device] Device Description set to: %s", device_handle->device_descriptor.device_desc);
             break;
+        }
         }
         memset(&cmd, 0, sizeof(cmd)); // Clear for next iteration
     }

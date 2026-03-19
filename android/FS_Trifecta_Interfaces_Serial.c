@@ -90,7 +90,7 @@ Java_com_trifecta_SerialBridge_nativeRegister(JNIEnv *env,
                                               jlong devPtr,
                                               jobject serialObj)
 {
-    fs_device_info_t *device = (fs_device_info_t *)devPtr;
+    const fs_device_info_t *device = (fs_device_info_t *)devPtr;
 
     // Cache JVM once
     if (g_vm == NULL)
@@ -277,5 +277,5 @@ int fs_shutdown_serial_driver(fs_device_info_t *device_handle)
 
 int fs_attempt_reconnect_serial(fs_device_info_t *device_handle)
 {
-
+    return -1;
 }

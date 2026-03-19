@@ -40,11 +40,11 @@ else()
     if (WIN32)
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_windows.cmake)
 
+    elseif (ANDROID_NDK)
+        include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_android.cmake)
+
     elseif (UNIX AND NOT APPLE AND NOT ANDROID)
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_linux.cmake)
-
-    elseif (ANDROID)
-        include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_android.cmake)
 
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Generic")
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/platform_stm32.cmake)

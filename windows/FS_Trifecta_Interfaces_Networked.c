@@ -9,6 +9,17 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define WIN32_LEAN_AND_MEAN
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma warning(push)
+#pragma warning(disable:5105)
+#include <windows.h>
+#pragma warning(pop)
+
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,12 +27,6 @@
 #include <time.h>
 #include <string.h>
 
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
 #include <process.h>
 #include <io.h>
 #include <fcntl.h>

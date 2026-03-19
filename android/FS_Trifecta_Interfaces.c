@@ -69,10 +69,10 @@ int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_ru
     {
         priority = sched_get_priority_min(SCHED_OTHER); // Default priority, lowest valid
     }
-    if (core_affinity < 0)
-    {
-        core_affinity = -1; // Indifferent to core affinity
-    }
+    // if (core_affinity < 0)
+    // {
+    //     core_affinity = -1; // Indifferent to core affinity
+    // }
 
     // Set stack size
     if (pthread_attr_setstacksize(&attr, stack_size) != 0)

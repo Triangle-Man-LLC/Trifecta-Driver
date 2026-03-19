@@ -9,6 +9,13 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define WIN32_LEAN_AND_MEAN
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,12 +23,6 @@
 #include <time.h>
 #include <string.h>
 
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
 #include <process.h>
 #include <io.h>
 #include <fcntl.h>
@@ -45,7 +46,7 @@ static FILE *log_file_ptr = NULL;
 /// @param priority Priority level of the thread.
 /// @param core_affinity -1 for indifference, else preferred core number
 /// @return Status of the thread creation (0 for success, -1 for failure).
-int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, size_t stack_size, int priority, int core_affinity)
+int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_run_status_t *thread_running_flag, fs_thread_t *thread_handle, size_t stack_size, int priority, int core_affinity)
 {
     if (thread_func == NULL || thread_running_flag == NULL)
     {
@@ -57,7 +58,7 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
 
     stack_size = 0; // Override to use default stack size on Windows
 
-    HANDLE thread_handle = (HANDLE)_beginthreadex(
+    HANDLE a_thread_handle = (HANDLE)_beginthreadex(
         NULL, // Security attributes
         (unsigned)stack_size,
         (unsigned(__stdcall *)(void *))thread_func,
@@ -66,33 +67,14 @@ int fs_thread_start(void (*thread_func)(void *), void *params, fs_run_status_t *
         NULL // Optionally capture thread ID
     );
 
-    if (thread_handle == 0)
+    if (a_thread_handle == 0)
     {
         fs_log_output("[Trifecta-Interface] Error: Thread creation failed: errno %d!\n", errno);
         *thread_running_flag = FS_RUN_STATUS_ERROR;
         return -1;
     }
 
-    // Set thread priority - EDIT: Disabled on Windows
-    // if (priority >= 0)
-    // {
-    //     if (!SetThreadPriority(thread_handle, priority))
-    //     {
-    //         fs_log_output("[Trifecta-Interface] Warning: Failed to set thread priority: %lu\n", GetLastError());
-    //     }
-    // }
-
-    // Set core affinity - EDIT: Disabled on Windows
-    // if (core_affinity >= 0)
-    // {
-    //     DWORD_PTR affinity_mask = 1ULL << core_affinity;
-    //     if (SetThreadAffinityMask(thread_handle, affinity_mask) == 0)
-    //     {
-    //         fs_log_output("[Trifecta-Interface] Warning: Failed to set thread affinity: %lu\n", GetLastError());
-    //     }
-    // }
-
-    CloseHandle(thread_handle); // Detach thread
+    CloseHandle(a_thread_handle); // Detach thread
 
     fs_log_output("[Trifecta-Interface] Thread created successfully.\n");
     return 0;

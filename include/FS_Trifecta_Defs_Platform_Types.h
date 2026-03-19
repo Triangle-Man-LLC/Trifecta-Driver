@@ -12,30 +12,31 @@
 #ifndef TRIFECTA_DEFS_PLATFORM_TYPES_H
 #define TRIFECTA_DEFS_PLATFORM_TYPES_H
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
+// Windows (MSVC or MinGW)
+#if defined(_WIN32)
 
-#ifdef FS_DRIVER_EXPORTS
-#define FS_API __declspec(dllexport)
-#else
-#define FS_API __declspec(dllimport)
-#endif
-#ifdef FS_DRIVER_EXPORTS
-#define FS_API __declspec(dllexport)
-#else
-#define FS_API __declspec(dllimport)
-#endif
+    #if defined(__MINGW32__) || defined(__MINGW64__)
+        #include <basetsd.h>   // MinGW version
+    #else
+        #include <BaseTsd.h>   // MSVC Windows SDK version
+    #endif
 
+    // --- ssize_t on Windows ---
+    typedef SSIZE_T ssize_t;
+
+    // --- DLL import/export ---
+    #ifdef FS_DRIVER_EXPORTS
+        #define FS_API __declspec(dllexport)
+    #else
+        #define FS_API __declspec(dllimport)
+    #endif
+
+// GCC/Clang (Linux, Android, etc.)
 #elif defined(__GNUC__)
-#define FS_API __attribute__((visibility("default")))
-#define FS_API __attribute__((visibility("default")))
-
+    #define FS_API __attribute__((visibility("default")))
+    
 #else
-#define FS_API
-#define FS_API
+    #define FS_API
 #endif
 
 typedef intptr_t fs_sock_t;

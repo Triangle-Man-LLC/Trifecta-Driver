@@ -52,7 +52,7 @@ int fs_init_network_udp_driver(fs_device_info_t *device_handle)
 
 int fs_init_serial_driver(fs_device_info_t *device_handle)
 {
-    UART_HandleTypeDef *uart = (UART_HandleTypeDef *)device_handle->device_params.serial_port;
+    const UART_HandleTypeDef *uart = (UART_HandleTypeDef *)device_handle->device_params.serial_port;
 
     if (uart == NULL)
     {

@@ -9,6 +9,9 @@
 /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define WIN32_LEAN_AND_MEAN
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,10 +19,8 @@
 #include <time.h>
 #include <string.h>
 
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h by windows.h
-
 #include <windows.h>
+
 #include <process.h>
 #include <io.h>
 #include <fcntl.h>
@@ -60,7 +61,7 @@ int fs_platform_supported_serial_interrupts()
 /// @param device_handle
 /// @param status_flag
 /// @return 0 on success, -1 on fail (e.g. not supported on platform)
-int fs_init_serial_interrupts(fs_device_info_t *device_handle, fs_run_status_t *status_flag)
+int fs_init_serial_interrupts(fs_device_info_t *device_handle)
 {
     return -1;
 }
