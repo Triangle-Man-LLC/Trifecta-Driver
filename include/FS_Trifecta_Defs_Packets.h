@@ -32,6 +32,12 @@
 #endif
 
 #ifdef __cplusplus
+#define FS_STATIC_ASSERT static_assert
+#else
+#define FS_STATIC_ASSERT _Static_assert
+#endif
+
+#ifdef __cplusplus
 extern "C"
 {
 #endif
@@ -192,7 +198,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet fs_imu_composite_packet_t;
-    _Static_assert(sizeof(fs_imu_composite_packet_t) == 145, "fs_imu_composite_packet_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_composite_packet_t) == 145, "fs_imu_composite_packet_t size mismatch");
 
     FS_PACKED_BEGIN
     struct fs_imu_regular_packet
@@ -231,7 +237,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_regular_packet fs_imu_regular_packet_t;
-    _Static_assert(sizeof(fs_imu_regular_packet_t) == 85, "fs_imu_regular_packet_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_regular_packet_t) == 85, "fs_imu_regular_packet_t size mismatch");
 
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet_2
@@ -295,7 +301,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_2 fs_imu_composite_packet_2_t;
-    _Static_assert(sizeof(fs_imu_composite_packet_2_t) == 181, "fs_imu_composite_packet_2_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_composite_packet_2_t) == 181, "fs_imu_composite_packet_2_t size mismatch");
 
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet_64
@@ -351,7 +357,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_64 fs_imu_composite_packet_64_t;
-    _Static_assert(sizeof(fs_imu_composite_packet_64_t) == 149, "fs_imu_composite_packet_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_composite_packet_64_t) == 149, "fs_imu_composite_packet_t size mismatch");
 
     FS_PACKED_BEGIN
     struct fs_imu_regular_packet_64
@@ -390,7 +396,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_regular_packet_64 fs_imu_regular_packet_64_t;
-    _Static_assert(sizeof(fs_imu_regular_packet_64_t) == 89, "fs_imu_regular_packet_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_regular_packet_64_t) == 89, "fs_imu_regular_packet_t size mismatch");
 
     FS_PACKED_BEGIN
     struct fs_imu_composite_packet_64_2
@@ -454,7 +460,7 @@ extern "C"
         float barometric_pressure; // Barometric pressure data [mbar]
     } FS_PACKED_END;
     typedef struct fs_imu_composite_packet_64_2 fs_imu_composite_packet_64_2_t;
-    _Static_assert(sizeof(fs_imu_composite_packet_64_2_t) == 185, "fs_imu_composite_packet_2_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_imu_composite_packet_64_2_t) == 185, "fs_imu_composite_packet_2_t size mismatch");
 
     FS_PACKED_BEGIN
     union fs_packet_union
@@ -467,7 +473,7 @@ extern "C"
         fs_imu_composite_packet_64_2_t composite64_2;
     } FS_PACKED_END;
     typedef union fs_packet_union fs_packet_union_t;
-    _Static_assert(sizeof(fs_packet_union_t) == 185, "fs_packet_union_t size mismatch");
+    FS_STATIC_ASSERT(sizeof(fs_packet_union_t) == 185, "fs_packet_union_t size mismatch");
 #ifdef __cplusplus
 }
 #endif
