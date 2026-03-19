@@ -21,7 +21,15 @@ else()
         common/FS_Trifecta_Networked.c
     )
 
-    add_library(DriverTrifecta ${TRIFECTA_COMMON_SRCS})
+    if(BUILD_KIND STREQUAL "static")
+        set(BUILD_LIBRARY_TYPE STATIC)
+    elseif(BUILD_KIND STREQUAL "shared")
+        set(BUILD_LIBRARY_TYPE SHARED)
+    else()
+        set(BUILD_LIBRARY_TYPE STATIC)
+    endif()
+
+    add_library(DriverTrifecta ${BUILD_LIBRARY_TYPE} ${TRIFECTA_COMMON_SRCS})
 
     target_include_directories(DriverTrifecta PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
