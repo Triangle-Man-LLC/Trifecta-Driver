@@ -1,0 +1,30 @@
+name: Build (Windows MinGW)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-mingw:
+    runs-on: [self-hosted, Linux, MinGW]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true 
+
+      - name: Build project with MinGW
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build_windows_mingw
+          cmake -B build_windows_mingw \
+              -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain_mingw.cmake \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_KIND="$BUILD_KIND"
+          cmake --build build_windows_mingw -- -j"$(nproc)"
+
+      - name: Delete build folders after upload
+        run: |
+          rm -rf $GITHUB_WORKSPACE/build_windows_mingw

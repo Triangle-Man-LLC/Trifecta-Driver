@@ -1,0 +1,30 @@
+name: Build (Linux)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+    runs-on: [self-hosted, Linux]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true 
+
+      - name: Build project for x86-64
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build-x86-64
+          cd $GITHUB_WORKSPACE/build-x86-64
+          cmake ..
+          make
+
+      - name: Delete build folders after upload
+        run: |
+          rm -rf $GITHUB_WORKSPACE/build-x86-64
+
+      
