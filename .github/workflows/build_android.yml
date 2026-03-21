@@ -1,0 +1,118 @@
+name: Build (Android NDK)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android-ndk:
+    runs-on: [self-hosted, Linux, Android]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true 
+
+
+      - name: Build project for Android
+        run: |
+
+          echo "=== Trifecta Android Superbuild ==="
+
+          # ----------------------------------------
+          # 1. Auto-detect Android NDK
+          # ----------------------------------------
+
+          detect_ndk() {
+              # 1. Explicit environment variable
+              if [[ -n "${ANDROID_NDK_HOME:-}" && -d "$ANDROID_NDK_HOME" ]]; then
+                  echo "$ANDROID_NDK_HOME"
+                  return
+              fi
+
+              # 2. Android Studio default
+              if [[ -n "${ANDROID_HOME:-}" ]]; then
+                  if [[ -d "$ANDROID_HOME/ndk" ]]; then
+                      local latest
+                      latest=$(ls -1 "$ANDROID_HOME/ndk" | sort -V | tail -n 1)
+                      echo "$ANDROID_HOME/ndk/$latest"
+                      return
+                  fi
+              fi
+
+              # 3. Common Linux path
+              if [[ -d "$HOME/Android/Sdk/ndk" ]]; then
+                  local latest
+                  latest=$(ls -1 "$HOME/Android/Sdk/ndk" | sort -V | tail -n 1)
+                  echo "$HOME/Android/Sdk/ndk/$latest"
+                  return
+              fi
+
+              # 4. Manual installs
+              local opt_ndk
+              opt_ndk=$(ls -d /opt/android-ndk-* 2>/dev/null | sort -V | tail -n 1 || true)
+              if [[ -n "$opt_ndk" ]]; then
+                  echo "$opt_ndk"
+                  return
+              fi
+              opt_ndk=$(ls -d /opt/android-ndk/android-ndk-* 2>/dev/null | sort -V | tail -n 1 || true)
+              if [[ -n "$opt_ndk" ]]; then
+                  echo "$opt_ndk"
+                  return
+              fi
+              echo ""
+          }
+
+          ANDROID_NDK=$(detect_ndk)
+
+          # ----------------------------------------
+          # 2. If auto-detect fails, ask user
+          # ----------------------------------------
+
+          if [[ -z "$ANDROID_NDK" ]]; then
+              echo "Could not auto-detect Android NDK."
+              read -rp "Please enter the path to your Android NDK: " USER_NDK
+              USER_NDK=$(realpath "$USER_NDK" 2>/dev/null || echo "$USER_NDK")
+
+              if [[ ! -d "$USER_NDK" ]]; then
+                  echo "ERROR: '$USER_NDK' is not a directory."
+                  exit 1
+              fi
+
+              ANDROID_NDK="$USER_NDK"
+          fi
+
+          echo "Using Android NDK: $ANDROID_NDK"
+
+          # Validate toolchain
+          if [[ ! -f "$ANDROID_NDK/build/cmake/android.toolchain.cmake" ]]; then
+              echo "ERROR: Invalid NDK: toolchain file missing."
+              exit 1
+          fi
+
+          # ----------------------------------------
+          # 3. Configure superbuild
+          # ----------------------------------------
+
+          rm -rf build_android
+          mkdir -p build_android
+
+          cmake -B build_android \
+              -DANDROID_NDK="$ANDROID_NDK"
+
+          # ----------------------------------------
+          # 4. Build (superbuild mode)
+          # ----------------------------------------
+
+          cmake --build build_android -- -j"$(nproc)"
+
+          echo "=== Android superbuild complete ==="
+          echo "Output: build_android/Trifecta-Driver-Android/"
+
+
+      - name: Delete build folders after upload
+        run: |
+          rm -rf $GITHUB_WORKSPACE/build_windows_android
