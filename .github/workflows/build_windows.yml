@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: trifecta-driver-windows-mingw-ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-mingw:
     runs-on: [self-hosted, Linux, MinGW]

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: trifecta-driver-android-ci-build-${{ github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   build-android-ndk:
     runs-on: [self-hosted, Linux, Android]

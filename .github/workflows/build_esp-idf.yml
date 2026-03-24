@@ -1,0 +1,94 @@
+name: Build (ESP-IDF)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: trifecta-driver-esp-idf-ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-espidf:
+    runs-on: [self-hosted, Linux, ESP-IDF]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Clone ESP-IDF sample project (no submodules)
+        run: |
+          git clone --depth 1 --recursive=0 https://github.com/Triangle-Man-LLC/Trifecta-Sample-ESP-IDF.git espidf_sample
+
+          cd espidf_sample/components
+          rm -rf Trifecta-Driver
+          mkdir Trifecta-Driver
+
+          shopt -s dotglob
+          for item in $GITHUB_WORKSPACE/*; do
+            if [[ "$(basename "$item")" != "espidf_sample" ]]; then
+              cp -r "$item" Trifecta-Driver/
+            fi
+          done
+
+      - name: Set ESP-IDF target platform (ESP32)
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py set-target esp32
+
+      - name: Build with idf.py
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py build
+        
+      - name: Cleanup build files
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py clean
+
+      - name: Set ESP-IDF target platform (ESP32-S3)
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py set-target esp32s3
+
+      - name: Build with idf.py
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py build
+        
+      - name: Cleanup build files
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py clean
+
+      - name: Set ESP-IDF target platform (ESP32-P4)
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py set-target esp32p4
+
+      - name: Build with idf.py
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py build
+
+      - name: Cleanup build files
+        run: |
+          . $HOME/esp-idf-5_5/export.sh
+          cd $GITHUB_WORKSPACE/espidf_sample
+          idf.py clean
+
+      - name: Cleanup ESP-IDF build folder
+        run: |
+          rm -rf $GITHUB_WORKSPACE/espidf_sample
