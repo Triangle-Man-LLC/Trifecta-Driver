@@ -123,7 +123,7 @@ int fs_serial_start(fs_device_info_t *device_handle)
 
     // Send identification command
     char send_buf[FS_MAX_CMD_LENGTH] = {0};
-    snprintf(send_buf, sizeof(send_buf), ";%c%d;%c%d;%c%d;", CMD_IDENTIFY, 0, CMD_IDENTIFY, 0, CMD_IDENTIFY, 0);
+    snprintf(send_buf, sizeof(send_buf), ";%c%d;%c%d;%c%d;", CMD_STREAM, 0, CMD_IDENTIFY, 0, CMD_IDENTIFY, 0);
     size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf)) + 1;
 
     const int receive_timeout_micros = 100000;
