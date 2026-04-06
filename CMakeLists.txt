@@ -17,8 +17,9 @@ else()
         common/FS_Trifecta.c
         common/FS_Trifecta_Device.c
         common/FS_Trifecta_Device_Utils.c
-        common/FS_Trifecta_Serial.c
         common/FS_Trifecta_Networked.c
+        common/FS_Trifecta_Serial.c
+        common/FS_Trifecta_Replay.c
     )
 
     if(BUILD_KIND STREQUAL "static")

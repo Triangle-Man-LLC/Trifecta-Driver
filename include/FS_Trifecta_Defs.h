@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 
 #include "FS_Trifecta_Defs_Platform_Types.h"
