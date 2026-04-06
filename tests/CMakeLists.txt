@@ -1,43 +1,40 @@
 cmake_minimum_required(VERSION 3.10)
 project(TrifectaDriverTests C)
 
-# Version info
-set(TrifectaDriverTests_VERSION_MAJOR 1)
-set(TrifectaDriverTests_VERSION_MINOR 0)
-
-# C standard
 set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Explicitly list required common sources
-set(COMMON_SOURCES
-    ${CMAKE_SOURCE_DIR}/../common/FS_Trifecta_Device_Utils.c
-    ${CMAKE_SOURCE_DIR}/../common/FS_Trifecta_Device.c
-)
-
-# Include headers from ../include
-include_directories(${CMAKE_SOURCE_DIR}/../include ${CMAKE_SOURCE_DIR}/../)
-
-# Enable testing
 enable_testing()
 
-# Collect all test .c files in this directory
+# Bring in the actual Trifecta-Driver module
+add_subdirectory(${CMAKE_SOURCE_DIR}/../ TrifectaDriver_build)
+
+# Collect all the CSV files that are used for testing
+file(GLOB TEST_CSVS "${CMAKE_SOURCE_DIR}/test_resources/*.csv")
+foreach(csv ${TEST_CSVS})
+    get_filename_component(name "${csv}" NAME)
+    configure_file("${csv}" "${CMAKE_BINARY_DIR}/test_resources/${name}" COPYONLY)
+endforeach()
+
+# Collect all test .c files
 file(GLOB TEST_SOURCES *.c)
 message(STATUS "Test sources: ${TEST_SOURCES}")
-
-# Loop through each test file and create an executable + test
 foreach(TEST_FILE ${TEST_SOURCES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 
-    add_executable(${TEST_NAME} ${TEST_FILE} ${COMMON_SOURCES})
-    target_link_libraries(${TEST_NAME} m)  # Link against libm
-    
-    target_compile_options(${TEST_NAME} PRIVATE -g3 -O0)
-    target_link_options(${TEST_NAME} PRIVATE -g3)
+    add_executable(${TEST_NAME} ${TEST_FILE})
 
-    # Enable AddressSanitizer
-    target_compile_options(${TEST_NAME} PRIVATE -fsanitize=address,undefined)
-    target_link_options(${TEST_NAME} PRIVATE -fsanitize=address,undefined)
+    target_link_libraries(${TEST_NAME}
+        PRIVATE
+            DriverTrifecta
+            m
+    )
 
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+    target_compile_options(${TEST_NAME} PRIVATE -g3 -O0 -fsanitize=address,undefined)
+    target_link_options(${TEST_NAME} PRIVATE -g3 -fsanitize=address,undefined)
+
+    add_test(
+        NAME ${TEST_NAME}
+        COMMAND /usr/bin/time -v $<TARGET_FILE:${TEST_NAME}>
+    )
 endforeach()
