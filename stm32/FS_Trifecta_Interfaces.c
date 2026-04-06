@@ -434,23 +434,43 @@ int fs_delay(int millis)
 /// @param current_time Pointer to the current time
 /// @param millis The exact amount of time to delay
 /// @return The number of ticks the delay lasted
-int fs_delay_for(uint32_t *current_time, int millis)
+int fs_delay_for(uint64_t *current_time, int millis)
 {
     if (*current_time == 0)
     {
         *current_time = osKernelSysTick();
     }
-    uint32_t initial_time = *current_time;
+    uint64_t initial_time = *current_time;
     osDelayUntil(current_time, millis);
-    uint32_t elapsed_ticks = *current_time - initial_time;
+    uint64_t elapsed_ticks = *current_time - initial_time;
     return (int)elapsed_ticks;
 }
 
 /// @brief Get the current system time
 /// @param current_time Pointer to the current time
 /// @return 0 on success
-int fs_get_current_time(uint32_t *current_time)
+int fs_get_current_time(uint64_t *current_time)
 {
     *current_time = osKernelSysTick();
+    return 0;
+}
+
+int fs_get_local_time(fs_tm_t *out)
+{
+    if (!out)
+        return -1;
+
+    time_t t = time(NULL);
+    struct tm tmv;
+
+    localtime_r(&t, &tmv);
+
+    out->year  = tmv.tm_year + 1900;
+    out->month = tmv.tm_mon + 1;
+    out->day   = tmv.tm_mday;
+    out->hour  = tmv.tm_hour;
+    out->min   = tmv.tm_min;
+    out->sec   = tmv.tm_sec;
+
     return 0;
 }
