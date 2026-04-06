@@ -39,8 +39,6 @@
 
 #define DEGREES_TO_RADIANS 0.0174533f
 
-#define FS_MAX_DEVICE_NUMBER 1
-
 #ifdef __cplusplus
 extern "C"
 {
