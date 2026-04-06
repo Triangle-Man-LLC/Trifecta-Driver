@@ -210,7 +210,7 @@ int fs_replay_parse_packet(fs_replay_t *r,
     {
         tokens[count] = ca;
 
-        char *comma = strchr(p, ',');
+        char *comma = strchr(ca, ',');
         if (!comma)
         {
             count++;
