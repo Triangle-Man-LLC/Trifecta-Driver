@@ -11,8 +11,6 @@
 
 #include "FS_Trifecta_Replay.h"
 
-#include "FS_Trifecta_Replay.h"
-
 static char linebuf[512] = {0};
 
 static int fs_strcasecmp(const char *a, const char *b)

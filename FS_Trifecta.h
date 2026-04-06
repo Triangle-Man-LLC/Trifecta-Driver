@@ -13,6 +13,8 @@
 #define TRIFECTA_H
 
 #include "FS_Trifecta_Defs.h"
+#include "FS_Trifecta_Replay.h"
+#include "FS_Trifecta_Saver.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -296,13 +298,47 @@ extern "C"
     /// @return
     FS_API int fs_eulers_from_quaternion(fs_vector3_t *euler_angles, const fs_quaternion_t *quaternion);
 
+
+    /// @section Replaying 
+
+    /// @brief Attempts to open the replay file at given path.
+    /// @param r Replay handle (This is managed by the backend, so treat it as opaque.)
+    /// @param path The path to the file to load, should be a CSV exported by this library.
+    /// @param sparse_step This value is typically set to FS_REPLAY_DEFAULT_STEP.
+    /// @return 0 on success.
+    FS_API int fs_replay_open(fs_replay_t *r, const char *path, uint32_t sparse_step);
+
+    /// @brief Advance to the next timestep in the saved data.
+    /// @param r Replay handle (This is managed by the backend, so treat it as opaque.)
+    /// @param out The fs_packet_union_t to copy the data into.
+    /// @return 0 on success.
+    FS_API int fs_replay_read_next(fs_replay_t *r, fs_packet_union_t *out);
+
+    /// @brief Advance to the arbitrary index in the saved data.
+    /// @param r Replay handle (This is managed by the backend, so treat it as opaque.)
+    /// @param line_index The index of the line that we want to skip to.
+    /// @param out The fs_packet_union_t to copy the data into.
+    /// @return 0 on success.
+    FS_API int fs_replay_read_line(fs_replay_t *r, uint32_t line_index, fs_packet_union_t *out);
+
+    /// @brief Close the replay handle. This is important, since fs_replay_t contains dynamic memory allocation.
+    /// @param r Replay handle (This is managed by the backend, so treat it as opaque.)
+    /// @return None.
+    FS_API void fs_replay_close(fs_replay_t *r);
+
+
     /// @section Debug utilities - This should typically not be used at all.
 
     /// @brief Toggle logging (logging is disabled by default because it is a latency penalty).
-    /// You should never enable it unless debugging some issue.
+    /// You should not enable it unless debugging some specific issue, like during driver porting.
     /// @param do_enable TRUE to turn logging on.
     /// @return 0 on success.
     FS_API int fs_enable_logging(bool do_enable);
+
+    /// @brief Toggle logging, but redirect it to a given path (logging is disabled by default because it is a latency penalty).
+    /// You should not enable it unless debugging some specific issue, like during driver porting.
+    /// @param do_enable TRUE to turn logging on.
+    /// @return 0 on success.
     FS_API int fs_enable_logging_at_path(const char *path, bool do_enable);
 
     /// @brief Danger! Factory reset clears all user configurations. Use only when needed.

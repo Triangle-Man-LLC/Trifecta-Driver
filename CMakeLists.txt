@@ -20,6 +20,7 @@ else()
         common/FS_Trifecta_Networked.c
         common/FS_Trifecta_Serial.c
         common/FS_Trifecta_Replay.c
+        common/FS_Trifecta_Saver.c
     )
 
     if(BUILD_KIND STREQUAL "static")

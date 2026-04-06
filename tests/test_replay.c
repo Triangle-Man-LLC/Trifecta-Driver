@@ -3,8 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "FS_Trifecta_Replay.h"
-#include "FS_Trifecta_Defs.h"
+#include "FS_Trifecta.h"
 #include "FS_Trifecta_Interfaces.h"
 
 // Utility: float comparison
