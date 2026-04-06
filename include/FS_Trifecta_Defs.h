@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <math.h>
 
 #include "FS_Trifecta_Defs_Platform_Types.h"

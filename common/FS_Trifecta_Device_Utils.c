@@ -351,41 +351,78 @@ int fs_enqueue_into_packet_queue(fs_device_info_t *device_handle, const fs_packe
 /// @param rx_buf
 /// @param rx_len
 /// @return
-int segment_packets(fs_device_info_t *device_handle, const void *rx_buf, size_t rx_len)
+int segment_packets(fs_device_info_t *device_handle,
+                    const void *rx_buf,
+                    size_t rx_len)
 {
-    if (rx_buf == NULL || rx_len < 1 || rx_len > FS_MAX_DATA_LENGTH)
+    if (!rx_buf || rx_len == 0 || rx_len > FS_MAX_DATA_LENGTH)
     {
-        fs_log_output("[Trifecta-Device-Utils] Cannot segment packets from invalid receive buffer!");
+        fs_log_output("[Trifecta-Device-Utils] Invalid RX buffer");
         return -1;
     }
-    uint8_t *buf = (uint8_t *)rx_buf;
+
+    const uint8_t *buf = (const uint8_t *)rx_buf;
     size_t pos = 0;
     int packet_count = 0;
+
     while (pos < rx_len)
     {
-        uint8_t packet_type = (uint8_t)buf[pos];
+        /* 1. Read packet type safely */
+        uint8_t packet_type = buf[pos];
+
+        /* 2. Lookup expected packet length */
         size_t packet_length = obtain_packet_length(packet_type);
 
-        // Validate packet length
         if (packet_length == 0)
         {
-            // It must be in the "CSV" format!
+            /* Not a binary packet → CSV or unknown format */
+            fs_log_output("[Trifecta-Device-Utils] Non-binary packet detected (CSV?)");
             return 0;
         }
+
+        /* 3. Check for partial packet at end of buffer */
         if (pos + packet_length > rx_len)
         {
-            fs_log_output("[Trifecta-Device-Utils] Error: Packet length %ld is out of bounds! RX_len: %ld", packet_length, rx_len);
+            fs_log_output("[Trifecta-Device-Utils] Partial packet detected: need more bytes");
+            return -1; /* or return 0 if you want to buffer partial packets */
+        }
+
+        /* 4. Copy into aligned local struct */
+        fs_packet_union_t pkt;
+        memcpy(&pkt, buf + pos, packet_length);
+
+        if (pkt.composite.type != packet_type)
+        {
+            fs_log_output("[Trifecta-Device-Utils] Packet type mismatch: header=%u struct=%u",
+                          packet_type, pkt.composite.type);
             return -1;
         }
 
-        uint32_t packet_time = ((fs_packet_union_t *)(buf + pos))->composite.time;
-        fs_log_output("[Trifecta-Device-Utils] Packet type %hhu, len: %ld, timestamp: %lu", packet_type, packet_length, packet_time);
+        if (packet_type >= C64_PACKET_TYPE_IMU && packet_type <= C64_PACKET_TYPE_RESERVED)
+        {
+            uint64_t t = pkt.composite64.time;
+            fs_log_output("[Trifecta-Device-Utils] Packet type %u, len=%zu, timestamp=%" PRIu64,
+                          packet_type, packet_length, t);
+        }
+        else if (packet_type >= C642_PACKET_TYPE_IMU && packet_type <= C642_PACKET_TYPE_RESERVED)
+        {
+            uint64_t t = pkt.composite64_2.time;
+            fs_log_output("[Trifecta-Device-Utils] Packet type %u, len=%zu, timestamp=%" PRIu64,
+                          packet_type, packet_length, t);
+        }
+        else
+        {
+            uint32_t t = pkt.composite.time;
+            fs_log_output("[Trifecta-Device-Utils] Packet type %u, len=%zu, timestamp=%u",
+                          packet_type, packet_length, t);
+        }
 
-        // Emplace the packet into the queue
-        fs_enqueue_into_packet_queue(device_handle, (fs_packet_union_t *)(buf + pos));
+        fs_enqueue_into_packet_queue(device_handle, &pkt);
+
         packet_count++;
         pos += packet_length;
     }
+
     return packet_count;
 }
 
