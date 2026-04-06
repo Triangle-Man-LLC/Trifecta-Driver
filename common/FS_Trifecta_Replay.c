@@ -204,11 +204,11 @@ int fs_replay_parse_packet(fs_replay_t *r,
     strncpy(tmp, line, sizeof(tmp));
     tmp[sizeof(tmp) - 1] = '\0';
 
-    char *p = tmp;
+    char *ca = tmp;
 
     while (count < FS_REPLAY_MAX_COLUMNS)
     {
-        tokens[count] = p;
+        tokens[count] = ca;
 
         char *comma = strchr(p, ',');
         if (!comma)
@@ -218,7 +218,7 @@ int fs_replay_parse_packet(fs_replay_t *r,
         }
 
         *comma = '\0';      // terminate token
-        p = comma + 1;      // next token (may be empty)
+        ca = comma + 1;      // next token (may be empty)
         count++;
     }
 
