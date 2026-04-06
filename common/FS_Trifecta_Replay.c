@@ -144,7 +144,7 @@ int fs_replay_parse_header(fs_replay_t *r, const char *line)
     tmp[sizeof(tmp) - 1] = '\0';
 
     int col = 0;
-    char *p = tmp;
+    const char *p = tmp;
 
     while (col < FS_REPLAY_MAX_COLUMNS)
     {
