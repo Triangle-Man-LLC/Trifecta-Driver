@@ -15,7 +15,7 @@
 
 typedef struct fs_save_device_t
 {
-    const fs_device_info_t *dev;   // pointer only, not owned
+    const fs_device_info_t *dev; // pointer only, not owned
     FILE *file;
 } fs_save_device_t;
 
@@ -41,18 +41,19 @@ static void write_header(FILE *f)
         "Rx,Ry,Rz,"
         "Temp_0,Temp_1,Temp_2,"
         "DeviceMotionStatus\n",
-        f
-    );
+        f);
 }
 
 fs_save_t *fs_save_create(const fs_save_config_t *cfg)
 {
     fs_save_t *s = (fs_save_t *)calloc(1, sizeof(fs_save_t));
-    if (!s) return NULL;
+    if (!s)
+        return NULL;
 
     if (cfg)
         s->cfg = *cfg;
-    else {
+    else
+    {
         memset(&s->cfg, 0, sizeof(s->cfg));
         s->cfg.write_header = 1;
         s->cfg.include_timestamp_in_filename = 1;
@@ -63,7 +64,8 @@ fs_save_t *fs_save_create(const fs_save_config_t *cfg)
 
 void fs_save_destroy(fs_save_t *saver)
 {
-    if (!saver) return;
+    if (!saver)
+        return;
 
     for (int i = 0; i < saver->device_count; ++i)
         if (saver->devices[i].file)
@@ -94,34 +96,32 @@ static fs_save_device_t *add_device(fs_save_t *saver, const fs_device_info_t *de
 
 int fs_save_begin_device(fs_save_t *saver, const fs_device_info_t *dev)
 {
-    if (!saver || !dev) return -1;
+    if (!saver || !dev)
+        return -1;
 
     fs_save_device_t *d = find_device(saver, dev);
-    if (d && d->file) return 0;
+    if (d && d->file)
+        return 0;
 
     if (!d)
         d = add_device(saver, dev);
 
-    if (!d) return -2;
+    if (!d)
+        return -2;
 
     char filename[256];
 
     if (saver->cfg.include_timestamp_in_filename)
     {
-        time_t t = time(NULL);
-        struct tm tmv;
-#if defined(_WIN32)
-        localtime_s(&tmv, &t);
-#else
-        localtime_r(&t, &tmv);
-#endif
+        fs_tm_t tmv;
+        fs_get_local_time(&tmv);
 
         snprintf(filename, sizeof(filename),
                  "%s%s_%04d%02d%02d%02d%02d%02d.csv",
                  saver->cfg.filename_prefix ? saver->cfg.filename_prefix : "",
-                 dev->device_descriptor.device_name,   // or dev->serial, dev->unique_id, etc.
-                 tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday,
-                 tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
+                 dev->device_descriptor.device_name,
+                 tmv.year, tmv.month, tmv.day,
+                 tmv.hour, tmv.min, tmv.sec);
     }
     else
     {
@@ -137,7 +137,8 @@ int fs_save_begin_device(fs_save_t *saver, const fs_device_info_t *dev)
              filename);
 
     d->file = fopen(fullpath, "w");
-    if (!d->file) return -3;
+    if (!d->file)
+        return -3;
 
     if (saver->cfg.write_header)
         write_header(d->file);
@@ -147,10 +148,12 @@ int fs_save_begin_device(fs_save_t *saver, const fs_device_info_t *dev)
 
 int fs_save_end_device(fs_save_t *saver, const fs_device_info_t *dev)
 {
-    if (!saver || !dev) return -1;
+    if (!saver || !dev)
+        return -1;
 
     fs_save_device_t *d = find_device(saver, dev);
-    if (!d || !d->file) return 0;
+    if (!d || !d->file)
+        return 0;
 
     fclose(d->file);
     d->file = NULL;
@@ -193,143 +196,148 @@ static int format_packet(char *buf, size_t buf_size, const fs_packet_union_t *p)
     static char fbuf[64][32]; // 64 fields × 32 chars each
 
     int fi = 0;
-    #define FMT(dst, fmt, val) do { snprintf(fbuf[fi], sizeof(fbuf[fi]), fmt, val); dst = fbuf[fi++]; } while(0)
+#define FMT(dst, fmt, val)                              \
+    do                                                  \
+    {                                                   \
+        snprintf(fbuf[fi], sizeof(fbuf[fi]), fmt, val); \
+        dst = fbuf[fi++];                               \
+    } while (0)
 
     switch (type)
     {
-        case C_PACKET_TYPE_AHRS:
-        case C_PACKET_TYPE_IMU:
-        case C_PACKET_TYPE_INS:
-        case C_PACKET_TYPE_RESERVED:
-            FMT(ax0, "%f", p->composite.ax0);
-            FMT(ay0, "%f", p->composite.ay0);
-            FMT(az0, "%f", p->composite.az0);
-            FMT(gx0, "%f", p->composite.gx0);
-            FMT(gy0, "%f", p->composite.gy0);
-            FMT(gz0, "%f", p->composite.gz0);
+    case C_PACKET_TYPE_AHRS:
+    case C_PACKET_TYPE_IMU:
+    case C_PACKET_TYPE_INS:
+    case C_PACKET_TYPE_RESERVED:
+        FMT(ax0, "%f", p->composite.ax0);
+        FMT(ay0, "%f", p->composite.ay0);
+        FMT(az0, "%f", p->composite.az0);
+        FMT(gx0, "%f", p->composite.gx0);
+        FMT(gy0, "%f", p->composite.gy0);
+        FMT(gz0, "%f", p->composite.gz0);
 
-            FMT(ax1, "%f", p->composite.ax1);
-            FMT(ay1, "%f", p->composite.ay1);
-            FMT(az1, "%f", p->composite.az1);
-            FMT(gx1, "%f", p->composite.gx1);
-            FMT(gy1, "%f", p->composite.gy1);
-            FMT(gz1, "%f", p->composite.gz1);
+        FMT(ax1, "%f", p->composite.ax1);
+        FMT(ay1, "%f", p->composite.ay1);
+        FMT(az1, "%f", p->composite.az1);
+        FMT(gx1, "%f", p->composite.gx1);
+        FMT(gy1, "%f", p->composite.gy1);
+        FMT(gz1, "%f", p->composite.gz1);
 
-            FMT(ax2, "%f", p->composite.ax2);
-            FMT(ay2, "%f", p->composite.ay2);
-            FMT(az2, "%f", p->composite.az2);
-            FMT(gx2, "%f", p->composite.gx2);
-            FMT(gy2, "%f", p->composite.gy2);
-            FMT(gz2, "%f", p->composite.gz2);
+        FMT(ax2, "%f", p->composite.ax2);
+        FMT(ay2, "%f", p->composite.ay2);
+        FMT(az2, "%f", p->composite.az2);
+        FMT(gx2, "%f", p->composite.gx2);
+        FMT(gy2, "%f", p->composite.gy2);
+        FMT(gz2, "%f", p->composite.gz2);
 
-            FMT(q0, "%f", p->composite.q0);
-            FMT(q1, "%f", p->composite.q1);
-            FMT(q2, "%f", p->composite.q2);
-            FMT(q3, "%f", p->composite.q3);
+        FMT(q0, "%f", p->composite.q0);
+        FMT(q1, "%f", p->composite.q1);
+        FMT(q2, "%f", p->composite.q2);
+        FMT(q3, "%f", p->composite.q3);
 
-            FMT(magX, "%f", p->composite.mag_x);
-            FMT(magY, "%f", p->composite.mag_y);
-            FMT(magZ, "%f", p->composite.mag_z);
+        FMT(magX, "%f", p->composite.mag_x);
+        FMT(magY, "%f", p->composite.mag_y);
+        FMT(magZ, "%f", p->composite.mag_z);
 
-            FMT(omegaX0, "%f", p->composite.omega_x0);
-            FMT(omegaY0, "%f", p->composite.omega_y0);
-            FMT(omegaZ0, "%f", p->composite.omega_z0);
+        FMT(omegaX0, "%f", p->composite.omega_x0);
+        FMT(omegaY0, "%f", p->composite.omega_y0);
+        FMT(omegaZ0, "%f", p->composite.omega_z0);
 
-            FMT(accX, "%f", p->composite.acc_x);
-            FMT(accY, "%f", p->composite.acc_y);
-            FMT(accZ, "%f", p->composite.acc_z);
+        FMT(accX, "%f", p->composite.acc_x);
+        FMT(accY, "%f", p->composite.acc_y);
+        FMT(accZ, "%f", p->composite.acc_z);
 
-            FMT(t0, "%f", p->composite.temperature[0]);
-            FMT(t1, "%f", p->composite.temperature[1]);
-            FMT(t2, "%f", p->composite.temperature[2]);
+        FMT(t0, "%f", p->composite.temperature[0]);
+        FMT(t1, "%f", p->composite.temperature[1]);
+        FMT(t2, "%f", p->composite.temperature[2]);
 
-            FMT(motion, "%u", p->composite.device_motion_status);
-            break;
+        FMT(motion, "%u", p->composite.device_motion_status);
+        break;
 
-        case S_PACKET_TYPE_AHRS:
-        case S_PACKET_TYPE_IMU:
-        case S_PACKET_TYPE_INS:
-        case S_PACKET_TYPE_RESERVED:
-            FMT(omegaX0, "%f", p->regular.omega_x0);
-            FMT(omegaY0, "%f", p->regular.omega_y0);
-            FMT(omegaZ0, "%f", p->regular.omega_z0);
+    case S_PACKET_TYPE_AHRS:
+    case S_PACKET_TYPE_IMU:
+    case S_PACKET_TYPE_INS:
+    case S_PACKET_TYPE_RESERVED:
+        FMT(omegaX0, "%f", p->regular.omega_x0);
+        FMT(omegaY0, "%f", p->regular.omega_y0);
+        FMT(omegaZ0, "%f", p->regular.omega_z0);
 
-            FMT(q0, "%f", p->regular.q0);
-            FMT(q1, "%f", p->regular.q1);
-            FMT(q2, "%f", p->regular.q2);
-            FMT(q3, "%f", p->regular.q3);
+        FMT(q0, "%f", p->regular.q0);
+        FMT(q1, "%f", p->regular.q1);
+        FMT(q2, "%f", p->regular.q2);
+        FMT(q3, "%f", p->regular.q3);
 
-            FMT(magX, "%f", p->regular.mag_x);
-            FMT(magY, "%f", p->regular.mag_y);
-            FMT(magZ, "%f", p->regular.mag_z);
+        FMT(magX, "%f", p->regular.mag_x);
+        FMT(magY, "%f", p->regular.mag_y);
+        FMT(magZ, "%f", p->regular.mag_z);
 
-            FMT(accX, "%f", p->regular.acc_x);
-            FMT(accY, "%f", p->regular.acc_y);
-            FMT(accZ, "%f", p->regular.acc_z);
+        FMT(accX, "%f", p->regular.acc_x);
+        FMT(accY, "%f", p->regular.acc_y);
+        FMT(accZ, "%f", p->regular.acc_z);
 
-            FMT(t0, "%f", p->composite.temperature[0]);
-            FMT(t1, "%f", p->composite.temperature[1]);
-            FMT(t2, "%f", p->composite.temperature[2]);
+        FMT(t0, "%f", p->composite.temperature[0]);
+        FMT(t1, "%f", p->composite.temperature[1]);
+        FMT(t2, "%f", p->composite.temperature[2]);
 
-            FMT(motion, "%u", p->regular.device_motion_status);
-            break;
+        FMT(motion, "%u", p->regular.device_motion_status);
+        break;
 
-        case C2_PACKET_TYPE_AHRS:
-        case C2_PACKET_TYPE_IMU:
-        case C2_PACKET_TYPE_INS:
-        case C2_PACKET_TYPE_RESERVED:
-            FMT(ax0, "%f", p->composite2.ax0);
-            FMT(ay0, "%f", p->composite2.ay0);
-            FMT(az0, "%f", p->composite2.az0);
-            FMT(gx0, "%f", p->composite2.gx0);
-            FMT(gy0, "%f", p->composite2.gy0);
-            FMT(gz0, "%f", p->composite2.gz0);
+    case C2_PACKET_TYPE_AHRS:
+    case C2_PACKET_TYPE_IMU:
+    case C2_PACKET_TYPE_INS:
+    case C2_PACKET_TYPE_RESERVED:
+        FMT(ax0, "%f", p->composite2.ax0);
+        FMT(ay0, "%f", p->composite2.ay0);
+        FMT(az0, "%f", p->composite2.az0);
+        FMT(gx0, "%f", p->composite2.gx0);
+        FMT(gy0, "%f", p->composite2.gy0);
+        FMT(gz0, "%f", p->composite2.gz0);
 
-            FMT(ax1, "%f", p->composite2.ax1);
-            FMT(ay1, "%f", p->composite2.ay1);
-            FMT(az1, "%f", p->composite2.az1);
-            FMT(gx1, "%f", p->composite2.gx1);
-            FMT(gy1, "%f", p->composite2.gy1);
-            FMT(gz1, "%f", p->composite2.gz1);
+        FMT(ax1, "%f", p->composite2.ax1);
+        FMT(ay1, "%f", p->composite2.ay1);
+        FMT(az1, "%f", p->composite2.az1);
+        FMT(gx1, "%f", p->composite2.gx1);
+        FMT(gy1, "%f", p->composite2.gy1);
+        FMT(gz1, "%f", p->composite2.gz1);
 
-            FMT(ax2, "%f", p->composite2.ax2);
-            FMT(ay2, "%f", p->composite2.ay2);
-            FMT(az2, "%f", p->composite2.az2);
-            FMT(gx2, "%f", p->composite2.gx2);
-            FMT(gy2, "%f", p->composite2.gy2);
-            FMT(gz2, "%f", p->composite2.gz2);
+        FMT(ax2, "%f", p->composite2.ax2);
+        FMT(ay2, "%f", p->composite2.ay2);
+        FMT(az2, "%f", p->composite2.az2);
+        FMT(gx2, "%f", p->composite2.gx2);
+        FMT(gy2, "%f", p->composite2.gy2);
+        FMT(gz2, "%f", p->composite2.gz2);
 
-            FMT(q0, "%f", p->composite2.q0);
-            FMT(q1, "%f", p->composite2.q1);
-            FMT(q2, "%f", p->composite2.q2);
-            FMT(q3, "%f", p->composite2.q3);
+        FMT(q0, "%f", p->composite2.q0);
+        FMT(q1, "%f", p->composite2.q1);
+        FMT(q2, "%f", p->composite2.q2);
+        FMT(q3, "%f", p->composite2.q3);
 
-            FMT(magX, "%f", p->composite2.mag_x);
-            FMT(magY, "%f", p->composite2.mag_y);
-            FMT(magZ, "%f", p->composite2.mag_z);
+        FMT(magX, "%f", p->composite2.mag_x);
+        FMT(magY, "%f", p->composite2.mag_y);
+        FMT(magZ, "%f", p->composite2.mag_z);
 
-            FMT(omegaX0, "%f", p->composite2.omega_x0);
-            FMT(omegaY0, "%f", p->composite2.omega_y0);
-            FMT(omegaZ0, "%f", p->composite2.omega_z0);
+        FMT(omegaX0, "%f", p->composite2.omega_x0);
+        FMT(omegaY0, "%f", p->composite2.omega_y0);
+        FMT(omegaZ0, "%f", p->composite2.omega_z0);
 
-            FMT(accX, "%f", p->composite2.acc_x);
-            FMT(accY, "%f", p->composite2.acc_y);
-            FMT(accZ, "%f", p->composite2.acc_z);
+        FMT(accX, "%f", p->composite2.acc_x);
+        FMT(accY, "%f", p->composite2.acc_y);
+        FMT(accZ, "%f", p->composite2.acc_z);
 
-            FMT(vx, "%f", p->composite2.vx);
-            FMT(vy, "%f", p->composite2.vy);
-            FMT(vz, "%f", p->composite2.vz);
+        FMT(vx, "%f", p->composite2.vx);
+        FMT(vy, "%f", p->composite2.vy);
+        FMT(vz, "%f", p->composite2.vz);
 
-            FMT(rx, "%f", p->composite2.rx);
-            FMT(ry, "%f", p->composite2.ry);
-            FMT(rz, "%f", p->composite2.rz);
+        FMT(rx, "%f", p->composite2.rx);
+        FMT(ry, "%f", p->composite2.ry);
+        FMT(rz, "%f", p->composite2.rz);
 
-            FMT(t0, "%f", p->composite.temperature[0]);
-            FMT(t1, "%f", p->composite.temperature[1]);
-            FMT(t2, "%f", p->composite.temperature[2]);
+        FMT(t0, "%f", p->composite.temperature[0]);
+        FMT(t1, "%f", p->composite.temperature[1]);
+        FMT(t2, "%f", p->composite.temperature[2]);
 
-            FMT(motion, "%u", p->composite2.device_motion_status);
-            break;
+        FMT(motion, "%u", p->composite2.device_motion_status);
+        break;
     }
 
     return snprintf(
@@ -356,23 +364,25 @@ static int format_packet(char *buf, size_t buf_size, const fs_packet_union_t *p)
         vx, vy, vz,
         rx, ry, rz,
         t0, t1, t2,
-        motion
-    );
+        motion);
 }
 
 int fs_save_on_packet(fs_save_t *saver,
                       const fs_device_info_t *dev,
                       const fs_packet_union_t *packet)
 {
-    if (!saver || !dev || !packet) return -1;
+    if (!saver || !dev || !packet)
+        return -1;
 
     fs_save_device_t *d = find_device(saver, dev);
     if (!d || !d->file)
     {
         int r = fs_save_begin_device(saver, dev);
-        if (r != 0) return r;
+        if (r != 0)
+            return r;
         d = find_device(saver, dev);
-        if (!d || !d->file) return -2;
+        if (!d || !d->file)
+            return -2;
     }
 
     char line[LINEBUF_SIZE];
