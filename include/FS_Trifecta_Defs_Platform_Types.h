@@ -15,28 +15,28 @@
 // Windows (MSVC or MinGW)
 #if defined(_WIN32)
 
-    #if defined(__MINGW32__) || defined(__MINGW64__)
-        #include <basetsd.h>   // MinGW version
-    #else
-        #include <BaseTsd.h>   // MSVC Windows SDK version
-    #endif
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#include <basetsd.h> // MinGW version
+#else
+#include <BaseTsd.h> // MSVC Windows SDK version
+#endif
 
-    // --- ssize_t on Windows ---
-    typedef SSIZE_T ssize_t;
+// --- ssize_t on Windows ---
+typedef SSIZE_T ssize_t;
 
-    // --- DLL import/export ---
-    #ifdef FS_DRIVER_EXPORTS
-        #define FS_API __declspec(dllexport)
-    #else
-        #define FS_API __declspec(dllimport)
-    #endif
+// --- DLL import/export ---
+#ifdef FS_DRIVER_EXPORTS
+#define FS_API __declspec(dllexport)
+#else
+#define FS_API __declspec(dllimport)
+#endif
 
 // GCC/Clang (Linux, Android, etc.)
 #elif defined(__GNUC__)
-    #define FS_API __attribute__((visibility("default")))
-    
+#define FS_API __attribute__((visibility("default")))
+
 #else
-    #define FS_API
+#define FS_API
 #endif
 
 typedef intptr_t fs_sock_t;
@@ -58,6 +58,17 @@ typedef void fs_thread_func_t;
 #else
 #include <pthread.h>
 #endif
+
+typedef struct fs_tm
+{
+    int year;  // 4-digit
+    int month; // 1-12
+    int day;   // 1-31
+    int hour;  // 0-23
+    int min;   // 0-59
+    int sec;   // 0-59
+    int usec;  // 0-999999
+} fs_tm_t;
 
 typedef struct fs_thread
 {

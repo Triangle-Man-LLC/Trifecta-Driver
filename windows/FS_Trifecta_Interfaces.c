@@ -261,3 +261,23 @@ int fs_get_current_time(uint32_t *current_time)
     *current_time = (uint32_t)(ms_since_1970 & 0xFFFFFFFF);
     return 0;
 }
+
+int fs_get_local_time(fs_tm_t *out)
+{
+    if (!out)
+        return -1;
+
+    time_t t = time(NULL);
+    struct tm tmv;
+
+    localtime_s(&tmv, &t);
+
+    out->year  = tmv.tm_year + 1900;
+    out->month = tmv.tm_mon + 1;
+    out->day   = tmv.tm_mday;
+    out->hour  = tmv.tm_hour;
+    out->min   = tmv.tm_min;
+    out->sec   = tmv.tm_sec;
+
+    return 0;
+}
