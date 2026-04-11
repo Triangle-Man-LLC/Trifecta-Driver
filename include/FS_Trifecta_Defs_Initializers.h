@@ -22,22 +22,22 @@
     .task_stack_size_bytes = 4096,      \
 }
 #elif defined(__linux__)
-#define FS_DRIVER_CONFIG_DEFAULT {        \
-    .use_serial_interrupt_mode = false,   \
-    .background_task_priority = -1,       \
-    .background_task_core_affinity = -1,  \
-    .read_timeout_micros = 1000,          \
-    .task_wait_ms = 3,                    \
-    .task_stack_size_bytes = (64 * 1024), \
+#define FS_DRIVER_CONFIG_DEFAULT {       \
+    .use_serial_interrupt_mode = false,  \
+    .background_task_priority = -1,      \
+    .background_task_core_affinity = -1, \
+    .read_timeout_micros = 1000,         \
+    .task_wait_ms = 3,                   \
+    .task_stack_size_bytes = 0,          \
 }
 #elif defined(_WIN32)
-#define FS_DRIVER_CONFIG_DEFAULT {         \
-    .use_serial_interrupt_mode = false,    \
-    .background_task_priority = -1,        \
-    .background_task_core_affinity = -1,   \
-    .read_timeout_micros = 1000,           \
-    .task_wait_ms = 3,                     \
-    .task_stack_size_bytes = (512 * 1024), \
+#define FS_DRIVER_CONFIG_DEFAULT {       \
+    .use_serial_interrupt_mode = false,  \
+    .background_task_priority = -1,      \
+    .background_task_core_affinity = -1, \
+    .read_timeout_micros = 1000,         \
+    .task_wait_ms = 3,                   \
+    .task_stack_size_bytes = 0,          \
 }
 #elif defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
 #define FS_DRIVER_CONFIG_DEFAULT {      \
@@ -93,7 +93,7 @@
         .device_params = FS_DEVICE_PARAMS_BLANK,                                                           \
         .driver_config = FS_DRIVER_CONFIG_DEFAULT,                                                         \
         .lock = {0},                                                                                       \
-        .background_task_handle = 0,                                                                    \
+        .background_task_handle = 0,                                                                       \
         .last_received_packet = {0},                                                                       \
         .data_buffer = (fs_bytes_ringbuffer_t){                                                            \
             .buffer = {0},                                                                                 \
