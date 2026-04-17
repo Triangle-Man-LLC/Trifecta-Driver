@@ -217,7 +217,7 @@ int fs_delay(int millis)
 /// @param current_time Pointer to the current time
 /// @param millis The exact amount of time to delay
 /// @return The number of ticks the delay lasted
-int fs_delay_for(uint32_t *current_time, int millis)
+int fs_delay_for(uint64_t *current_time, int millis)
 {
     if (current_time == NULL)
     {
@@ -232,7 +232,7 @@ int fs_delay_for(uint32_t *current_time, int millis)
 
     QueryPerformanceCounter(&end);
 
-    uint32_t elapsed_ms = (uint32_t)((end.QuadPart - start.QuadPart) * 1000 / freq.QuadPart);
+    uint64_t elapsed_ms = ((end.QuadPart - start.QuadPart) * 1000 / freq.QuadPart);
     *current_time += elapsed_ms;
     return elapsed_ms;
 }
@@ -240,7 +240,7 @@ int fs_delay_for(uint32_t *current_time, int millis)
 /// @brief Get the current system time
 /// @param current_time Pointer to the current time
 /// @return 0 on success
-int fs_get_current_time(uint32_t *current_time)
+int fs_get_current_time(uint64_t *current_time)
 {
     if (current_time == NULL)
     {
@@ -258,7 +258,7 @@ int fs_get_current_time(uint32_t *current_time)
     uint64_t ms_since_1601 = time.QuadPart / 10000;
     uint64_t ms_since_1970 = ms_since_1601 - 11644473600000ULL;
 
-    *current_time = (uint32_t)(ms_since_1970 & 0xFFFFFFFF);
+    *current_time = (ms_since_1970 & 0xFFFFFFFF);
     return 0;
 }
 
