@@ -101,13 +101,16 @@ int fs_log_output(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -132,13 +135,16 @@ int fs_log_critical(const char *format, ...)
     fflush(stdout);
 
     // If last char wasn't newline, add one
-    if (chars_printed > 0) {
+    if (chars_printed > 0)
+    {
         // Use fputc instead of indexing format
-        if (ferror(stdout) == 0) {
+        if (ferror(stdout) == 0)
+        {
             // Can't directly check last char printed, so safer approach:
             // Always append newline unless format already ends with '\n'
             size_t len = strlen(format);
-            if (len == 0 || format[len - 1] != '\n') {
+            if (len == 0 || format[len - 1] != '\n')
+            {
                 putchar('\n');
                 chars_printed++;
             }
@@ -175,10 +181,10 @@ int fs_delay_for(uint64_t *current_time, int millis)
 {
     if (*current_time == 0)
     {
-        *current_time = xTaskGetTickCount();
+        *current_time = (uint64_t)xTaskGetTickCount();
     }
     uint64_t initial_time = *current_time;
-    vTaskDelayUntil(current_time, pdMS_TO_TICKS(millis));
+    vTaskDelayUntil((uint32_t *)current_time, pdMS_TO_TICKS(millis));
     uint64_t elapsed_ticks = *current_time - initial_time;
     return (int)elapsed_ticks;
 }
@@ -189,13 +195,13 @@ int fs_delay_for(uint64_t *current_time, int millis)
 /// @return 0 on success
 int fs_get_current_time(uint64_t *current_time)
 {
-    *current_time = xTaskGetTickCount();
+    *current_time = (uint64_t)xTaskGetTickCount();
     return 0;
 }
 
-/// @brief 
-/// @param out 
-/// @return 
+/// @brief
+/// @param out
+/// @return
 int fs_get_local_time(fs_tm_t *out)
 {
     if (!out)
@@ -206,12 +212,12 @@ int fs_get_local_time(fs_tm_t *out)
 
     localtime_r(&t, &tmv);
 
-    out->year  = tmv.tm_year + 1900;
+    out->year = tmv.tm_year + 1900;
     out->month = tmv.tm_mon + 1;
-    out->day   = tmv.tm_mday;
-    out->hour  = tmv.tm_hour;
-    out->min   = tmv.tm_min;
-    out->sec   = tmv.tm_sec;
+    out->day = tmv.tm_mday;
+    out->hour = tmv.tm_hour;
+    out->min = tmv.tm_min;
+    out->sec = tmv.tm_sec;
 
     return 0;
 }
