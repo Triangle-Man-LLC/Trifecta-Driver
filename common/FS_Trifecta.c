@@ -339,6 +339,22 @@ int fs_set_serial_uart_baudrate(fs_device_info_t *device_handle, int baudrate)
   return fs_send_command(device_handle, send_buf, send_len);
 }
 
+int fs_set_gnss_baseline(fs_device_info_t *device_handle, fs_vector3_t baseline)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.6f,%.6f,%.6f;", CMD_SET_GNSS_BASELINE, baseline.x, baseline.y, baseline.z);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
+int fs_set_gnss_lever_arm(fs_device_info_t *device_handle, fs_vector3_t lever_arm)
+{
+  char send_buf[FS_MAX_CMD_LENGTH];
+  snprintf(send_buf, FS_MAX_CMD_LENGTH, ";%c%.6f,%.6f,%.6f;", CMD_SET_GNSS_LEVER_ARM, lever_arm.x, lever_arm.y, lever_arm.z);
+  size_t send_len = fs_safe_strnlen(send_buf, sizeof(send_buf));
+  return fs_send_command(device_handle, send_buf, send_len);
+}
+
 int fs_get_device_operating_state(fs_device_info_t *device_handle, fs_device_params_t *device_params_info)
 {
   if (device_handle == NULL || device_params_info == NULL)

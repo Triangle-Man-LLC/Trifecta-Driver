@@ -36,9 +36,10 @@ extern "C"
     /// @brief Command definitions
     typedef enum
     {
-        PACKET_HEADER = ':',       // The packet header indicates the start of a packet (legacy version)
-        PACKET_FOOTER = '!',       // The packet footer indicates the end of a packet (legacy version)
-        PACKET_HEADER_V2 = '@',    // The packet header indicates the start of a packet (new version)
+        PACKET_HEADER = ':',    // The packet header indicates the start of a packet (legacy version)
+        PACKET_FOOTER = '!',    // The packet footer indicates the end of a packet (legacy version)
+        PACKET_HEADER_V2 = '@', // The packet header indicates the start of a packet (new version)
+
         CMD_TERMINATOR = ';',      // The command terminator denotes the end of a command.
         CMD_RESTART = 'R',         // Restart the device "R0;"
         CMD_CLEAR_CONFIG = 'C',    // Clear all saved settings "C0;"
@@ -60,7 +61,8 @@ extern "C"
         CMD_IDENTIFY_PARAM_PASSWORD_AP = '3',    // Respond with current SSID (AP) for WiFi connection "30;"
         CMD_IDENTIFY_PARAM_TRANSMIT = 't',       // Respond with transmit mode (serial/UDP/etc.) "t-1;" to query, "t<COMMUNICATION_MODE_1 | 2 | ... |>;" to set
 
-        CMD_REZERO_IMUS = 'Z', // Re-calibrate the IMUs (should only do on a flat plane and stationary) "Z<NUM_CALIBRATION_POINTS>;"
+        CMD_SET_GNSS_BASELINE = 'B',  // Set the baseline between the GNSS antennas. "B<X>,<Y>,<Z>;", where X, Y, Z is GNSS_1 - GNSS_0 relative position following the coordinate conventions of the IMU.
+        CMD_SET_GNSS_LEVER_ARM = 'L', // Set the lever arm between GNSS_0 and the IMU origin. "L<X>,<Y>,<Z>;" following the coordinate conventions of the IMU.
 
         CMD_SET_POSITION = '0',           // Reset INS position: "0<type>,<X>,<Y>,<Z>;" where <type> is a fs_gnss_position_format_t
         CMD_SET_ORIENTATION_OFFSET = 'Q', // Sets the offset orientation: "Q0;" to clear, "Q1;" to use current orientation, else "Q<W>,<X>,<Y>,<Z>;"

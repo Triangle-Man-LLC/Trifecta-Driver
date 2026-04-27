@@ -134,14 +134,14 @@ extern "C"
     /// @brief
     typedef enum fs_device_diagnostic_flags
     {
-        FS_DEVICE_DIAG_UTC_SYNCED = 0x01,
-        FS_DEVICE_DIAG_GNSS_AVAILABLE = 0x02,
-        FS_DEVICE_DIAG_PPS_LOCKED = 0x04,
-        FS_DEVICE_DIAG_IMU_HEALTHY = 0x08,
-        FS_DEVICE_DIAG_RESERVED_4 = 0x10,
-        FS_DEVICE_DIAG_RESERVED_5 = 0x20,
-        FS_DEVICE_DIAG_RESERVED_6 = 0x40,
-        FS_DEVICE_DIAG_RESERVED_7 = 0x80,
+        FS_DEVICE_DIAG_UTC_SYNCED = 0x01, // Clock is synchronized with UTC by means of GNSS
+        FS_DEVICE_DIAG_GNSS_AVAILABLE = 0x02, // GNSS solution available (at least SPP)
+        FS_DEVICE_DIAG_IMU_AVAILABLE = 0x04, // IMU status OK
+        FS_DEVICE_DIAG_GNSS_DGPS = 0x08, // GNSS solution corrected by DGPS or SBAS
+        FS_DEVICE_DIAG_GNSS_RTK_FLOAT = 0x10, // GNSS solution is RTK FLOAT
+        FS_DEVICE_DIAG_GNSS_RTK_FIX = 0x20, // GNSS solution is RTK FIX
+        FS_DEVICE_DIAG_GNSS_RTK_MB = 0x40, // GNSS RTK moving baseline solution acquired
+        FS_DEVICE_DIAG_GNSS_RTK_EXT = 0x80, // GNSS RTK is fixed on external base station (e.g. valid RTCM input received)
     } fs_device_diagnostic_flags_t;
 
     FS_PACKED_BEGIN

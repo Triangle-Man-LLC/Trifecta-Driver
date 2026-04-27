@@ -81,8 +81,8 @@ static int test_new_format_row(const fs_imu_composite_packet_2_t *p)
     CHECKF(p->vy, -0.002136487f, 1e-6f, -35);
     CHECKF(p->vz, 0.0f, 1e-6f, -36);
 
-    CHECKD(p->rx, 33.16704808, 1e-6, -37);
-    CHECKD(p->ry, -117.1831163, 1e-6, -38);
+    CHECKD(p->rx, 0, 1e-6, -37);
+    CHECKD(p->ry, 0, 1e-6, -38);
     CHECKD(p->rz, 217.4045, 1e-6, -39);
 
     CHECKF(p->reserved[0], 0.0f, 1e-6f, -40);

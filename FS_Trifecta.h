@@ -230,20 +230,6 @@ extern "C"
 
     /// @section Device configuration methods
 
-    /// @brief Manually set the AHRS yaw angle to a known value. Non-volatile.
-    /// NOTE: However, this procedure is usually performed automatically when connected with a compatible GNSS.
-    /// @param device_handle Device handle
-    /// @param heading_deg The desired angle.
-    /// @return 0 on success.
-    FS_API int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg);
-
-    /// @brief Manually set the INS position, this is typically used to update the device position from a
-    /// GNSS system.
-    /// @param device_handle Device handle
-    /// @param position The position to set to (for now, this function only re-sets position to zero).
-    /// @return 0 on success.
-    FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_d_t *position);
-
     /// @brief Sets the device name. Note that changes are applied on restart.
     /// @param device_handle
     /// @param name
@@ -275,6 +261,34 @@ extern "C"
     /// @param baudrate Allowed range: 921,600 - 3,000,000. Exceeding these limits may cause lag or instability.
     /// @return 0 on success.
     FS_API int fs_set_serial_uart_baudrate(fs_device_info_t *device_handle, int baudrate);
+
+    /// @brief Set the GNSS baseline. Only applicable for GNSS-enabled devices, such as Trifecta-M series.
+    /// @param device_handle 
+    /// @param baseline <x,y,z> baseline between GNSS_1 and GNSS_0 antennas. Unit in neters [m].
+    /// @return 0 on success.
+    FS_API int fs_set_gnss_baseline(fs_device_info_t *device_handle, fs_vector3_t baseline);
+
+    /// @brief Set the GNSS lever arm. Only applicable for GNSS-enabled devices, such as Trifecta-M series.
+    /// @param device_handle 
+    /// @param baseline <x,y,z> lever arm between GNSS_0 antenna and the IMU mounting point. Unit in neters [m].
+    /// @return 0 on success.
+    FS_API int fs_set_gnss_lever_arm(fs_device_info_t *device_handle, fs_vector3_t lever_arm);
+    
+    /// @brief Manually set the AHRS yaw angle to a known value. Non-volatile.
+    /// NOTE: However, this procedure is usually performed automatically when connected with a compatible GNSS.
+    /// @param device_handle Device handle
+    /// @param heading_deg The desired angle.
+    /// @return 0 on success.
+    FS_API int fs_set_ahrs_heading(fs_device_info_t *device_handle, float heading_deg);
+
+    /// @brief Manually set the INS position, this is typically used to update the device position from an
+    /// external GNSS system.
+    /// @param device_handle Device handle
+    /// @param position The position to set to (for now, this function only re-sets position to zero).
+    /// @return 0 on success.
+    FS_API int fs_set_ins_position(fs_device_info_t *device_handle, fs_vector3_d_t *position);
+
+    /// @section 
 
     /// @brief
     /// @param device_handle

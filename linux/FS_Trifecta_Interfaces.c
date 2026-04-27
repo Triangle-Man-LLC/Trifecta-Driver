@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+
+#include <limits.h>
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -26,11 +29,11 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include <string.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 
 #include <fcntl.h>
 #include <termios.h>
@@ -220,14 +223,6 @@ int fs_toggle_logging(bool do_log)
     fs_logging_level = do_log ? 1 : 0;
     return fs_logging_level;
 }
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <limits.h>
 
 /// @brief Redirect logs to the indicated path.
 /// Only some platforms support this. (E.g. a filesystem needed.)
