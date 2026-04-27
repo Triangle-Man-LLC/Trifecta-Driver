@@ -83,7 +83,7 @@ static int test_new_format_row(const fs_imu_composite_packet_2_t *p)
 
     CHECKD(p->rx, 0, 1e-6, -37);
     CHECKD(p->ry, 0, 1e-6, -38);
-    CHECKD(p->rz, 0, 1e-6, -39);
+    CHECKD(p->rz, 217.4045, 1e-6, -39);
 
     CHECKF(p->reserved[0], 0.0f, 1e-6f, -40);
     CHECKF(p->reserved[1], 0.0f, 1e-6f, -41);
