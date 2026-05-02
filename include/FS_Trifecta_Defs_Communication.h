@@ -26,7 +26,7 @@
 #define FS_MAX_DATA_LENGTH 512
 
 #define FS_MAX_CMD_QUEUE_LENGTH 16
-#define FS_MAX_CMD_LENGTH 72
+#define FS_MAX_CMD_LENGTH 256
 
 #ifdef __cplusplus
 extern "C"
@@ -68,8 +68,13 @@ extern "C"
         CMD_SET_ORIENTATION_OFFSET = 'Q', // Sets the offset orientation: "Q0;" to clear, "Q1;" to use current orientation, else "Q<W>,<X>,<Y>,<Z>;"
         CMD_SET_YAW_DEG = 'y',            // Set yaw angle to the given argument (degrees) "y<DEG>;"
 
+        CMD_SET_DATE_TIME = 'T', // Set the date/time: "T<DAY>,<MONTH>,<YEAR>,<HR>:<MIN>:<SEC>.<MSEC>,<TZ>;", if a PPS signal was detected in the last second, it will be backdated to the PPS.
+
         CMD_STREAM = 'A',             // Start or stop streaming data "A<0 == STOP, 1 == STREAM, 2 == ONE SHOT READ>;"
         CMD_SET_LISTENING_PORT = 'l', // Set the target port for UDP listener on host device (default: 8888) "l<PORT 1024-65535>;"
+
+        CMD_CALIBRATE_SENSOR_INTERNAL = 'z', // 
+        CMD_CALIBRATE_SENSOR_EXTERNAL = 'j', // 
 
         CMD_OTA = '@', // Signal start of OTA - upon receiving the command "@1;", the device will begin waiting for OTA to commence.
                        // Upon receiving the command "@0;", the device will end OTA update.
