@@ -64,9 +64,13 @@ int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_ru
     pthread_attr_init(&attr);
 
     // Apply system defaults for parameters if their values are < 0
-    if (stack_size == 0)
+    if (stack_size >= PTHREAD_STACK_MIN)
     {
-        stack_size = PTHREAD_STACK_MIN; // Default stack size, platform-defined minimum
+        // Set stack size
+        if (pthread_attr_setstacksize(&attr, stack_size) != 0)
+        {
+            fs_log_output("[Trifecta] Warning: Failed to set stack size!\n");
+        }
     }
     if (priority < 0)
     {
@@ -75,12 +79,6 @@ int fs_thread_start(fs_thread_func_t (*thread_func)(void *), void *params, fs_ru
     if (core_affinity < 0)
     {
         core_affinity = -1; // Indifferent to core affinity
-    }
-
-    // Set stack size
-    if (pthread_attr_setstacksize(&attr, stack_size) != 0)
-    {
-        fs_log_output("[Trifecta] Warning: Failed to set stack size!\n");
     }
 
     // Set thread priority if supported
