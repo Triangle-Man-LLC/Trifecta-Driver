@@ -25,6 +25,7 @@
 
 #include "FS_Trifecta_Defs_Platform_Types.h"
 #include "FS_Trifecta_Defs_Packets.h"
+#include "FS_Trifecta_Defs_J1939.h"
 #include "FS_Trifecta_Defs_Communication.h"
 #include "FS_Trifecta_Defs_Ringbuffer.h"
 #include "FS_Trifecta_Defs_Mutex.h"

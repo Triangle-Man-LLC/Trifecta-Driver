@@ -19,6 +19,7 @@ else()
         common/FS_Trifecta_Device_Utils.c
         common/FS_Trifecta_Networked.c
         common/FS_Trifecta_Serial.c
+        common/FS_Trifecta_J1939.c
         common/FS_Trifecta_Replay.c
     )
 
