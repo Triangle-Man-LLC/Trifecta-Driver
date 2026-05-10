@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <math.h>
+#include <time.h>
 
 #include "FS_Trifecta_Defs_Platform_Types.h"
 #include "FS_Trifecta_Defs_Packets.h"
@@ -38,8 +39,6 @@
 #define FS_ACCEL_SCALER_Gs 4
 
 #define DEGREES_TO_RADIANS 0.0174533f
-
-#define FS_MAX_DEVICE_NUMBER 1
 
 #ifdef __cplusplus
 extern "C"
@@ -93,10 +92,10 @@ extern "C"
         int udp_port;
         fs_sock_t tcp_sock;
         fs_sock_t udp_sock;
-        char serial_path[128]; // E.g. "COM<X>" on Windows and "/dev/ttyACM*" on Linux. Not used on most embedded platforms.
+        char serial_path[128];          // E.g. "COM<X>" on Windows and "/dev/ttyACM*" on Linux. Not used on most embedded platforms.
         fs_serial_handle_t serial_port; // Opaque handle on Windows and Linux, user interacts with it usually only on embedded platforms.
-        int32_t baudrate; 
-        int32_t ping;                 // Time since last received communication from device
+        int32_t baudrate;
+        int32_t ping;          // Time since last received communication from device
         uint64_t hp_timestamp; // If serial interrupt mode is enabled, this enables accurate timestamping of most recent packet.
     } fs_device_params_t;
 
@@ -152,6 +151,43 @@ extern "C"
             ++i;
         }
         dest[i] = '\0';
+    }
+
+    /// @brief fgets() with bound checks
+    /// @return 1 = success, 0 = EOF (no data read), -1 = line too long (truncated), -2 = read error
+    static inline int fs_safe_fgets(FILE *fp, char *buf, size_t buf_size)
+    {
+        if (!fp || !buf || buf_size < 2)
+            return -2;
+
+        size_t idx = 0;
+        int c;
+
+        while ((c = fgetc(fp)) != EOF)
+        {
+            if (idx < buf_size - 1)
+            {
+                buf[idx++] = (char)c;
+            }
+            else
+            {
+                // Buffer full — discard until newline
+                while (c != '\n' && c != EOF)
+                    c = fgetc(fp);
+
+                buf[buf_size - 1] = '\0';
+                return -1; // truncated
+            }
+
+            if (c == '\n')
+                break;
+        }
+
+        if (idx == 0 && c == EOF)
+            return 0; // EOF, no data
+
+        buf[idx] = '\0';
+        return 1;
     }
 
 #ifdef __cplusplus

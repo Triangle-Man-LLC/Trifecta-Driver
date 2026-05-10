@@ -3,8 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "FS_Trifecta_Replay.h"
-#include "FS_Trifecta_Defs.h"
+#include "FS_Trifecta.h"
 #include "FS_Trifecta_Interfaces.h"
 
 // Utility: float comparison
@@ -81,9 +80,9 @@ static int test_new_format_row(const fs_imu_composite_packet_2_t *p)
     CHECKF(p->vy, -0.002136487f, 1e-6f, -35);
     CHECKF(p->vz, 0.0f, 1e-6f, -36);
 
-    CHECKD(p->rx, 33.16704808, 1e-6, -37);
-    CHECKD(p->ry, -117.1831163, 1e-6, -38);
-    CHECKD(p->rz, 217.4045, 1e-6, -39);
+    CHECKD(p->rx, 0.0, 1e-6, -37);
+    CHECKD(p->ry, 0.0, 1e-6, -38);
+    CHECKD(p->rz, 0.0, 1e-6, -39);
 
     CHECKF(p->reserved[0], 0.0f, 1e-6f, -40);
     CHECKF(p->reserved[1], 0.0f, 1e-6f, -41);

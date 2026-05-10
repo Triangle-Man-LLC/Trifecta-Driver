@@ -187,12 +187,14 @@ extern "C"
     /// @param current_time Pointer to the current time value.
     /// @param millis Number of milliseconds to delay.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_delay_for(uint32_t *current_time, int millis);
+    int fs_delay_for(uint64_t *current_time, int millis);
 
     /// @brief Retrieves the current system time in milliseconds.
     /// @param current_time Pointer to store the current time.
     /// @return 0 on success, or a negative error code on failure.
-    int fs_get_current_time(uint32_t *current_time);
+    int fs_get_current_time(uint64_t *current_time);
+
+    int fs_get_local_time(fs_tm_t *out);
 
 #ifdef __cplusplus
 }

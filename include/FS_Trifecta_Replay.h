@@ -21,6 +21,7 @@ extern "C"
 #endif
 
 #define FS_REPLAY_MAX_COLUMNS 64
+#define FS_REPLAY_DEFAULT_STEP 200
 
     typedef enum fs_field_id
     {
@@ -107,10 +108,6 @@ extern "C"
     } fs_replay_t;
 
     int fs_replay_parse_header(fs_replay_t *r, const char *line);
-    int fs_replay_open(fs_replay_t *r, const char *path, uint32_t sparse_step);
-    int fs_replay_read_next(fs_replay_t *r, fs_packet_union_t *out);
-    int fs_replay_read_line(fs_replay_t *r, uint32_t line_index, fs_packet_union_t *out);
-    void fs_replay_close(fs_replay_t *r);
 
 #ifdef __cplusplus
 }

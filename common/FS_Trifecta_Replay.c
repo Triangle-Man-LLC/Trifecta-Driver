@@ -11,8 +11,6 @@
 
 #include "FS_Trifecta_Replay.h"
 
-#include "FS_Trifecta_Replay.h"
-
 static char linebuf[512] = {0};
 
 static int fs_strcasecmp(const char *a, const char *b)
@@ -182,7 +180,7 @@ int fs_replay_parse_header(fs_replay_t *r, const char *line)
         if (!comma)
             break;
 
-        p = comma + 1;  // may point to empty field
+        p = comma + 1; // may point to empty field
         col++;
     }
 
@@ -217,8 +215,8 @@ int fs_replay_parse_packet(fs_replay_t *r,
             break;
         }
 
-        *comma = '\0';      // terminate token
-        ca = comma + 1;      // next token (may be empty)
+        *comma = '\0';  // terminate token
+        ca = comma + 1; // next token (may be empty)
         count++;
     }
 
@@ -919,7 +917,7 @@ int fs_replay_open(fs_replay_t *r, const char *path, uint32_t sparse_step)
     if (!r->fp)
         return -2;
 
-    if (!fgets(linebuf, sizeof(linebuf), r->fp))
+    if (fs_safe_fgets(r->fp, linebuf, sizeof(linebuf)) <= 0)
         return -3;
 
     if (fs_replay_parse_header(r, linebuf) != 0)
@@ -936,7 +934,7 @@ int fs_replay_open(fs_replay_t *r, const char *path, uint32_t sparse_step)
     uint32_t line = 0;
     uint32_t block = 0;
 
-    while (fgets(linebuf, sizeof(linebuf), r->fp))
+    while (fs_safe_fgets(r->fp, linebuf, sizeof(linebuf)) > 0)
     {
         if (line % sparse_step == 0)
         {
@@ -970,8 +968,11 @@ int fs_replay_read_next(fs_replay_t *r, fs_packet_union_t *out)
     if (!r || !r->fp || !out)
         return -1;
 
-    if (!fgets(linebuf, sizeof(linebuf), r->fp))
+    int rc = fs_safe_fgets(r->fp, linebuf, sizeof(linebuf));
+    if (rc == 0)
         return 1; // EOF
+    if (rc < 0)
+        return -2; // truncated or read error
 
     return fs_replay_parse_packet(r, linebuf, out);
 }
@@ -1020,11 +1021,11 @@ int fs_replay_read_line(fs_replay_t *r,
 
     for (uint32_t i = start_line; i < line_index; i++)
     {
-        if (!fgets(linebuf, sizeof(linebuf), r->fp))
+        if (fs_safe_fgets(r->fp, linebuf, sizeof(linebuf)) <= 0)
             return -5;
     }
-
-    if (!fgets(linebuf, sizeof(linebuf), r->fp))
+    
+    if (fs_safe_fgets(r->fp, linebuf, sizeof(linebuf)) <= 0)
         return -6;
 
     return fs_replay_parse_packet(r, linebuf, out);
